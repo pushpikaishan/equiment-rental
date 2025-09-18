@@ -1,0 +1,322 @@
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #afea66 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .register-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .register-header .icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 24px;
+        }
+
+        .register-header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .register-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .register-form {
+            padding: 35px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group label .required {
+            color: #e74c3c;
+            margin-left: 2px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input,
+        .input-wrapper select {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .input-wrapper select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .input-wrapper input:focus,
+        .input-wrapper select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-wrapper .icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 16px;
+            pointer-events: none;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 5px;
+        }
+
+        .password-toggle:hover {
+            color: #667eea;
+        }
+
+        .password-strength {
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        .strength-bar {
+            height: 4px;
+            background: #e1e5e9;
+            border-radius: 2px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .strength-weak .strength-fill {
+            width: 33%;
+            background: #e74c3c;
+        }
+
+        .strength-medium .strength-fill {
+            width: 66%;
+            background: #f39c12;
+        }
+
+        .strength-strong .strength-fill {
+            width: 100%;
+            background: #27ae60;
+        }
+
+        .terms-wrapper {
+            margin: 25px 0;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            margin-top: 3px;
+            accent-color: #667eea;
+        }
+
+        .checkbox-wrapper label {
+            font-size: 14px;
+            line-height: 1.4;
+            color: #666;
+        }
+
+        .checkbox-wrapper a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .checkbox-wrapper a:hover {
+            text-decoration: underline;
+        }
+
+        .register-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .register-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .register-btn:active {
+            transform: translateY(0);
+        }
+
+        .register-btn.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 25px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .success-message {
+            color: #27ae60;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .form-group.error input,
+        .form-group.error select {
+            border-color: #e74c3c;
+            background: #fef5f5;
+        }
+
+        .form-group.error .error-message {
+            display: block;
+        }
+
+        .form-group.success input {
+            border-color: #27ae60;
+            background: #f0fff4;
+        }
+
+        .form-group.success .success-message {
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+            .register-container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+
+            .register-header {
+                padding: 25px 20px;
+            }
+
+            .register-form {
+                padding: 25px 20px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+        }
