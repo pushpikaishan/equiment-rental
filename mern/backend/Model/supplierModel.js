@@ -8,7 +8,8 @@ const supplierSchema = new Schema({
   phone: { type: String, required: true },
   district: { type: String, required: true },
   password: { type: String, required: true },
-  role: { type: String, default: "supplier" } 
+  role: { type: String, default: "supplier" },
+  profileImage: { type: String, default: "" }
 });
 
 //Creates "suppliers" collection

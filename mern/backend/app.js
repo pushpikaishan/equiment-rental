@@ -26,6 +26,9 @@ app.use("/staff", staffRoutes);
 app.use("/admins", adminRoutes);
 
 app.use("/auth", authRoutes);
+app.use("/uploads", express.static("uploads"));
+
+
 
 const PORT = process.env.PORT || 5000;
 // Connect to MongoDB

@@ -7,6 +7,7 @@ const staffSchema = new mongoose.Schema({
   nicNo: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, default: "staff" } 
+  role: { type: String, default: "staff" },
+   profileImage: { type: String, default: "" }
 });
 module.exports = mongoose.model("Staff", staffSchema);

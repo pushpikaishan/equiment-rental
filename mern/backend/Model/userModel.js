@@ -8,7 +8,8 @@ const userSchema = new Schema({
     phoneno:{type:Number, required:true},
     district:{type:String,required:true},
     password:{type:String , required:true},
-    role: { type: String, default: "user" } 
+    role: { type: String, default: "user" }, 
+    profileImage: { type: String, default: "" }
 
 });
 
