@@ -474,14 +474,14 @@ function UserProfile() {
           <p style={titleStyle}>Welcome back</p> 
           <p style={subtitleStyle}>{profile.name || "User"}</p>
 
-          {/*<div style={statsStyle}>
+          {<div style={statsStyle}>
             <div style={statItemStyle}>
               <span style={statNumberStyle}>
                 {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
               </span>
               <span style={statLabelStyle}>Account Type</span>
             </div>
-          </div>*/}
+          </div>}
         </div>
 
         <div style={contentStyle}>
