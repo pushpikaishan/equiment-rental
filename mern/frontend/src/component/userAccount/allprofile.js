@@ -481,7 +481,7 @@ function UserProfile() {
               </span>
               <span style={statLabelStyle}>Account Type</span>
             </div>
-          </div>                        ccdhufh suaaa*/}
+          </div>                       suuuuuuuuuuuuuuu*/}
         </div>
 
         <div style={contentStyle}>
