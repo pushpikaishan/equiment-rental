@@ -11,9 +11,10 @@ function Login() {
     try {
       const res = await axios.post("http://localhost:5000/auth/login", { email, password });
 
-      // Save token & role
+      // Save token , role & userId to localStorage 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", res.data.role);
+      localStorage.setItem("userId", res.data.user.id);
 
       // Navigate based on role
       switch (res.data.role) {

@@ -59,7 +59,7 @@ function SupplierUpdate() {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '20px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    //background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
   };
 

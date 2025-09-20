@@ -26,6 +26,9 @@ import AdminUpdate from "./component/userupdate/adminupdate";
 //lognavigate
 import Userprof from "./component/userAccount/allprofile";
 
+//user account
+import UserMenu from "./component/userAccount/userMenu";
+
 function App() {
   return (
     <div>
@@ -51,7 +54,8 @@ function App() {
 
 
 
-          <Route path="/userAccount/profile" element={<Userprof />} />
+          <Route path="/userAccount/profile" element={<Userprof />}/>
+          <Route path="/UserMenu" element={<UserMenu />} />
         </Routes>
       </React.Fragment>
     </div>

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
 
 function UserProfile() {
   const [profile, setProfile] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -64,9 +67,9 @@ function UserProfile() {
 
 
   // Settings button click handler
-  const handleSettingsClick = () => {
-    alert("Settings clicked!"); // Replace with your navigation logic
-    // Example: navigate('/settings') or show settings modal
+ const handleSettingsClick = () => {
+    //alert("Settings clicked!");
+    navigate("/UserMenu");   // 
   };
 
   // Generate avatar based on user's name and role
@@ -481,7 +484,7 @@ function UserProfile() {
               </span>
               <span style={statLabelStyle}>Account Type</span>
             </div>
-          </div>                       suuuuuuuuuuuuuuu*/}
+          </div>*/}
         </div>
 
         <div style={contentStyle}>

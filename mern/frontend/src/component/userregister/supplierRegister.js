@@ -87,7 +87,7 @@ function SupplierRegister() {
           success = "Email format is valid";
         }
         break;
-      case "phoneno":
+      case "phone":
         if (value && !validatePhone(value)) {
           error = "Please enter a valid phone number";
         }
@@ -347,7 +347,7 @@ function SupplierRegister() {
             )}
           </div>
 
-          <div className={getFormGroupClass("phoneno")}>
+          <div className={getFormGroupClass("phone")}>
             <label htmlFor="phoneno">Phone Number</label>
             <div className="input-wrapper">
               <span className="icon">📱</span>
