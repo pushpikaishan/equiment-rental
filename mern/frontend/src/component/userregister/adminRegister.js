@@ -57,7 +57,7 @@ function AdminRegister() {
     try {
       await axios.post("http://localhost:5000/admins", inputs);
       setIsLoading(false);
-      navigate("/alladmins");
+      navigate("/DisAllAdmins");
     } catch (err) {
       setIsLoading(false);
       alert("Registration failed");

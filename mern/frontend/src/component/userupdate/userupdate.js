@@ -3,11 +3,11 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 
+
 function UserUpdate() {
   const [inputs, setInputs] = useState({});
   const { id } = useParams();
   const navigate = useNavigate();
-
   // Fetch user details when component loads
   useEffect(() => {
     const fetchUser = async () => {
@@ -59,7 +59,7 @@ function UserUpdate() {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '20px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    //background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
   };
 
