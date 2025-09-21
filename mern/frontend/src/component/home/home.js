@@ -47,6 +47,10 @@ function Home() {
         <h1>Dis All Admins</h1>
       </Link>
 
+      <Link to="/inventoryDetails" className="inventoryDetails">
+        <h1>Inventory Admin</h1>
+      </Link>
+
 
       
     </div>

@@ -30,6 +30,11 @@ import Userprof from "./component/userAccount/allprofile";
 //user account
 import UserMenu from "./component/userAccount/userMenu";
 
+//inventory
+import Addinventory from "./component/InventoryAdd/addinventory";
+import Inventorydetails from "./component/InventoryDetails/inventorydetails";
+import UpdateInventory from "./component/InventoryUpdate/updateInventory"; 
+
 
 function App() {
   return (
@@ -59,7 +64,11 @@ function App() {
           <Route path="/userAccount/profile" element={<Userprof />}/>
           <Route path="/UserMenu" element={<UserMenu />} />
 
-         
+         {/*inventory*/}
+          <Route path="/" element={<Addinventory />} />
+          <Route path="/addinventory" element={<Addinventory />} />
+          <Route path="/inventorydetails" element={<Inventorydetails />} />
+          <Route path="/updateInventory/:id" element={<UpdateInventory />} /> 
 
         </Routes>
       </React.Fragment>
