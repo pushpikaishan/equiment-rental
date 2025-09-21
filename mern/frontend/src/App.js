@@ -4,7 +4,6 @@ import { Route, Routes } from "react-router-dom";
 import Home from "./component/home/home";
 import Log from "./component/userlog/login";
 
-
 //register
 import UserRegister from "./component/userregister/userregister";
 import SupplierRegister from "./component/userregister/supplierRegister";
@@ -29,14 +28,6 @@ import Userprof from "./component/userAccount/allprofile";
 
 //user account
 import UserMenu from "./component/userAccount/userMenu";
-
-
-//inventory
-import Home from "./Components/InventoryHome/home";
-import Addinventory from "./Components/InventoryAdd/addinventory";
-import Inventorydetails from "./Components/InventoryDetails/inventorydetails";
-import UpdateInventory from "./Components/InventoryUpdate/updateInventory"; 
-
 
 function App() {
   return (
@@ -65,6 +56,7 @@ function App() {
 
           <Route path="/userAccount/profile" element={<Userprof />}/>
           <Route path="/UserMenu" element={<UserMenu />} />
+<<<<<<< HEAD
 
           {/*inventory*/}
           <Route path="/" element={<InventoryHome />} />
@@ -73,6 +65,8 @@ function App() {
           <Route path="/inventorydetails" element={<Inventorydetails />} />
           <Route path="/updateInventory/:id" element={<UpdateInventory />} /> 
 
+=======
+>>>>>>> parent of b648f36 (equipment)
         </Routes>
       </React.Fragment>
     </div>
