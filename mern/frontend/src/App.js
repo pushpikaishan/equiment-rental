@@ -56,17 +56,7 @@ function App() {
 
           <Route path="/userAccount/profile" element={<Userprof />}/>
           <Route path="/UserMenu" element={<UserMenu />} />
-<<<<<<< HEAD
 
-          {/*inventory*/}
-          <Route path="/" element={<InventoryHome />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/addinventory" element={<Addinventory />} />
-          <Route path="/inventorydetails" element={<Inventorydetails />} />
-          <Route path="/updateInventory/:id" element={<UpdateInventory />} /> 
-
-=======
->>>>>>> parent of b648f36 (equipment)
         </Routes>
       </React.Fragment>
     </div>
