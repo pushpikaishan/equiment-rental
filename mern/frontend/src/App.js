@@ -32,7 +32,7 @@ import UserMenu from "./component/userAccount/userMenu";
 
 
 //inventory
-import Home from "./Components/InventoryHome/home";
+import Home from "./Components/InventoryHome/inventoryhome";
 import Addinventory from "./Components/InventoryAdd/addinventory";
 import Inventorydetails from "./Components/InventoryDetails/inventorydetails";
 import UpdateInventory from "./Components/InventoryUpdate/updateInventory"; 
@@ -67,8 +67,8 @@ function App() {
           <Route path="/UserMenu" element={<UserMenu />} />
 
           {/*inventory*/}
-          <Route path="/" element={<Home />} />
-          <Route path="/home" element={<Home />} />
+           <Route path="/" element={<Home />} />
+          <Route path="/inventoryhome" element={<Home />} />
           <Route path="/addinventory" element={<Addinventory />} />
           <Route path="/inventorydetails" element={<Inventorydetails />} />
           <Route path="/updateInventory/:id" element={<UpdateInventory />} /> 
