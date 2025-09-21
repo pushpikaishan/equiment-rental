@@ -25,7 +25,7 @@ function Login() {
           navigate("/userAccount/profile");
           break;
         case "admin":
-          navigate("/userAccount/profile");
+          navigate("/adminDashbooard");
           break;
         case "staff":
           navigate("/userAccount/profile");

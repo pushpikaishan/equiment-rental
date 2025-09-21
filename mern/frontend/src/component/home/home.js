@@ -47,6 +47,10 @@ function Home() {
         <h1>Dis All Admins</h1>
       </Link>
 
+      <Link to="/adminDashbooard" className="adminDashbooard">
+        <h2>Admin Dashboard</h2>
+      </Link>
+
 
       
     </div>

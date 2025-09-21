@@ -1,6 +1,8 @@
 import React from "react";
 import "./App.css";
 import { Route, Routes } from "react-router-dom";
+
+
 import Home from "./component/home/home";
 import Log from "./component/userlog/login";
 
@@ -13,6 +15,7 @@ import StaffRegister from "./component/userregister/staffRegister";
 //update
 import UserUpdate from "./component/userupdate/userupdate";
 import SupplierUpdate from "./component/userupdate/supplierupdate";
+import AdminProfileUpdate from "./component/adminPanel/adminProfile/adminupdate"
 
 //diaplay all
 import DisAllUsers from "./component/disalluser/allUsers";
@@ -28,6 +31,11 @@ import Userprof from "./component/userAccount/allprofile";
 
 //user account
 import UserMenu from "./component/userAccount/userMenu";
+
+
+
+//adminpanel
+import AdminPanel from "./component/adminPanel/admindashboard";
 
 function App() {
   return (
@@ -56,6 +64,11 @@ function App() {
 
           <Route path="/userAccount/profile" element={<Userprof />}/>
           <Route path="/UserMenu" element={<UserMenu />} />
+
+       
+
+          <Route path="/adminDashbooard" element={<AdminPanel />} />
+          <Route path="/AdminProfileUpdate/:id" element={<AdminProfileUpdate />} />
 
         </Routes>
       </React.Fragment>
