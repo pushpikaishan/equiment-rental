@@ -67,7 +67,7 @@ function App() {
           <Route path="/UserMenu" element={<UserMenu />} />
 
           {/*inventory*/}
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<InventoryHome />} />
           <Route path="/home" element={<Home />} />
           <Route path="/addinventory" element={<Addinventory />} />
           <Route path="/inventorydetails" element={<Inventorydetails />} />
