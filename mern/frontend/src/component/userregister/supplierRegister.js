@@ -221,7 +221,7 @@ function SupplierRegister() {
     sendRequest()
       .then(() => {
         setIsLoading(false);
-        navigate("/allusers"); // navigate to profile page
+        navigate("/userlog"); // navigate to profile page
       })
       .catch((error) => {
         setIsLoading(false);

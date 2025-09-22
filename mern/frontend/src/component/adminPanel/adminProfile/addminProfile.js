@@ -66,12 +66,8 @@ function UserProfile() {
 };
 
 
-  // Settings button click handler
- const handleSettingsClick = () => {
-    //alert("Settings clicked!");
-    navigate("/UserMenu");   // 
-  };
-
+  
+ 
   // Generate avatar based on user's name and role
   const getAvatarUrl = (name, role) => {
     const initials = name
@@ -406,24 +402,7 @@ function UserProfile() {
 
       <div style={cardStyle}>
         <div style={headerStyle}>
-          {/* Settings Button */}
-          <button
-            style={settingsButtonStyle}
-            onClick={handleSettingsClick}
-            onMouseOver={(e) => {
-              e.target.style.background = "rgba(255, 255, 255, 0.25)";
-              e.target.style.transform = "scale(1.1)";
-              e.target.style.boxShadow = "0 6px 20px rgba(0, 0, 0, 0.15)";
-            }}
-            onMouseOut={(e) => {
-              e.target.style.background = "rgba(255, 255, 255, 0.15)";
-              e.target.style.transform = "scale(1)";
-              e.target.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.1)";
-            }}
-            title="Settings"
-          >
-            ⚙️
-          </button>
+          
 
           <div style={profileImageContainerStyle}>
             <img
