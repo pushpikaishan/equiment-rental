@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const User = require("../Model/userModel");
 const Supplier = require("../Model/supplierModel");
 const Admin = require("../Model/adminModel");
@@ -9,7 +10,7 @@ const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: "1h" }
+    { expiresIn: "7d" } // extend token lifetime to reduce frequent expirations
   );
 };
 
@@ -24,7 +25,7 @@ exports.login = async (req, res) => {
 
   try {
     // Trim email to remove spaces
-    const trimmedEmail = email.trim();
+    const trimmedEmail = String(email).trim();
 
     // Find account in all collections
     let account =
@@ -33,7 +34,28 @@ exports.login = async (req, res) => {
       (await Admin.findOne({ email: trimmedEmail })) ||
       (await Staff.findOne({ email: trimmedEmail }));
 
-  
+    // Validate account existence and password (support bcrypt hash or plain text)
+    if (!account) {
+      return res.status(401).json({ msg: "Invalid credentials" });
+    }
+
+    let isValid = false;
+    const stored = String(account.password || "");
+    try {
+      if (/^\$2[aby]\$/.test(stored)) {
+        // bcrypt hash
+        isValid = await bcrypt.compare(password, stored);
+      } else {
+        // plain-text fallback
+        isValid = stored === password;
+      }
+    } catch (e) {
+      isValid = false;
+    }
+
+    if (!isValid) {
+      return res.status(401).json({ msg: "Invalid credentials" });
+    }
 
     const token = generateToken(account);
 
@@ -72,6 +94,9 @@ exports.getProfile = async (req, res) => {
         break;
       default:
         return res.status(400).json({ msg: "Invalid role" });
+    }
+    if (!account) {
+      return res.status(404).json({ msg: "Account not found" });
     }
     res.json(account);
   } catch (err) {

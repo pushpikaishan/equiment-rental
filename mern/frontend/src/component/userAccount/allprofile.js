@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import UserNavbar from "../shop/UserNavbar";
+import SiteFooter from "../common/SiteFooter";
 
 
 function UserProfile() {
@@ -10,7 +12,10 @@ function UserProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!token) {
+        navigate("/", { replace: true });
+        return;
+      }
 
       try {
         const res = await axios.get("http://localhost:5000/auth/profile", {
@@ -22,6 +27,13 @@ function UserProfile() {
           "Error fetching profile:",
           err.response?.data || err.message
         );
+        if (err.response?.status === 401) {
+          // Clear stale/invalid token and redirect to login
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          localStorage.removeItem("userId");
+          navigate("/", { replace: true });
+        }
       }
     };
 
@@ -55,8 +67,9 @@ function UserProfile() {
         throw new Error("Unknown role");
     }
 
+    const token = localStorage.getItem("token");
     const res = await axios.post(uploadUrl, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { Authorization: `Bearer ${token}` }, // let axios set multipart boundary
     });
 
     setProfile(res.data.user); // refresh profile with new image
@@ -384,7 +397,9 @@ function UserProfile() {
   };
 
   return (
-    <div style={containerStyle}>
+    <div>
+      <UserNavbar />
+      <div style={containerStyle}>
       <style>
         {`
           @keyframes slideUp {
@@ -404,7 +419,7 @@ function UserProfile() {
         `}
       </style>
 
-      <div style={cardStyle}>
+  <div style={cardStyle}>
         <div style={headerStyle}>
           {/* Settings Button */}
           <button
@@ -528,6 +543,8 @@ function UserProfile() {
           </div>
         </div>
       </div>
+      </div>
+      <SiteFooter />
     </div>
   );
 }
