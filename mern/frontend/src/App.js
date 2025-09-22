@@ -15,15 +15,15 @@ import StaffRegister from "./component/userregister/staffRegister";
 //update
 import UserUpdate from "./component/userupdate/userupdate";
 import SupplierUpdate from "./component/userupdate/supplierupdate";
-import AdminProfileUpdate from "./component/adminPanel/adminProfile/adminupdate"
+import StaffUpdate from "./component/userupdate/staffupdate";
+import AdminUpdate from "./component/userupdate/adminupdate";
 
 //diaplay all
 import DisAllUsers from "./component/disalluser/allUsers";
 import DisAllStaff from "./component/disalluser/allstaff";
 import DisAllSupplier from "./component/disalluser/allSuppliers";
 import DisAllAdmins from "./component/disalluser/alladmin";
-import StaffUpdate from "./component/userupdate/staffupdate";
-import AdminUpdate from "./component/userupdate/adminupdate";
+
 
 
 //lognavigate
@@ -32,7 +32,8 @@ import Userprof from "./component/userAccount/allprofile";
 //user account
 import UserMenu from "./component/userAccount/userMenu";
 
-
+//test
+import RegCusOrSupButton from "./component/userlog/regCusOrSup";
 
 //adminpanel
 import AdminPanel from "./component/adminPanel/admindashboard";
@@ -68,7 +69,9 @@ function App() {
        
 
           <Route path="/adminDashbooard" element={<AdminPanel />} />
-          <Route path="/AdminProfileUpdate/:id" element={<AdminProfileUpdate />} />
+
+          <Route path="/RegCusOrSupButton" element={<RegCusOrSupButton />} />
+         
 
         </Routes>
       </React.Fragment>

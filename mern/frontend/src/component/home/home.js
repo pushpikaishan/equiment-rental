@@ -51,6 +51,10 @@ function Home() {
         <h2>Admin Dashboard</h2>
       </Link>
 
+      <Link to="/test" className="test">
+        <h2>test</h2>
+      </Link>
+
 
       
     </div>

@@ -44,13 +44,23 @@ function StaffUpdate() {
     }
   };
 
-  // Handle form submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await sendRequest();
-    alert("Staff updated successfully!");
-    navigate("/DisAllStaff"); // redirect after update
-  };
+ // Handle form submit
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  await sendRequest();
+  alert("Staff updated successfully!");
+
+  const role = localStorage.getItem("role");
+
+  if (role === "admin") {
+    navigate("/adminDashbooard");
+  } else if (role === "staff") {
+    navigate("/userAccount/profile");
+  } else {
+    navigate("/"); // fallback
+  }
+};
+
 
   const containerStyle = {
     minHeight: "100vh",
@@ -59,7 +69,7 @@ function StaffUpdate() {
     justifyContent: "center",
     padding: "20px",
     //background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
   };
 
   const cardStyle = {
@@ -69,29 +79,29 @@ function StaffUpdate() {
     overflow: "hidden",
     width: "100%",
     maxWidth: "600px",
-    animation: "slideIn 0.5s ease-out"
+    animation: "slideIn 0.5s ease-out",
   };
 
   const headerStyle = {
     background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     padding: "30px",
     textAlign: "center",
-    color: "white"
+    color: "white",
   };
 
   const titleStyle = {
     fontSize: "28px",
     marginBottom: "8px",
     fontWeight: "600",
-    margin: "0 0 8px 0"
+    margin: "0 0 8px 0",
   };
 
   const formStyle = {
-    padding: "40px 30px"
+    padding: "40px 30px",
   };
 
   const formGroupStyle = {
-    marginBottom: "25px"
+    marginBottom: "25px",
   };
 
   const labelStyle = {
@@ -101,7 +111,7 @@ function StaffUpdate() {
     fontWeight: "600",
     fontSize: "14px",
     textTransform: "uppercase",
-    letterSpacing: "0.5px"
+    letterSpacing: "0.5px",
   };
 
   const inputStyle = {
@@ -112,7 +122,7 @@ function StaffUpdate() {
     fontSize: "16px",
     transition: "all 0.3s ease",
     background: "#f8f9fa",
-    boxSizing: "border-box"
+    boxSizing: "border-box",
   };
 
   const buttonStyle = {
@@ -127,7 +137,7 @@ function StaffUpdate() {
     cursor: "pointer",
     transition: "all 0.3s ease",
     textTransform: "uppercase",
-    letterSpacing: "1px"
+    letterSpacing: "1px",
   };
 
   return (
@@ -207,6 +217,32 @@ function StaffUpdate() {
             Update Staff Details
           </button>
         </form>
+
+        {/* Back Button → only visible for admin */}
+        {localStorage.getItem("role") === "admin" && (
+          <div style={{ textAlign: "center", marginTop: "30px" }}>
+            <button
+              style={{
+                background:
+                  "linear-gradient(135deg, #f81515ff 0%, #764ba2 100%)",
+                color: "white",
+                border: "none",
+                padding: "12px 30px",
+                borderRadius: "25px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                marginBottom: "20px",
+              }}
+              onClick={() => navigate("/adminDashbooard")}
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
+        )}
+
+
+        
       </div>
     </div>
   );

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "./register.css"; // keep your CSS separate
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -134,8 +133,6 @@ function SupplierRegister() {
       isValid = false;
     }
 
-   
-
     if (!formData.email) {
       newErrors.email = "Email is required";
       isValid = false;
@@ -143,8 +140,6 @@ function SupplierRegister() {
       newErrors.email = "Please enter a valid email address";
       isValid = false;
     }
-
-
 
     if (formData.phone && !validatePhone(formData.phone)) {
       newErrors.phone = "Please enter a valid phone number";
@@ -273,228 +268,574 @@ function SupplierRegister() {
     }
   };
 
+  // CSS Styles
+  const containerStyle = {
+    margin: 0,
+    padding: 0,
+    boxSizing: 'border-box',
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    background: 'linear-gradient(135deg, #14a06f 0%, #764ba2 100%)',
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '20px'
+  };
+
+  const registerContainerStyle = {
+    background: 'white',
+    borderRadius: '20px',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: '500px',
+    position: 'relative'
+  };
+
+  const headerStyle = {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    padding: '30px',
+    textAlign: 'center',
+    color: 'white'
+  };
+
+  const iconStyle = {
+    width: '60px',
+    height: '60px',
+    background: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 15px',
+    fontSize: '24px'
+  };
+
+  const formStyle = {
+    padding: '35px 30px'
+  };
+
+  const formGroupStyle = (hasError, hasSuccess) => ({
+    marginBottom: '20px',
+    position: 'relative',
+    ...(hasError && {
+      '& input, & select': {
+        borderColor: '#e74c3c',
+        background: '#fef5f5'
+      }
+    }),
+    ...(hasSuccess && {
+      '& input': {
+        borderColor: '#27ae60',
+        background: '#f0fff4'
+      }
+    })
+  });
+
+  const labelStyle = {
+    display: 'block',
+    marginBottom: '6px',
+    color: '#333',
+    fontWeight: '500',
+    fontSize: '14px'
+  };
+
+  const inputWrapperStyle = {
+    position: 'relative'
+  };
+
+  const inputStyle = (hasError, hasSuccess) => ({
+    width: '100%',
+    padding: '12px 15px 12px 45px',
+    border: hasError ? '2px solid #e74c3c' : hasSuccess ? '2px solid #27ae60' : '2px solid #e1e5e9',
+    borderRadius: '8px',
+    fontSize: '15px',
+    transition: 'all 0.3s ease',
+    background: hasError ? '#fef5f5' : hasSuccess ? '#f0fff4' : '#f8f9fa',
+    boxSizing: 'border-box'
+  });
+
+  const selectStyle = (hasError) => ({
+    width: '100%',
+    padding: '12px 15px 12px 45px',
+    border: hasError ? '2px solid #e74c3c' : '2px solid #e1e5e9',
+    borderRadius: '8px',
+    fontSize: '15px',
+    transition: 'all 0.3s ease',
+    background: hasError ? '#fef5f5' : '#f8f9fa',
+    cursor: 'pointer',
+    appearance: 'none',
+    backgroundImage: "url(\"data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e\")",
+    backgroundPosition: 'right 12px center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: '16px',
+    paddingRight: '40px',
+    boxSizing: 'border-box'
+  });
+
+  const iconInInputStyle = {
+    position: 'absolute',
+    left: '15px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    color: '#999',
+    fontSize: '16px',
+    pointerEvents: 'none'
+  };
+
+  const passwordToggleStyle = {
+    position: 'absolute',
+    right: '15px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    color: '#999',
+    cursor: 'pointer',
+    fontSize: '16px',
+    padding: '5px',
+    transition: 'color 0.3s ease'
+  };
+
+  const passwordStrengthStyle = {
+    marginTop: '8px',
+    fontSize: '12px'
+  };
+
+  const strengthBarStyle = {
+    height: '4px',
+    background: '#e1e5e9',
+    borderRadius: '2px',
+    margin: '5px 0',
+    overflow: 'hidden'
+  };
+
+  const getStrengthFillStyle = () => {
+    let width = '0%';
+    let background = '#e1e5e9';
+
+    switch (passwordStrength.level) {
+      case 1:
+        width = '33%';
+        background = '#e74c3c';
+        break;
+      case 2:
+        width = '66%';
+        background = '#f39c12';
+        break;
+      case 3:
+        width = '100%';
+        background = '#27ae60';
+        break;
+      default:
+        width = '0%';
+    }
+
+    return {
+      height: '100%',
+      width: width,
+      background: background,
+      transition: 'all 0.3s ease',
+      borderRadius: '2px'
+    };
+  };
+
+  const termsWrapperStyle = {
+    margin: '25px 0'
+  };
+
+  const checkboxWrapperStyle = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px'
+  };
+
+  const checkboxStyle = {
+    marginTop: '3px',
+    accentColor: '#667eea'
+  };
+
+  const checkboxLabelStyle = {
+    fontSize: '14px',
+    lineHeight: '1.4',
+    color: '#666'
+  };
+
+  const buttonStyle = {
+    width: '100%',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    padding: '15px',
+    borderRadius: '8px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    position: 'relative',
+    overflow: 'hidden'
+  };
+
+  const loadingButtonStyle = {
+    ...buttonStyle,
+    pointerEvents: 'none',
+    opacity: '0.8'
+  };
+
+  const spinnerStyle = {
+    width: '20px',
+    height: '20px',
+    border: '2px solid rgba(255, 255, 255, 0.3)',
+    borderRadius: '50%',
+    borderTopColor: 'white',
+    animation: 'spin 1s ease-in-out infinite',
+    marginRight: '10px'
+  };
+
+  const errorMessageStyle = {
+    color: '#e74c3c',
+    fontSize: '12px',
+    marginTop: '5px',
+    display: 'block'
+  };
+
+  const successMessageStyle = {
+    color: '#27ae60',
+    fontSize: '12px',
+    marginTop: '5px',
+    display: 'block'
+  };
+
+  const loginLinkStyle = {
+    textAlign: 'center',
+    marginTop: '25px',
+    color: '#666',
+    fontSize: '14px'
+  };
+
+  const requiredStyle = {
+    color: '#e74c3c',
+    marginLeft: '2px'
+  };
+
+  const linkStyle = {
+    color: '#667eea',
+    textDecoration: 'none'
+  };
+
   return (
-    <div className="register-container">
-      <div className="register-header">
-        <div className="icon">👤</div>
-        <h1>Create Supplier Account</h1>
-        <p>Join us and start your journey</p>
-      </div>
+    <div style={containerStyle}>
+      <style>
+        {`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
 
-      <div className="register-form">
-        <form id="registerForm" onSubmit={handleSubmit}>
-          <div className={getFormGroupClass("companyName")}>
-            <label htmlFor="name">
-              Company Name <span className="required">*</span>
-            </label>
-            <div className="input-wrapper">
-              <span className="icon">👤</span>
-              <input
-                type="text"
-                id="companyName"
-                name="companyName"
-                onChange={handleChange}
-                value={inputs.companyName}
-                placeholder="Enter your company name"
-                required
-              />
-            </div>
-            {errors.companyName && (
-              <div className="error-message">{errors.companyName}</div>
-            )}
-          </div>
+      <div style={registerContainerStyle}>
+        <div style={headerStyle}>
+          <div style={iconStyle}>👤</div>
+          <h1 style={{ fontSize: '24px', marginBottom: '8px', fontWeight: '600', margin: '0 0 8px 0' }}>Create Supplier Account</h1>
+          <p style={{ opacity: '0.9', fontSize: '14px', margin: '0' }}>Join us and start your journey</p>
+        </div>
 
-          <div className={getFormGroupClass("name")}>
-            <label htmlFor="name">
-              Name <span className="required">*</span>
-            </label>
-            <div className="input-wrapper">
-              <span className="icon">👤</span>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                onChange={handleChange}
-                value={inputs.name}
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
-            {errors.name && <div className="error-message">{errors.name}</div>}
-          </div>
-
-          <div className={getFormGroupClass("email")}>
-            <label htmlFor="email">
-              Email Address <span className="required">*</span>
-            </label>
-            <div className="input-wrapper">
-              <span className="icon">📧</span>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                onChange={handleChange}
-                value={inputs.email}
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-            {errors.email && (
-              <div className="error-message">{errors.email}</div>
-            )}
-            {successMessages.email && (
-              <div className="success-message">{successMessages.email}</div>
-            )}
-          </div>
-
-          <div className={getFormGroupClass("phone")}>
-            <label htmlFor="phoneno">Phone Number</label>
-            <div className="input-wrapper">
-              <span className="icon">📱</span>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                onChange={handleChange}
-                value={inputs.phone}
-                placeholder="+94 71 234 5678"
-              />
-            </div>
-            {errors.phone && (
-              <div className="error-message">{errors.phone}</div>
-            )}
-          </div>
-
-          <div className={getFormGroupClass("district")}>
-            <label htmlFor="district">
-              District <span className="required">*</span>
-            </label>
-            <div className="input-wrapper">
-              <span className="icon">📍</span>
-              <select
-                id="district"
-                name="district"
-                onChange={handleChange}
-                value={inputs.district}
-                required
-              >
-                <option value="">Select your district</option>
-                <option value="galle">Galle</option>
-                <option value="matara">Matara</option>
-                <option value="hambantota">Hambantota</option>
-              </select>
-            </div>
-            {errors.district && (
-              <div className="error-message">{errors.district}</div>
-            )}
-          </div>
-
-          <div className={getFormGroupClass("password")}>
-            <label htmlFor="password">
-              Password <span className="required">*</span>
-            </label>
-            <div className="input-wrapper">
-              <span className="icon">🔒</span>
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                onChange={handleChange}
-                value={inputs.password}
-                placeholder="Create password"
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePassword("password")}
-              >
-                {showPassword ? "🙈" : "👁️"}
-              </button>
-            </div>
-            <div className={getPasswordStrengthClass()}>
-              <div className="strength-bar">
-                <div className="strength-fill"></div>
-              </div>
-              <span className="strength-text">
-                Password strength:{" "}
-                <span id="strengthLabel">{passwordStrength.label}</span>
-              </span>
-            </div>
-            {errors.password && (
-              <div className="error-message">{errors.password}</div>
-            )}
-          </div>
-
-          <div className={getFormGroupClass("confirmPassword")}>
-            <label htmlFor="confirmPassword">
-              Confirm Password <span className="required">*</span>
-            </label>
-            <div className="input-wrapper">
-              <span className="icon">🔒</span>
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                id="confirmPassword"
-                name="confirmPassword"
-                value={confirmPassword}
-                onChange={handleConfirmPasswordChange}
-                placeholder="Confirm password"
-                required
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => togglePassword("confirmPassword")}
-              >
-                {showConfirmPassword ? "🙈" : "👁️"}
-              </button>
-            </div>
-            {errors.confirmPassword && (
-              <div className="error-message">{errors.confirmPassword}</div>
-            )}
-          </div>
-
-          <div className="terms-wrapper">
-            <div className="checkbox-wrapper">
-              <input type="checkbox" id="terms" name="terms" required />
-              <label htmlFor="terms">
-                I agree to the{" "}
-                <a href="#" target="_blank">
-                  Terms of Service
-                </a>{" "}
-                and{" "}
-                <a href="#" target="_blank">
-                  Privacy Policy
-                </a>{" "}
-                <span className="required">*</span>
+        <div style={formStyle}>
+          <form id="registerForm" onSubmit={handleSubmit}>
+            <div style={formGroupStyle(errors.companyName, successMessages.companyName)}>
+              <label style={labelStyle} htmlFor="name">
+                Company Name <span style={requiredStyle}>*</span>
               </label>
-            </div>
-            {errors.terms && (
-              <div className="error-message" style={{ marginTop: 5 }}>
-                {errors.terms}
+              <div style={inputWrapperStyle}>
+                <span style={iconInInputStyle}>👤</span>
+                <input
+                  style={inputStyle(errors.companyName, successMessages.companyName)}
+                  type="text"
+                  id="companyName"
+                  name="companyName"
+                  onChange={handleChange}
+                  value={inputs.companyName}
+                  placeholder="Enter your company name"
+                  required
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.companyName) {
+                      e.target.style.borderColor = successMessages.companyName ? '#27ae60' : '#e1e5e9';
+                      e.target.style.background = successMessages.companyName ? '#f0fff4' : '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
               </div>
-            )}
+              {errors.companyName && <div style={errorMessageStyle}>{errors.companyName}</div>}
+            </div>
+
+            <div style={formGroupStyle(errors.name, successMessages.name)}>
+              <label style={labelStyle} htmlFor="name">
+                Name <span style={requiredStyle}>*</span>
+              </label>
+              <div style={inputWrapperStyle}>
+                <span style={iconInInputStyle}>👤</span>
+                <input
+                  style={inputStyle(errors.name, successMessages.name)}
+                  type="text"
+                  id="name"
+                  name="name"
+                  onChange={handleChange}
+                  value={inputs.name}
+                  placeholder="Enter your full name"
+                  required
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.name) {
+                      e.target.style.borderColor = successMessages.name ? '#27ae60' : '#e1e5e9';
+                      e.target.style.background = successMessages.name ? '#f0fff4' : '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
+              </div>
+              {errors.name && <div style={errorMessageStyle}>{errors.name}</div>}
+            </div>
+
+            <div style={formGroupStyle(errors.email, successMessages.email)}>
+              <label style={labelStyle} htmlFor="email">
+                Email Address <span style={requiredStyle}>*</span>
+              </label>
+              <div style={inputWrapperStyle}>
+                <span style={iconInInputStyle}>📧</span>
+                <input
+                  style={inputStyle(errors.email, successMessages.email)}
+                  type="email"
+                  id="email"
+                  name="email"
+                  onChange={handleChange}
+                  value={inputs.email}
+                  placeholder="Enter your email"
+                  required
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.email) {
+                      e.target.style.borderColor = successMessages.email ? '#27ae60' : '#e1e5e9';
+                      e.target.style.background = successMessages.email ? '#f0fff4' : '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
+              </div>
+              {errors.email && <div style={errorMessageStyle}>{errors.email}</div>}
+              {successMessages.email && <div style={successMessageStyle}>{successMessages.email}</div>}
+            </div>
+
+            <div style={formGroupStyle(errors.phone, successMessages.phone)}>
+              <label style={labelStyle} htmlFor="phoneno">Phone Number</label>
+              <div style={inputWrapperStyle}>
+                <span style={iconInInputStyle}>📱</span>
+                <input
+                  style={inputStyle(errors.phone, successMessages.phone)}
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  onChange={handleChange}
+                  value={inputs.phone}
+                  placeholder="+94 71 234 5678"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.phone) {
+                      e.target.style.borderColor = '#e1e5e9';
+                      e.target.style.background = '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
+              </div>
+              {errors.phone && <div style={errorMessageStyle}>{errors.phone}</div>}
+            </div>
+
+            <div style={formGroupStyle(errors.district, successMessages.district)}>
+              <label style={labelStyle} htmlFor="district">
+                District <span style={requiredStyle}>*</span>
+              </label>
+              <div style={inputWrapperStyle}>
+                <span style={iconInInputStyle}>📍</span>
+                <select
+                  style={selectStyle(errors.district)}
+                  id="district"
+                  name="district"
+                  onChange={handleChange}
+                  value={inputs.district}
+                  required
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.district) {
+                      e.target.style.borderColor = '#e1e5e9';
+                      e.target.style.background = '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                >
+                  <option value="">Select your district</option>
+                  <option value="galle">Galle</option>
+                  <option value="matara">Matara</option>
+                  <option value="hambantota">Hambantota</option>
+                </select>
+              </div>
+              {errors.district && <div style={errorMessageStyle}>{errors.district}</div>}
+            </div>
+
+            <div style={formGroupStyle(errors.password, successMessages.password)}>
+              <label style={labelStyle} htmlFor="password">
+                Password <span style={requiredStyle}>*</span>
+              </label>
+              <div style={inputWrapperStyle}>
+                <span style={iconInInputStyle}>🔒</span>
+                <input
+                  style={inputStyle(errors.password, successMessages.password)}
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  onChange={handleChange}
+                  value={inputs.password}
+                  placeholder="Create password"
+                  required
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.password) {
+                      e.target.style.borderColor = '#e1e5e9';
+                      e.target.style.background = '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  style={passwordToggleStyle}
+                  onClick={() => togglePassword("password")}
+                  onMouseOver={(e) => e.target.style.color = '#667eea'}
+                  onMouseOut={(e) => e.target.style.color = '#999'}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
+              <div style={passwordStrengthStyle}>
+                <div style={strengthBarStyle}>
+                  <div style={getStrengthFillStyle()}></div>
+                </div>
+                <span>
+                  Password strength: <span>{passwordStrength.label}</span>
+                </span>
+              </div>
+              {errors.password && <div style={errorMessageStyle}>{errors.password}</div>}
+            </div>
+
+            <div style={formGroupStyle(errors.confirmPassword, successMessages.confirmPassword)}>
+              <label style={labelStyle} htmlFor="confirmPassword">
+                Confirm Password <span style={requiredStyle}>*</span>
+              </label>
+              <div style={inputWrapperStyle}>
+                <span style={iconInInputStyle}>🔒</span>
+                <input
+                  style={inputStyle(errors.confirmPassword, successMessages.confirmPassword)}
+                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  placeholder="Confirm password"
+                  required
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#667eea';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.confirmPassword) {
+                      e.target.style.borderColor = '#e1e5e9';
+                      e.target.style.background = '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  style={passwordToggleStyle}
+                  onClick={() => togglePassword("confirmPassword")}
+                  onMouseOver={(e) => e.target.style.color = '#667eea'}
+                  onMouseOut={(e) => e.target.style.color = '#999'}
+                >
+                  {showConfirmPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
+              {errors.confirmPassword && <div style={errorMessageStyle}>{errors.confirmPassword}</div>}
+            </div>
+
+            <div style={termsWrapperStyle}>
+              <div style={checkboxWrapperStyle}>
+                <input style={checkboxStyle} type="checkbox" id="terms" name="terms" required />
+                <label style={checkboxLabelStyle} htmlFor="terms">
+                  I agree to the{" "}
+                  <a style={linkStyle} href="#" target="_blank">
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a style={linkStyle} href="#" target="_blank">
+                    Privacy Policy
+                  </a>{" "}
+                  <span style={requiredStyle}>*</span>
+                </label>
+              </div>
+              {errors.terms && <div style={{ ...errorMessageStyle, marginTop: 5 }}>{errors.terms}</div>}
+            </div>
+
+            <button
+              type="submit"
+              style={isLoading ? loadingButtonStyle : buttonStyle}
+              disabled={isLoading}
+              onMouseOver={(e) => {
+                if (!isLoading) {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.3)';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              {isLoading && <span style={spinnerStyle}></span>}
+              <span>
+                {isLoading ? "Creating Account..." : "Create Account"}
+              </span>
+            </button>
+          </form>
+
+          <div style={loginLinkStyle}>
+            Already have an account? <a style={{...linkStyle, fontWeight: '600'}} href="/userlog">Sign in here</a>
           </div>
-
-          <button
-            type="submit"
-            className={`register-btn ${isLoading ? "loading" : ""}`}
-            disabled={isLoading}
-          >
-            {isLoading && (
-              <span
-                className="spinner"
-                style={{ display: "inline-block" }}
-              ></span>
-            )}
-            <span className="btn-text">
-              {isLoading ? "Creating Account..." : "Create Account"}
-            </span>
-          </button>
-        </form>
-
-        <div className="login-link">
-          Already have an account? <a href="#">Sign in here</a>
         </div>
       </div>
     </div>

@@ -45,12 +45,22 @@ function SupplierUpdate() {
   };
 
   // Handle form submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await sendRequest();
-    alert("Supplier updated successfully!");
-    navigate("/DisAllSupplier"); // redirect after update
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  await sendRequest();
+  alert("Supplier updated successfully!");
+
+  const role = localStorage.getItem("role");
+
+  if (role === "admin") {
+    navigate("/adminDashbooard");
+  } else if (role === "supplier") {
+    navigate("/userAccount/profile");
+  } else {
+    navigate("/"); // fallback
+  }
+};
+
 
   // ---------- STYLES ----------
   const containerStyle = {
@@ -244,6 +254,31 @@ function SupplierUpdate() {
             Update Supplier
           </button>
         </form>
+
+
+
+        {/* Back Button → only visible for admin */}
+        {localStorage.getItem("role") === "admin" && (
+          <div style={{ textAlign: "center", marginTop: "30px" }}>
+            <button
+              style={{
+                background:
+                  "linear-gradient(135deg, #f81515ff 0%, #764ba2 100%)",
+                color: "white",
+                border: "none",
+                padding: "12px 30px",
+                borderRadius: "25px",
+                fontSize: "14px",
+                fontWeight: "600",
+                cursor: "pointer",
+                marginBottom: "20px",
+              }}
+              onClick={() => navigate("/adminDashbooard")}
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

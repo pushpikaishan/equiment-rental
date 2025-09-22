@@ -12,7 +12,7 @@ function AdminMenu() {
   const handleMenuClick = async (action) => {
     switch (action) {
       case "editProfile": // update profile
-        navigate(`/AdminProfileUpdate/${userId}`);
+        navigate(`/update-admin/${userId}`);
         break;
 
       case "twoFactor":
