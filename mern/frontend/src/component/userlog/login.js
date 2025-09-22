@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -6,6 +6,21 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+
+  // If already logged in, redirect based on role
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+    if (token && role) {
+      if (role === "admin") {
+        navigate("/adminDashbooard", { replace: true });
+      } else if (role === "user") {
+        navigate("/home", { replace: true });
+      } else {
+        navigate("/userAccount/profile", { replace: true });
+      }
+    }
+  }, [navigate]);
 
   const handleLogin = async () => {
     try {
@@ -22,7 +37,7 @@ function Login() {
       // Navigate based on role
       switch (res.data.role) {
         case "user":
-          navigate("/userAccount/profile");
+          navigate("/home");
           break;
         case "supplier":
           navigate("/userAccount/profile");

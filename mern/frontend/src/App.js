@@ -3,7 +3,6 @@ import "./App.css";
 import { Route, Routes } from "react-router-dom";
 
 
-import Home from "./component/home/home";
 import Log from "./component/userlog/login";
 
 //register
@@ -34,16 +33,23 @@ import UserMenu from "./component/userAccount/userMenu";
 
 //test
 import RegCusOrSupButton from "./component/userlog/regCusOrSup";
+import Testing from "./component/home/home";
 
 //adminpanel
 import AdminPanel from "./component/adminPanel/admindashboard";
+import EquipmentList from "./component/shop/EquipmentList";
+import EquipmentDetail from "./component/shop/EquipmentDetail";
+import CartPage from "./component/shop/CartPage";
+import MyBookings from "./component/shop/MyBookings";
+import SupportPage from "./component/shop/SupportPage";
+import PaymentGateway from "./component/shop/PaymentGateway";
 
 function App() {
   return (
     <div>
       <React.Fragment>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Log />} />
           <Route path="/userlog" element={<Log />} />
 
           <Route path="/userRegister" element={<UserRegister />} />
@@ -65,10 +71,19 @@ function App() {
 
           <Route path="/userAccount/profile" element={<Userprof />}/>
           <Route path="/UserMenu" element={<UserMenu />} />
+          <Route path="/Testing" element={<Testing />} />
 
        
 
           <Route path="/adminDashbooard" element={<AdminPanel />} />
+
+          {/* User-facing shop routes */}
+          <Route path="/home" element={<EquipmentList />} />
+          <Route path="/equipment/:id" element={<EquipmentDetail />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/bookings" element={<MyBookings />} />
+          <Route path="/support" element={<SupportPage />} />
+          <Route path="/payment" element={<PaymentGateway />} />
 
           <Route path="/RegCusOrSupButton" element={<RegCusOrSupButton />} />
          

@@ -10,6 +10,8 @@ const supplierRoutes = require("./Route/supplierRouts");
 const staffRoutes = require("./Route/staffRouts");
 const adminRoutes = require("./Route/adminRouts");
 const authRoutes = require("./Route/authRouts");
+const equipmentRoutes = require("./Route/equipmentRouts");
+const bookingRoutes = require("./Route/bookingRoutes");
 
 
 const app = express();
@@ -26,6 +28,9 @@ app.use("/staff", staffRoutes);
 app.use("/admins", adminRoutes);
 
 app.use("/auth", authRoutes);
+app.use("/equipment", equipmentRoutes);
+app.use("/bookings", bookingRoutes);
+// notifications route removed per revert request
 app.use("/uploads", express.static("uploads"));
 
 
