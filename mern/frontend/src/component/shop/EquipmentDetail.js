@@ -38,7 +38,15 @@ export default function EquipmentDetail() {
       <div style={{ padding: 20, maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
       <div>
         {item.image ? (
-          <img src={`${baseUrl}${item.image}`} alt={item.name} style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 12 }} />
+          <img
+            src={
+              item.image.startsWith('http')
+                ? item.image
+                : `${baseUrl}${item.image.startsWith('/') ? '' : '/'}${item.image}`
+            }
+            alt={item.name}
+            style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 12 }}
+          />
         ) : (
           <div style={{ width: '100%', height: 400, background: '#e2e8f0', borderRadius: 12 }} />
         )}
