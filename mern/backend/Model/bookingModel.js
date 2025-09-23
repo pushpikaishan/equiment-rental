@@ -18,6 +18,7 @@ const BookingSchema = new mongoose.Schema({
   customerPhone: { type: String, required: true },
   deliveryAddress: { type: String, required: true },
   notes: { type: String, default: '' },
+  returnDate: { type: Date },
   subtotal: { type: Number, required: true, min: 0 },
   securityDeposit: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },

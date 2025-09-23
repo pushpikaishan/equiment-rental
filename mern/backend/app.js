@@ -15,6 +15,7 @@ const equipmentRoutes = require("./Route/equipmentRouts");
 const bookingRoutes = require("./Route/bookingRoutes");
 const paymentRoutes = require("./Route/paymentRoutes");
 const feedbackRoutes = require("./Route/feedbackRoutes");
+const deliveryRoutes = require("./Route/deliveryRoutes");
 
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/equipment", equipmentRoutes);
 app.use("/bookings", bookingRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/feedback", feedbackRoutes);
+app.use("/deliveries", deliveryRoutes);
 // notifications route removed per revert request
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

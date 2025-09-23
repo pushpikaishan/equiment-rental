@@ -3,7 +3,10 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const ctrl = require('../Controllers/paymentController');
 
-// All routes require auth; controller enforces admin/staff
+// User route: my payments (success/partial)
+router.get('/my', auth, ctrl.my);
+
+// Admin/staff routes
 router.get('/', auth, ctrl.list);
 router.get('/summary', auth, ctrl.summary);
 router.get('/export/csv', auth, ctrl.exportCSV);

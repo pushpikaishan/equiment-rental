@@ -8,15 +8,25 @@ const PDFDocument = require('pdfkit');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Helper to compute totals and deposit (10% deposit by default)
-function computeTotals(items, depositRate = 0.1) {
-  const subtotal = items.reduce((sum, it) => sum + (Number(it.pricePerDay) || 0) * (it.qty || 0), 0);
+// Uses number of rental days = max(1, ceil((returnDate - bookingDate)/DAY_MS))
+function computeTotals(items, bookingDate, returnDate, depositRate = 0.1) {
+  let days = 1;
+  if (bookingDate && returnDate) {
+    const bd = new Date(bookingDate).getTime();
+    const rd = new Date(returnDate).getTime();
+    if (!isNaN(bd) && !isNaN(rd) && rd >= bd) {
+      days = Math.max(1, Math.ceil((rd - bd) / DAY_MS));
+    }
+  }
+  const subtotalPerDay = items.reduce((sum, it) => sum + (Number(it.pricePerDay) || 0) * (it.qty || 0), 0);
+  const subtotal = subtotalPerDay * days;
   const securityDeposit = Math.round(subtotal * depositRate * 100) / 100;
-  return { subtotal, securityDeposit, total: subtotal + securityDeposit };
+  return { subtotal, securityDeposit, total: subtotal + securityDeposit, days };
 }
 
 exports.create = async (req, res) => {
   try {
-  const { bookingDate, items, customerName, customerEmail, customerPhone, deliveryAddress, notes } = req.body;
+  const { bookingDate, returnDate, items, customerName, customerEmail, customerPhone, deliveryAddress, notes } = req.body;
     if (!bookingDate || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'bookingDate and items required' });
     }
@@ -26,6 +36,12 @@ exports.create = async (req, res) => {
     const date = new Date(bookingDate);
     if (isNaN(date.getTime())) {
       return res.status(400).json({ message: 'Invalid bookingDate' });
+    }
+    let retDate;
+    if (returnDate) {
+      retDate = new Date(returnDate);
+      if (isNaN(retDate.getTime())) return res.status(400).json({ message: 'Invalid returnDate' });
+      if (retDate.getTime() < date.getTime()) return res.status(400).json({ message: 'returnDate must be on or after bookingDate' });
     }
 
     // Validate equipment availability and map to snapshot items
@@ -38,7 +54,7 @@ exports.create = async (req, res) => {
       snapItems.push({ equipmentId: eq._id, name: eq.name, pricePerDay: Number(eq.rentalPrice) || 0, qty: it.qty });
     }
 
-    const sums = computeTotals(snapItems);
+    const sums = computeTotals(snapItems, date, retDate);
     const booking = await Booking.create({
       userId: req.user.id,
       userRole: req.user.role,
@@ -49,6 +65,7 @@ exports.create = async (req, res) => {
       customerPhone,
   deliveryAddress,
       notes: notes || '',
+      returnDate: retDate,
       subtotal: sums.subtotal,
       securityDeposit: sums.securityDeposit,
       total: sums.total,
@@ -84,12 +101,24 @@ exports.update = async (req, res) => {
       return res.status(400).json({ message: 'Cannot modify booking within 24 hours of the booking date' });
     }
 
-  const { bookingDate, items, customerName, customerEmail, customerPhone, deliveryAddress, notes } = req.body;
+  const { bookingDate, returnDate, items, customerName, customerEmail, customerPhone, deliveryAddress, notes } = req.body;
 
     if (bookingDate) {
       const date = new Date(bookingDate);
       if (isNaN(date.getTime())) return res.status(400).json({ message: 'Invalid bookingDate' });
       booking.bookingDate = date;
+    }
+
+    if (typeof returnDate !== 'undefined') {
+      if (returnDate === null || returnDate === '') {
+        booking.returnDate = undefined;
+      } else {
+        const rd = new Date(returnDate);
+        if (isNaN(rd.getTime())) return res.status(400).json({ message: 'Invalid returnDate' });
+        const bd = new Date(booking.bookingDate).getTime();
+        if (rd.getTime() < bd) return res.status(400).json({ message: 'returnDate must be on or after bookingDate' });
+        booking.returnDate = rd;
+      }
     }
 
     if (customerName) booking.customerName = customerName;
@@ -108,8 +137,16 @@ exports.update = async (req, res) => {
         if (!available) return res.status(400).json({ message: `Item not available: ${eq.name}` });
         snapItems.push({ equipmentId: eq._id, name: eq.name, pricePerDay: Number(eq.rentalPrice) || 0, qty: it.qty });
       }
-      const sums = computeTotals(snapItems);
+      const sums = computeTotals(snapItems, booking.bookingDate, booking.returnDate);
       booking.items = snapItems;
+      booking.subtotal = sums.subtotal;
+      booking.securityDeposit = sums.securityDeposit;
+      booking.total = sums.total;
+    }
+
+    // If dates changed but items didn't, still recompute totals based on existing items and new dates
+    if (!(Array.isArray(items) && items.length > 0)) {
+      const sums = computeTotals(booking.items || [], booking.bookingDate, booking.returnDate);
       booking.subtotal = sums.subtotal;
       booking.securityDeposit = sums.securityDeposit;
       booking.total = sums.total;
@@ -140,6 +177,30 @@ exports.remove = async (req, res) => {
     return res.json({ message: 'Booking deleted' });
   } catch (e) {
     console.error('Delete booking error:', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// PUT /bookings/:id/cancel - user cancels own booking
+exports.userCancel = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (String(booking.userId) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' });
+
+    // Business rule: allow cancellation anytime until it's cancelled or already cancelled
+    if (booking.status === 'cancelled') return res.status(400).json({ message: 'Booking already cancelled' });
+
+    booking.status = 'cancelled';
+    booking.cancelledAt = new Date();
+    booking.cancelReason = req.body?.reason || '';
+    booking.cancelledByRole = req.user.role;
+    booking.cancelledById = req.user.id;
+    await booking.save();
+    return res.json({ booking });
+  } catch (e) {
+    console.error('User cancel booking error:', e);
     return res.status(500).json({ message: 'Server error' });
   }
 };
