@@ -102,9 +102,9 @@ export default function NotificationsPage() {
 					)}
 				</div>
 
-				{/* Successful payments */}
+				{/* Payments & Refunds */}
 				<div style={{ ...card, marginTop: 12 }}>
-					<h3 style={{ marginTop: 0 }}>Successful Payments</h3>
+					<h3 style={{ marginTop: 0 }}>Payments & Refunds</h3>
 								{loading ? (
 						<div>Loading…</div>
 								) : !Array.isArray(payments) || payments.length === 0 ? (
@@ -121,11 +121,21 @@ export default function NotificationsPage() {
 									</tr>
 								</thead>
 								<tbody>
-														{Array.isArray(payments) && payments.map((p) => (
+									{Array.isArray(payments) && payments.map((p) => (
 										<tr key={p._id || `${p.bookingId}-pay`} style={{ borderBottom: '1px solid #f1f5f9' }}>
 											<td style={{ padding: 8 }}>{p.createdAt ? new Date(p.createdAt).toLocaleString() : '-'}</td>
 											<td style={{ padding: 8 }}><code>{p.bookingId || '-'}</code></td>
-											<td style={{ padding: 8 }}>{p.status}</td>
+											<td style={{ padding: 8 }}>
+												<span style={{
+													background: (p.status === 'paid') ? '#dcfce7' : (p.status === 'partial_refunded') ? '#fef3c7' : (p.status === 'refunded') ? '#fee2e2' : '#e2e8f0',
+													color: (p.status === 'paid') ? '#166534' : (p.status === 'partial_refunded') ? '#92400e' : (p.status === 'refunded') ? '#dc2626' : '#334155',
+													padding: '2px 8px',
+													borderRadius: 9999,
+													fontWeight: 600,
+													fontSize: 12,
+													textTransform: 'capitalize'
+												}}>{(p.status || '').replace(/_/g, ' ')}</span>
+											</td>
 											<td style={{ padding: 8 }}>LKR {Number(p.amount || 0).toFixed(2)}</td>
 										</tr>
 									))}

@@ -7,9 +7,9 @@ const PDFDocument = require('pdfkit');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Helper to compute totals and deposit (10% deposit by default)
+// Helper to compute totals and deposit (30% deposit by default)
 // Uses number of rental days = max(1, ceil((returnDate - bookingDate)/DAY_MS))
-function computeTotals(items, bookingDate, returnDate, depositRate = 0.1) {
+function computeTotals(items, bookingDate, returnDate, depositRate = 0.3) {
   let days = 1;
   if (bookingDate && returnDate) {
     const bd = new Date(bookingDate).getTime();
@@ -198,6 +198,26 @@ exports.userCancel = async (req, res) => {
     booking.cancelledByRole = req.user.role;
     booking.cancelledById = req.user.id;
     await booking.save();
+
+    // Create a refund record for admin processing
+    try {
+      const Refund = require('../Model/refundModel');
+      // Try to locate a payment for this booking
+      const pay = await Payment.findOne({ bookingId: booking._id });
+      const amount = Number(pay?.amount ?? booking.total) || 0;
+      await Refund.create({
+        bookingId: booking._id,
+        userId: booking.userId,
+        paymentId: pay?._id,
+        amount,
+        reason: booking.cancelReason || 'User cancelled booking',
+        status: 'pending',
+      });
+    } catch (e) {
+      console.error('Create refund record error:', e);
+      // do not fail cancellation on refund creation error
+    }
+
     return res.json({ booking });
   } catch (e) {
     console.error('User cancel booking error:', e);

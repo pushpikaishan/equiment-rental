@@ -35,7 +35,7 @@ function Login() {
       localStorage.setItem("userId", res.data.user.id);
 
       // Navigate based on role
-      switch (res.data.role) {
+  switch (res.data.role) {
         case "user":
           navigate("/home");
           break;
@@ -46,7 +46,7 @@ function Login() {
           navigate("/adminDashbooard");
           break;
         case "staff":
-          navigate("/userAccount/profile");
+          navigate("/driver");
           break;
         default:
           navigate("/");

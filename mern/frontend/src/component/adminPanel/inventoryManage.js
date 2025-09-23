@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
 
 function InventoryManagement() {
   const [form, setForm] = useState({
@@ -88,6 +89,149 @@ function InventoryManagement() {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  // Export CSV: include image URL column
+  const exportCSV = () => {
+    if (!items || items.length === 0) {
+      alert('No equipment to export');
+      return;
+    }
+    const header = ['Name', 'Category', 'Description', 'Price', 'Quantity', 'Available', 'Image URL'];
+    const rows = items.map((it) => [
+      cleanCSV(it.name),
+      cleanCSV(it.category),
+      cleanCSV(it.description),
+      String(it.rentalPrice ?? ''),
+      String(it.quantity ?? ''),
+      it.available ? 'Yes' : 'No',
+      it.image ? `${baseUrl}${it.image}` : ''
+    ]);
+
+    const csv = [header, ...rows]
+      .map((r) => r.map(csvEscape).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'inventory.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const csvEscape = (val) => {
+    const s = String(val ?? '');
+    // Escape double quotes by doubling them and wrap field with quotes
+    return '"' + s.replace(/"/g, '""') + '"';
+  };
+
+  const cleanCSV = (val) => (val == null ? '' : String(val).replace(/\r|\n/g, ' ').trim());
+
+  // Export PDF: include photo thumbnails and key fields
+  const exportPDF = async () => {
+    if (!items || items.length === 0) {
+      alert('No equipment to export');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 36; // 0.5 inch
+    let y = margin;
+
+    doc.setFontSize(16);
+    doc.text('Inventory', pageWidth / 2, y, { align: 'center' });
+    y += 18;
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 12;
+
+    const lineHeight = 16;
+    const imgWidth = 120;
+    const imgHeight = 80;
+    const gap = 12;
+
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+
+      // Add new page if needed
+      const blockHeight = imgHeight + gap + lineHeight * 5 + gap; // image + fields + spacing
+      if (y + blockHeight > doc.internal.pageSize.getHeight() - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      // Image (if available)
+      if (it.image) {
+        try {
+          const dataUrl = await toDataURL(`${baseUrl}${it.image}`);
+          doc.addImage(dataUrl, 'JPEG', margin, y, imgWidth, imgHeight, undefined, 'FAST');
+        } catch (e) {
+          // Draw a placeholder rectangle if image fails
+          doc.setDrawColor(200);
+          doc.rect(margin, y, imgWidth, imgHeight);
+          doc.setTextColor(150);
+          doc.setFontSize(10);
+          doc.text('Image unavailable', margin + 8, y + 20);
+          doc.setTextColor(0);
+          doc.setFontSize(12);
+        }
+      } else {
+        doc.setDrawColor(230);
+        doc.rect(margin, y, imgWidth, imgHeight);
+      }
+
+      // Details next to image
+      let x = margin + imgWidth + 16;
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      const details = [
+        `Name: ${it.name || ''}`,
+        `Category: ${it.category || ''}`,
+        `Description: ${truncate(it.description || '', 120)}`,
+        `Price (per day): ${it.rentalPrice ?? ''}`,
+        `Quantity: ${it.quantity ?? ''} | Available: ${it.available ? 'Yes' : 'No'}`,
+      ];
+      details.forEach((line) => {
+        doc.text(line, x, y + 14);
+        y += lineHeight;
+      });
+
+      // Move y past image if image block is taller
+      if (y < margin + imgHeight + 14) y = margin + imgHeight + 14;
+      y += gap;
+      // Divider between items
+      doc.setDrawColor(230);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += gap;
+    }
+
+    doc.save('inventory.pdf');
+  };
+
+  const truncate = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+  const toDataURL = (url) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function () {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(dataURL);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      img.onerror = function (err) { reject(err); };
+      img.src = url + (url.includes('?') ? '&' : '?') + 'cachebust=' + Date.now();
+    });
 
   const startEdit = (item) => {
     setEditing({ ...item });
@@ -202,7 +346,13 @@ function InventoryManagement() {
       </form>
 
       <div style={{ marginTop: 30 }}>
-        <h3 style={{ marginBottom: 10 }}>Equipment List</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <h3 style={{ margin: 0 }}>Equipment List</h3>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={exportPDF} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export PDF</button>
+            <button onClick={exportCSV} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export CSV</button>
+          </div>
+        </div>
         {loading ? (
           <div>Loading...</div>
         ) : (
@@ -249,6 +399,68 @@ function InventoryManagement() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Damaged List Section */}
+      <div style={{ marginTop: 40 }}>
+        <h3 style={{ margin: 0 }}>Damaged List</h3>
+        <p style={{ color: '#64748b', marginTop: 6 }}>Items with reported damage from recollect reports.</p>
+        {(() => {
+          const damagedItems = (items || []).filter(it => Number(it.damagedCount || 0) > 0);
+          if (damagedItems.length === 0) {
+            return <div style={{ padding: 12, color: '#64748b' }}>No damaged items reported.</div>;
+          }
+          return (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f1f5f9' }}>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Image</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Name</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Category</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Damaged Count</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Recent Damages</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {damagedItems.map((it) => (
+                    <tr key={it._id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: 8 }}>
+                        {it.image ? (
+                          <img src={`http://localhost:5000${it.image}`} alt={it.name} style={{ width: 60, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                        ) : (
+                          <div style={{ width: 60, height: 40, background: '#e2e8f0', borderRadius: 6 }} />
+                        )}
+                      </td>
+                      <td style={{ padding: 8 }}>{it.name}</td>
+                      <td style={{ padding: 8 }}>{it.category}</td>
+                      <td style={{ padding: 8 }}>{Number(it.damagedCount || 0)}</td>
+                      <td style={{ padding: 8 }}>
+                        {(it.damageLogs || []).length === 0 ? (
+                          <span style={{ color: '#64748b' }}>No log entries</span>
+                        ) : (
+                          <details>
+                            <summary style={{ cursor: 'pointer', color: '#2563eb' }}>View latest logs</summary>
+                            <div style={{ padding: '6px 0', color: '#475569' }}>
+                              {(it.damageLogs || []).slice().reverse().slice(0,5).map((log, idx) => (
+                                <div key={idx} style={{ borderTop: '1px dashed #e2e8f0', paddingTop: 6, marginTop: 6 }}>
+                                  <div><strong>Date:</strong> {new Date(log.at).toLocaleString()}</div>
+                                  <div><strong>Qty:</strong> {log.qty} | <strong>Condition:</strong> {log.condition}</div>
+                                  {log.note && <div><strong>Note:</strong> {log.note}</div>}
+                                </div>
+                              ))}
+                              {it.damageLogs.length > 5 && <div style={{ marginTop: 6, fontSize: 12, color: '#94a3b8' }}>(showing latest 5)</div>}
+                            </div>
+                          </details>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Edit Modal (simple inline panel) */}

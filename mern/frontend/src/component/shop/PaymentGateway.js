@@ -153,7 +153,7 @@ export default function PaymentGateway() {
                 <div style={{ marginBottom: 8 }}>Customer: {booking.customerName} ({booking.customerEmail})</div>
                 <div style={{ marginBottom: 8 }}>Delivery address: {booking.deliveryAddress}</div>
                 <div style={{ marginTop: 12, fontWeight: 600 }}>Total per day: {currency} {Number(booking.subtotal).toFixed(2)}</div>
-                <div>Security deposit (10%): {currency} {Number(booking.securityDeposit).toFixed(2)}</div>
+                <div>Security deposit (30%): {currency} {Number(booking.securityDeposit).toFixed(2)}</div>
                 <div style={{ marginTop: 12, borderTop: '1px dashed #e5e7eb', paddingTop: 10, fontWeight: 700 }}>Charge amount (Per day + Deposit): {currency} {chargeAmount.toFixed(2)}</div>
               </div>
             ) : (

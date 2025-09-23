@@ -47,6 +47,7 @@ export default function MyBookings() {
     const cutoff = new Date(b.createdAt).getTime() + 24 * 60 * 60 * 1000;
     return Date.now() <= cutoff;
   };
+  const isCancelled = (b) => String(b.status).toLowerCase() === 'cancelled';
 
   const saveEdit = async () => {
     if (!editing) return;
@@ -91,14 +92,14 @@ export default function MyBookings() {
 
   const remove = async (id) => {
     const token = localStorage.getItem('token');
-    if (!window.confirm('Delete this booking?')) return;
+    if (!window.confirm('Cancel this booking?')) return;
     try {
-      await axios.delete(`${baseUrl}/bookings/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.put(`${baseUrl}/bookings/${id}/cancel`, { reason: 'User requested cancellation' }, { headers: { Authorization: `Bearer ${token}` } });
       await fetchBookings();
-      alert('Booking deleted');
+      alert('Booking cancelled');
     } catch (e) {
       const msg = e.response?.data?.message || e.message;
-      alert(`Delete failed: ${msg}`);
+      alert(`Cancel failed: ${msg}`);
     }
   };
 
@@ -151,38 +152,42 @@ export default function MyBookings() {
                 </div>
                 <div style={{ padding: 12, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: 12, color: '#64748b', fontSize: 12 }}>
-                    {!canEdit(b) && <span>Edit locked (within 24h of booking date)</span>}
+                    {isCancelled(b) && <span>Edit locked (cancelled)</span>}
+                    {!isCancelled(b) && !canEdit(b) && <span>Edit locked (within 24h of booking date)</span>}
                     {!canDelete(b) && <span>Delete locked (after 24h from creation)</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
-                      onClick={() => setEditing({
-                        ...b,
-                        bookingDate: b.bookingDate ? new Date(b.bookingDate).toISOString().slice(0, 10) : '',
-                        returnDate: b.returnDate ? new Date(b.returnDate).toISOString().slice(0, 10) : '',
-                        customerName: b.customerName || '',
-                        customerEmail: b.customerEmail || '',
-                        customerPhone: b.customerPhone || '',
-                        deliveryAddress: b.deliveryAddress || '',
-                        notes: b.notes || ''
-                      })}
-                      disabled={!canEdit(b)}
-                      style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6, opacity: canEdit(b) ? 1 : 0.5 }}
+                      onClick={() => {
+                        if (isCancelled(b) || !canEdit(b)) return;
+                        setEditing({
+                          ...b,
+                          bookingDate: b.bookingDate ? new Date(b.bookingDate).toISOString().slice(0, 10) : '',
+                          returnDate: b.returnDate ? new Date(b.returnDate).toISOString().slice(0, 10) : '',
+                          customerName: b.customerName || '',
+                          customerEmail: b.customerEmail || '',
+                          customerPhone: b.customerPhone || '',
+                          deliveryAddress: b.deliveryAddress || '',
+                          notes: b.notes || ''
+                        });
+                      }}
+                      disabled={isCancelled(b) || !canEdit(b)}
+                      style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6, opacity: (isCancelled(b) || !canEdit(b)) ? 0.5 : 1 }}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => remove(b._id)}
-                      disabled={!canDelete(b)}
-                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: 6, opacity: canDelete(b) ? 1 : 0.5 }}
+                      disabled={b.status === 'cancelled'}
+                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: 6, opacity: b.status === 'cancelled' ? 0.5 : 1 }}
                     >
-                      Delete
+                      Cancel Booking
                     </button>
                   </div>
                 </div>
 
                 {/* Inline editor for this booking */}
-                {editing && editing._id === b._id && (
+                {editing && editing._id === b._id && !isCancelled(b) && (
                   <div style={{ margin: '0 12px 12px', border: '1px solid #cbd5e1', borderRadius: 8, padding: 12, background: 'white' }}>
                     <h3>Edit Booking</h3>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>

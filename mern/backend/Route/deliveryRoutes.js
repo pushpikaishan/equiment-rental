@@ -7,6 +7,8 @@ router.get('/admin', auth, ctrl.adminList);
 router.get('/admin/drivers', auth, ctrl.listDrivers);
 router.post('/admin/:bookingId/assign', auth, ctrl.assign);
 router.put('/admin/:bookingId/complete', auth, ctrl.complete);
+router.post('/admin/:bookingId/recollect/assign', auth, ctrl.assignRecollect);
+router.put('/admin/:bookingId/recollect/returned', auth, ctrl.markRecollectReturned);
 router.delete('/admin', auth, ctrl.purgeAll);
 // User: list my deliveries
 router.get('/user/my', auth, ctrl.userList);
@@ -28,5 +30,9 @@ router.get('/driver/my', auth, async (req, res) => {
 
 // Staff can update their own assigned delivery status
 router.put('/driver/:bookingId/status', auth, ctrl.updateByDriver);
+// Staff recollect task: list and update
+router.get('/driver/recollect/my', auth, ctrl.driverRecollectList);
+router.put('/driver/:bookingId/recollect/status', auth, ctrl.updateRecollectByDriver);
+router.post('/driver/:bookingId/recollect/report', auth, ctrl.submitRecollectReport);
 
 module.exports = router;
