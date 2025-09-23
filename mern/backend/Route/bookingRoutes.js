@@ -15,6 +15,8 @@ router.get('/admin/export/pdf', auth, ctrl.exportPDF);
 router.post('/', auth, ctrl.create);
 // Get my bookings
 router.get('/my', auth, ctrl.getMine);
+// User cancel own booking
+router.put('/:id/cancel', auth, ctrl.userCancel);
 // Update my booking before 24h cutoff
 router.put('/:id', auth, ctrl.update);
 // Delete my booking before 24h cutoff

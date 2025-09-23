@@ -16,7 +16,8 @@ export default function BookingManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-  const params = new URLSearchParams({ page, limit: 10 });
+  // Show only confirmed bookings as requested
+  const params = new URLSearchParams({ page, limit: 10, status: 'confirmed' });
   const res = await axios.get(`${baseUrl}/bookings/admin?${params.toString()}`, { headers });
       setItems(res.data.items || []);
       setTotal(res.data.total || 0);
@@ -98,7 +99,7 @@ export default function BookingManagement() {
 
       {/* Toolbar with export actions (filters removed) */}
       <div style={{ ...card, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ fontWeight: 600, color: '#334155' }}>All Bookings</div>
+        <div style={{ fontWeight: 600, color: '#334155' }}>Confirmed Bookings</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button onClick={exportCSV} style={btn('#16a34a')}>Export CSV</button>
           <button onClick={exportPDF} style={btn('#f59e0b')}>Export PDF</button>

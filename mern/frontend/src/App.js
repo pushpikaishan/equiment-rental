@@ -43,6 +43,7 @@ import CartPage from "./component/shop/CartPage";
 import MyBookings from "./component/shop/MyBookings";
 import SupportPage from "./component/shop/SupportPage";
 import PaymentGateway from "./component/shop/PaymentGateway";
+import NotificationsPage from "./component/userAccount/NotificationsPage";
 
 function App() {
   return (
@@ -84,6 +85,7 @@ function App() {
           <Route path="/bookings" element={<MyBookings />} />
           <Route path="/support" element={<SupportPage />} />
           <Route path="/payment" element={<PaymentGateway />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
 
           <Route path="/RegCusOrSupButton" element={<RegCusOrSupButton />} />
          

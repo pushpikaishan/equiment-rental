@@ -12,6 +12,19 @@ function ensureAdmin(req, res) {
   return true;
 }
 
+// List my successful payments (user-facing)
+exports.my = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+    const q = { userId: req.user.id, status: { $in: ['paid', 'partial_refunded'] } };
+    const items = await Payment.find(q).sort({ createdAt: -1 });
+    res.json({ items });
+  } catch (e) {
+    console.error('My payments error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 exports.list = async (req, res) => {
   try {
     if (!ensureAdmin(req, res)) return;

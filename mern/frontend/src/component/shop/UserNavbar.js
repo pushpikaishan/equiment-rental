@@ -93,6 +93,7 @@ export default function UserNavbar() {
           <Link to="/bookings" style={link}>My Bookings</Link>
         </div>
         <div style={right}>
+          <Link to="/notifications" style={link}>Notifications</Link>
           <Link to="/cart" style={link}>Booking Cart ({count})</Link>
           <Link to="/support" style={link}>Support</Link>
           <Link to="/userAccount/profile" style={link}>Profile</Link>

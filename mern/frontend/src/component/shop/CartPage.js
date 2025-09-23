@@ -8,6 +8,7 @@ import SiteFooter from '../common/SiteFooter';
 export default function CartPage() {
   const [cart, setCart] = useState([]);
   const [bookingDate, setBookingDate] = useState('');
+  const [returnDate, setReturnDate] = useState('');
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -49,6 +50,10 @@ export default function CartPage() {
       alert('Please select a booking date');
       return;
     }
+    if (returnDate && new Date(returnDate).getTime() < new Date(bookingDate).getTime()) {
+      alert('Return date must be on or after the booking date');
+      return;
+    }
     const items = cart.map(i => ({ equipmentId: i._id, qty: i.qty }));
     if (!name || !email || !phone || !deliveryAddress) {
       alert('Please fill your name, email, phone, and delivery address');
@@ -56,7 +61,7 @@ export default function CartPage() {
     }
     setCreating(true);
     try {
-      const res = await axios.post(`${baseUrl}/bookings`, { bookingDate, items, customerName: name, customerEmail: email, customerPhone: phone, deliveryAddress, notes }, {
+      const res = await axios.post(`${baseUrl}/bookings`, { bookingDate, returnDate: returnDate || undefined, items, customerName: name, customerEmail: email, customerPhone: phone, deliveryAddress, notes }, {
         headers: { Authorization: `Bearer ${token}` },
       });
       // Navigate to dummy payment gateway with booking data and deposit amount
@@ -137,6 +142,17 @@ export default function CartPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Booking date</label>
                 <input id="bookingDate" type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)} style={{ width: '100%', padding: 8, border: '1px solid #cbd5e1', borderRadius: 6 }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
+                <input
+                  id="returnDate"
+                  type="date"
+                  value={returnDate}
+                  min={bookingDate || undefined}
+                  onChange={(e) => setReturnDate(e.target.value)}
+                  style={{ width: '100%', padding: 8, border: '1px solid #cbd5e1', borderRadius: 6 }}
+                />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Notes (optional)</label>
