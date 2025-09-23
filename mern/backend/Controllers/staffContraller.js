@@ -44,8 +44,14 @@ const getStaffById = async (req, res) => {
 const updateStaff = async (req, res) => {
   const { name, phoneno, nicNo, email, password } = req.body;
   try {
-    let staff = await Staff.findByIdAndUpdate(req.params.id, { name, phoneno, nicNo, email, password });
-    staff = await staff.save();
+    const staff = await Staff.findByIdAndUpdate(
+      req.params.id,
+      { name, phoneno, nicNo, email, password },
+      { new: true }
+    );
+    if (!staff) {
+      return res.status(404).json({ message: "Staff not found" });
+    }
     return res.status(200).json({ staff });
   } catch (err) {
     console.log(err);

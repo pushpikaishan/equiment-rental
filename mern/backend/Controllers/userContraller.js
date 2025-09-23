@@ -64,19 +64,20 @@ const updateUser = async (req, res, next) =>{
     const id = req.params.id;
     const {name,email,nic,phoneno,district,password} = req.body;
 
-    let user;
-
     try{
-        user = await User.findByIdAndUpdate(id,{name:name,email:email,nic:nic,phoneno:phoneno,district:district,password:password});
-        user = await user.save();
+        const user = await User.findByIdAndUpdate(
+          id,
+          { name, email, nic, phoneno, district, password },
+          { new: true }
+        );
+        if(!user){
+            return res.status(404).json({massage:"unable to Update"});
+        }
+        return res.status(200).json({user});
     }catch (err){
         console.log(err);
+        return res.status(400).json({massage:"unable to Update"});
     }
-
-    if(!user){
-         return res.status(404).json({massage:"unable to Update"});
-    }
-    return res.status(200).json({user});
 };
 
 
