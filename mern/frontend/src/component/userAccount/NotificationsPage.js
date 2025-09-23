@@ -11,6 +11,27 @@ export default function NotificationsPage() {
 	const [deliveries, setDeliveries] = useState([]);
 	const [payments, setPayments] = useState([]);
 
+	const downloadBlob = (blob, fileName) => {
+		const url = window.URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = fileName;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		window.URL.revokeObjectURL(url);
+	};
+
+	const downloadRefundReceipt = async (payment) => {
+		try {
+			const res = await axios.get(`${baseUrl}/payments/${payment._id}/refund-receipt`, { headers, responseType: 'blob' });
+			const name = `refund-receipt-${payment.orderId || payment.bookingId || payment._id}.pdf`;
+			downloadBlob(new Blob([res.data], { type: 'application/pdf' }), name);
+		} catch (e) {
+			alert('Failed to download refund receipt');
+		}
+	};
+
 	const load = async () => {
 		setLoading(true);
 		try {
@@ -118,6 +139,7 @@ export default function NotificationsPage() {
 										<th style={{ padding: 8 }}>Order ID</th>
 										<th style={{ padding: 8 }}>Status</th>
 										<th style={{ padding: 8 }}>Amount</th>
+										<th style={{ padding: 8 }}>Download</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -137,6 +159,16 @@ export default function NotificationsPage() {
 												}}>{(p.status || '').replace(/_/g, ' ')}</span>
 											</td>
 											<td style={{ padding: 8 }}>LKR {Number(p.amount || 0).toFixed(2)}</td>
+											<td style={{ padding: 8 }}>
+												<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+													{p.invoicePath && (
+														<a href={`${baseUrl}${p.invoicePath}`} target="_blank" rel="noreferrer" style={{ ...btn('#64748b'), textDecoration: 'none', display: 'inline-block' }}>Invoice</a>
+													)}
+													{(p.status === 'refunded' || p.status === 'partial_refunded') && p._id && (
+														<button onClick={() => downloadRefundReceipt(p)} style={btn('#0ea5e9')}>Refund Receipt</button>
+													)}
+												</div>
+											</td>
 										</tr>
 									))}
 								</tbody>

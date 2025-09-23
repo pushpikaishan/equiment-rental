@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import UserNavbar from "../shop/UserNavbar";
@@ -8,37 +8,33 @@ import SiteFooter from "../common/SiteFooter";
 function UserProfile() {
   const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
+  const baseUrl = useMemo(() => process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000', []);
+
+  const fetchProfile = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/", { replace: true });
+      return;
+    }
+    try {
+      const res = await axios.get(`${baseUrl}/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setProfile(res.data);
+    } catch (err) {
+      console.error("Error fetching profile:", err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        localStorage.removeItem("userId");
+        navigate("/", { replace: true });
+      }
+    }
+  }, [baseUrl, navigate]);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/", { replace: true });
-        return;
-      }
-
-      try {
-        const res = await axios.get("http://localhost:5000/auth/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setProfile(res.data);
-      } catch (err) {
-        console.error(
-          "Error fetching profile:",
-          err.response?.data || err.message
-        );
-        if (err.response?.status === 401) {
-          // Clear stale/invalid token and redirect to login
-          localStorage.removeItem("token");
-          localStorage.removeItem("role");
-          localStorage.removeItem("userId");
-          navigate("/", { replace: true });
-        }
-      }
-    };
-
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   //profile image upload handler handleFileChange
  const handleFileChange = async (e) => {
@@ -52,16 +48,16 @@ function UserProfile() {
     let uploadUrl = "";
     switch (profile.role) {
       case "admin":
-        uploadUrl = `http://localhost:5000/admins/${profile._id}/upload`;
+        uploadUrl = `${baseUrl}/admins/${profile._id}/upload`;
         break;
       case "staff":
-        uploadUrl = `http://localhost:5000/staff/${profile._id}/upload`;
+        uploadUrl = `${baseUrl}/staff/${profile._id}/upload`;
         break;
       case "supplier":
-        uploadUrl = `http://localhost:5000/suppliers/${profile._id}/upload`;
+        uploadUrl = `${baseUrl}/suppliers/${profile._id}/upload`;
         break;
       case "user":
-        uploadUrl = `http://localhost:5000/users/${profile._id}/upload`;
+        uploadUrl = `${baseUrl}/users/${profile._id}/upload`;
         break;
       default:
         throw new Error("Unknown role");
@@ -398,7 +394,9 @@ function UserProfile() {
 
   return (
     <div>
-      <UserNavbar />
+      {((profile && profile.role !== 'staff') || (!profile && (localStorage.getItem('role') !== 'staff'))) && (
+        <UserNavbar />
+      )}
       <div style={containerStyle}>
       <style>
         {`
@@ -444,7 +442,7 @@ function UserProfile() {
             <img
               src={
                 profile.profileImage
-                  ? `http://localhost:5000${profile.profileImage}`
+                  ? `${baseUrl}${profile.profileImage}`
                   : getAvatarUrl(profile.name, profile.role)
               }
               alt="Profile"

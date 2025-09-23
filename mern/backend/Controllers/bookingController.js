@@ -4,6 +4,9 @@ const { generateInvoicePDF } = require('./invoiceHelper');
 const Payment = require('../Model/paymentModel');
 const PaymentAudit = require('../Model/paymentAuditModel');
 const PDFDocument = require('pdfkit');
+const path = require('path');
+const nodemailer = require('nodemailer');
+const https = require('https');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -226,7 +229,7 @@ exports.userCancel = async (req, res) => {
 };
 
 // (removed) confirmPayment handler
-// Confirm booking payment: mark confirmed and generate invoice PDF (no notifications)
+// Confirm booking payment: mark confirmed and generate invoice PDF, then notify via email (and optional SMS webhook)
 exports.confirm = async (req, res) => {
   try {
     const { id } = req.params;
@@ -237,8 +240,8 @@ exports.confirm = async (req, res) => {
     booking.status = 'confirmed';
     await booking.save();
 
-    // Generate invoice PDF (still created on server, but no notification is sent)
-    const invoicePath = await generateInvoicePDF(booking);
+  // Generate invoice PDF
+  const invoicePath = await generateInvoicePDF(booking);
 
     // Create or update a Payment record for admin management
     let payment = await Payment.findOne({ bookingId: booking._id });
@@ -273,6 +276,82 @@ exports.confirm = async (req, res) => {
       await payment.save();
       await PaymentAudit.create({ paymentId: payment._id, action: 'updated', actorId: booking.userId, actorRole: booking.userRole, note: 'Payment updated on confirm', amount: payment.amount });
     }
+
+    // Fire-and-forget notifications: email with invoice attachment + optional SMS webhook
+    (async () => {
+      try {
+        const mailFrom = process.env.MAIL_FROM || 'no-reply@example.com';
+        // Build transporter: prefer SMTP_URL, fallback to host/port/user/pass
+        let transporter;
+        if (process.env.SMTP_URL) {
+          transporter = nodemailer.createTransport(process.env.SMTP_URL);
+        } else if (process.env.SMTP_HOST) {
+          transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT) || 587,
+            secure: !!(process.env.SMTP_SECURE === 'true' || Number(process.env.SMTP_PORT) === 465),
+            auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+          });
+        }
+        if (transporter && booking.customerEmail) {
+          const subject = 'Payment Successful - Invoice Attached';
+          const totalLkr = (Number(booking.total) || 0).toFixed(2);
+          const html = `
+            <div style="font-family:Segoe UI,Tahoma,Arial,sans-serif;color:#0f172a">
+              <h2>Payment Successful</h2>
+              <p>Hi ${booking.customerName || 'Customer'},</p>
+              <p>Your payment for booking <strong>${booking._id}</strong> was successful.</p>
+              <ul>
+                <li>Total charged: <strong>LKR ${totalLkr}</strong></li>
+                <li>Booking date: ${new Date(booking.bookingDate).toLocaleDateString()}</li>
+                ${booking.returnDate ? `<li>Return date: ${new Date(booking.returnDate).toLocaleDateString()}</li>` : ''}
+                <li>Delivery address: ${booking.deliveryAddress || '-'}</li>
+              </ul>
+              <p>Your invoice is attached as a PDF and is also available in your account.</p>
+              <p>Thank you for choosing us.</p>
+            </div>`;
+          try {
+            await transporter.sendMail({
+              from: mailFrom,
+              to: booking.customerEmail,
+              subject,
+              html,
+              attachments: invoicePath ? [{ filename: `invoice-${booking._id}.pdf`, path: invoicePath.startsWith('/') ? path.join(process.cwd(), invoicePath) : invoicePath }] : [],
+            });
+          } catch (mailErr) {
+            console.error('Email send error:', mailErr?.message || mailErr);
+          }
+        }
+
+        // Optional SMS webhook
+        if (process.env.SMS_WEBHOOK_URL && booking.customerPhone) {
+          const payload = JSON.stringify({
+            to: booking.customerPhone,
+            message: `Payment successful for booking ${booking._id}. Total LKR ${(Number(booking.total)||0).toFixed(2)}. Delivery: ${booking.deliveryAddress || '-'}.`,
+          });
+          try {
+            const url = new URL(process.env.SMS_WEBHOOK_URL);
+            const opts = {
+              method: 'POST',
+              hostname: url.hostname,
+              path: url.pathname + (url.search || ''),
+              port: url.port || (url.protocol === 'https:' ? 443 : 80),
+              headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+            };
+            const reqHttps = (url.protocol === 'https:' ? https : require('http')).request(opts, (resp) => {
+              resp.on('data', () => {});
+            });
+            reqHttps.on('error', (err) => console.error('SMS webhook error:', err?.message || err));
+            reqHttps.write(payload);
+            reqHttps.end();
+          } catch (smsErr) {
+            console.error('SMS webhook init error:', smsErr?.message || smsErr);
+          }
+        }
+      } catch (notifyErr) {
+        console.error('Post-confirm notifications error:', notifyErr?.message || notifyErr);
+      }
+    })();
 
     return res.json({ booking, invoicePath, payment });
   } catch (e) {

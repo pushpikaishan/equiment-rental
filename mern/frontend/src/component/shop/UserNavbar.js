@@ -57,12 +57,15 @@ export default function UserNavbar() {
   const left = { display: 'flex', alignItems: 'center', gap: 16 };
   const right = { display: 'flex', alignItems: 'center', gap: 12 };
   const link = { textDecoration: 'none', color: '#0f172a', padding: '6px 10px', borderRadius: 8 };
+  const logoStyle = { display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' };
 
   return (
     <div style={container}>
       <div style={inner}>
         <div style={left}>
-          <Link to="/home" style={{ ...link, fontWeight: 700 }}>Home</Link>
+          <Link to="/home" style={logoStyle} aria-label="EvoqRentals Home">
+            <img src="/logo-evoqrentals.svg" alt="EvoqRentals" style={{ height: 28 }} />
+          </Link>
           <div style={{ position: 'relative' }} ref={menuRef}>
             <button
               onClick={() => setOpen((v) => !v)}

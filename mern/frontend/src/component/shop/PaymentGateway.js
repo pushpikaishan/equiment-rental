@@ -97,8 +97,27 @@ export default function PaymentGateway() {
     try {
       // Simulate a successful payment; then inform backend to mark booking as confirmed
       const token = localStorage.getItem('token');
+      let invoicePath;
       if (token) {
-        await axios.post(`${baseUrl}/bookings/${booking._id}/confirm`, {}, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await axios.post(`${baseUrl}/bookings/${booking._id}/confirm`, {}, { headers: { Authorization: `Bearer ${token}` } });
+        invoicePath = res?.data?.invoicePath;
+      }
+      // Attempt auto-download of invoice if available
+      if (invoicePath) {
+        try {
+          const url = invoicePath.startsWith('http') ? invoicePath : `${baseUrl}${invoicePath}`;
+          const resp = await axios.get(url, { responseType: 'blob' });
+          const blobUrl = window.URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' }));
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `invoice-${booking._id}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(blobUrl);
+        } catch (dlErr) {
+          console.warn('Invoice auto-download failed:', dlErr);
+        }
       }
       alert('Payment successful! Invoice generated for your booking.');
       clearCart();
@@ -118,10 +137,12 @@ export default function PaymentGateway() {
   };
 
   const chargeAmount = useMemo(() => {
-    const deposit = Number(amount ?? booking?.securityDeposit ?? 0);
-    const perDay = Number(booking?.subtotal ?? 0);
-    return deposit + perDay;
-  }, [amount, booking]);
+    if (!booking) return 0;
+    const subtotal = Number(booking?.subtotal ?? 0);
+    const deposit = Number(booking?.securityDeposit ?? 0);
+    const total = Number(booking?.total ?? subtotal + deposit);
+    return total;
+  }, [booking]);
 
   // Card brand detection helper
   function detectBrand(digits) {
@@ -152,9 +173,9 @@ export default function PaymentGateway() {
                 <div style={{ marginBottom: 8 }}>Booking date: {new Date(booking.bookingDate).toLocaleDateString()}</div>
                 <div style={{ marginBottom: 8 }}>Customer: {booking.customerName} ({booking.customerEmail})</div>
                 <div style={{ marginBottom: 8 }}>Delivery address: {booking.deliveryAddress}</div>
-                <div style={{ marginTop: 12, fontWeight: 600 }}>Total per day: {currency} {Number(booking.subtotal).toFixed(2)}</div>
+                <div style={{ marginTop: 12, fontWeight: 600 }}>Total: {currency} {Number(booking.subtotal).toFixed(2)}</div>
                 <div>Security deposit (30%): {currency} {Number(booking.securityDeposit).toFixed(2)}</div>
-                <div style={{ marginTop: 12, borderTop: '1px dashed #e5e7eb', paddingTop: 10, fontWeight: 700 }}>Charge amount (Per day + Deposit): {currency} {chargeAmount.toFixed(2)}</div>
+                <div style={{ marginTop: 12, borderTop: '1px dashed #e5e7eb', paddingTop: 10, fontWeight: 700 }}>Charge amount (Total + Security Deposit): {currency} {chargeAmount.toFixed(2)}</div>
               </div>
             ) : (
               <div style={{ color: '#dc2626' }}>No booking data found. Return to cart.</div>

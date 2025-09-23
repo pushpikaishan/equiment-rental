@@ -349,3 +349,81 @@ exports.exportPDF = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// GET /payments/:id/refund-receipt
+// Stream a one-off PDF receipt for the latest refund (or partial refund) on a payment
+exports.exportRefundReceipt = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+    const { id } = req.params;
+    const pay = await Payment.findById(id).lean();
+    if (!pay) return res.status(404).json({ message: 'Payment not found' });
+
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'staff';
+    const isOwner = String(pay.userId || '') === String(req.user.id || '');
+    if (!isAdmin && !isOwner) return res.status(403).json({ message: 'Forbidden' });
+
+    const audit = await PaymentAudit
+      .findOne({ paymentId: id, action: { $in: ['refund', 'partial_refund'] } })
+      .sort({ createdAt: -1 })
+      .lean();
+    if (!audit) return res.status(404).json({ message: 'No refund found for this payment' });
+
+    const doc = new PDFDocument({ margin: 50 });
+    const fileName = `refund-receipt-${pay.orderId || pay.bookingId || pay._id}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    doc.pipe(res);
+
+    // Header
+    doc.font('Helvetica-Bold').fontSize(18).fillColor('#0f172a');
+    doc.text('Refund Receipt', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fontSize(10).fillColor('#334155');
+    doc.text(`Receipt #: ${audit._id}`);
+    doc.text(`Date: ${new Date(audit.createdAt).toLocaleString()}`);
+    doc.moveDown(0.5);
+
+    // Customer & Payment details
+    const currency = pay.currency || 'LKR';
+    const refundedAmount = Number(audit.amount || pay.amount || 0).toFixed(2);
+    const originalAmount = Number(pay.amount || 0).toFixed(2);
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#0f172a');
+    doc.text('Customer', { continued: false });
+    doc.font('Helvetica').fontSize(10).fillColor('#0f172a');
+    doc.text(`Name: ${pay.customerName || '-'}`);
+    doc.text(`Email: ${pay.customerEmail || '-'}`);
+    doc.moveDown(0.5);
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#0f172a');
+    doc.text('Payment');
+    doc.font('Helvetica').fontSize(10).fillColor('#0f172a');
+    doc.text(`Payment ID: ${pay._id}`);
+    doc.text(`Order ID: ${pay.orderId || pay.bookingId || '-'}`);
+    doc.text(`Method: ${pay.method || pay.gateway || '-'}`);
+    doc.text(`Original Amount: ${currency} ${originalAmount}`);
+    doc.moveDown(0.5);
+
+    // Refund summary
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#0f172a');
+    doc.text('Refund Summary');
+    doc.font('Helvetica').fontSize(11).fillColor('#16a34a');
+    doc.text(`Refunded Amount: ${currency} ${refundedAmount}`);
+    doc.font('Helvetica').fontSize(10).fillColor('#0f172a');
+    doc.text(`Status: ${(pay.status || '').replace(/_/g, ' ')}`);
+    if (audit.note) {
+      doc.moveDown(0.25);
+      doc.font('Helvetica-Oblique').fillColor('#334155');
+      doc.text(`Note: ${audit.note}`);
+      doc.font('Helvetica').fillColor('#0f172a');
+    }
+
+    doc.moveDown(1);
+    doc.fontSize(9).fillColor('#64748b');
+    doc.text('If you have any questions about this refund, please contact support.', { align: 'left' });
+
+    doc.end();
+  } catch (e) {
+    console.error('Payments exportRefundReceipt error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

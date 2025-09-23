@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export default function DriverDashboard() {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -7,8 +8,8 @@ export default function DriverDashboard() {
   const userId = localStorage.getItem('userId');
   const role = localStorage.getItem('role');
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const navigate = useNavigate();
 
-  const [profile, setProfile] = useState(null);
   const [deliveries, setDeliveries] = useState([]);
   const [recollects, setRecollects] = useState([]);
   const [reportFor, setReportFor] = useState(null); // bookingId
@@ -48,16 +49,6 @@ export default function DriverDashboard() {
     return lateDays * (totalPerDay * 0.2);
   }, [reportBooking, reportReturnDate]);
   const [loading, setLoading] = useState(false);
-
-  const fetchProfile = async () => {
-    try {
-      if (!userId) return;
-      const res = await axios.get(`${baseUrl}/users/${userId}`, { headers });
-      setProfile(res.data);
-    } catch (e) {
-      // ignore
-    }
-  };
 
   const fetchDeliveries = async () => {
     setLoading(true);
@@ -105,7 +96,7 @@ export default function DriverDashboard() {
     }
   };
 
-  useEffect(() => { fetchProfile(); fetchDeliveries(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { fetchDeliveries(); /* eslint-disable-next-line */ }, []);
 
   const updateStatus = async (bookingId, status) => {
     try {
@@ -175,22 +166,13 @@ export default function DriverDashboard() {
     <div style={{ maxWidth: 1000, margin: '16px auto', padding: '0 12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>Driver Dashboard</h2>
-        <button onClick={logout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Log out</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => navigate('/userAccount/profile')} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Profile</button>
+          <button onClick={logout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Log out</button>
+        </div>
       </div>
 
-      <Card style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Profile</h3>
-        {profile ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 12 }}>
-            <div><strong>Name:</strong> {profile.name}</div>
-            <div><strong>Email:</strong> {profile.email}</div>
-            <div><strong>Phone:</strong> {profile.phoneno || '-'}</div>
-            <div><strong>Role:</strong> {profile.role}</div>
-          </div>
-        ) : (
-          <div>Loading profile…</div>
-        )}
-      </Card>
+      {/* Profile section removed as requested; use the Staff Profile button in the header */}
 
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
