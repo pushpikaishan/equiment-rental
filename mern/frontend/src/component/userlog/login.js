@@ -158,129 +158,33 @@ function Login() {
   };
 
   return (
-    <div style={containerStyle}>
-      <style>
-        {`
-          @keyframes slideIn {
-            from {
-              opacity: 0;
-              transform: translateY(30px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}
-      </style>
-
-      <div style={cardStyle}>
-        <div style={headerStyle}>
-          <div style={iconStyle}>👤</div>
-          <h2 style={titleStyle}>Welcome Back</h2>
-          <p style={subtitleStyle}>Sign in to your account</p>
+    <div className="page-center">
+      <style>{`@keyframes slideIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <div className="card animate-slide-in" style={{ maxWidth: 420, width: "100%", overflow: "hidden" }}>
+        <div className="card-header brand" style={{ textAlign: "center" }}>
+          <div style={{ width: 60, height: 60, margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "999px", background: "rgba(255,255,255,.2)", fontSize: 24 }}>👤</div>
+          <h2 className="section-title" style={{ color: "#fff", marginBottom: 6 }}>Welcome Back</h2>
+          <p className="muted" style={{ color: "#fff", opacity: .9, margin: 0 }}>Sign in to your account</p>
         </div>
 
-        <div style={formStyle}>
-          <div style={inputGroupStyle}>
-            <input
-              style={inputStyle}
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#667eea";
-                e.target.style.background = "white";
-                e.target.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
-                e.target.style.transform = "translateY(-2px)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#e1e5e9";
-                e.target.style.background = "#f8f9fa";
-                e.target.style.boxShadow = "none";
-                e.target.style.transform = "translateY(0)";
-              }}
-            />
+        <div className="card-body">
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <input className="input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
 
-          <div style={inputGroupStyle}>
-            <input
-              style={inputStyle}
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#667eea";
-                e.target.style.background = "white";
-                e.target.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
-                e.target.style.transform = "translateY(-2px)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#e1e5e9";
-                e.target.style.background = "#f8f9fa";
-                e.target.style.boxShadow = "none";
-                e.target.style.transform = "translateY(0)";
-              }}
-            />
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
 
-          <button
-            style={buttonStyle}
-            onClick={handleLogin}
-            onMouseOver={(e) => {
-              e.target.style.transform = "translateY(-3px)";
-              e.target.style.boxShadow = "0 15px 35px rgba(102, 126, 234, 0.4)";
-            }}
-            onMouseOut={(e) => {
-              e.target.style.transform = "translateY(0)";
-              e.target.style.boxShadow = "none";
-            }}
-            onMouseDown={(e) => {
-              e.target.style.transform = "translateY(-1px)";
-            }}
-            onMouseUp={(e) => {
-              e.target.style.transform = "translateY(-3px)";
-            }}
-          >
+          <button className="btn btn-primary" style={{ width: "100%" }} onClick={handleLogin}>
             Login
           </button>
 
-          <div style={linkContainerStyle}>
-            <a 
-              href="/forgot-password" 
-              style={linkStyle}
-              onMouseOver={(e) => {
-                e.target.style.color = "#764ba2";
-                e.target.style.textDecoration = "underline";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.color = "#667eea";
-                e.target.style.textDecoration = "none";
-              }}
-            >
-              Forgot Password?
-            </a>
-            <a 
-              href="/RegCusOrSupButton" 
-              style={linkStyle}
-              onMouseOver={(e) => {
-                e.target.style.color = "#764ba2";
-                e.target.style.textDecoration = "underline";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.color = "#667eea";
-                e.target.style.textDecoration = "none";
-              }}
-            >
-              Create Account
-            </a>
+          <div className="actions" style={{ justifyContent: "space-between", marginTop: 16, fontSize: 14 }}>
+            <a className="link" href="/forgot-password">Forgot Password?</a>
+            <a className="link" href="/RegCusOrSupButton">Create Account</a>
           </div>
-        
         </div>
-
-        
-
       </div>
     </div>
   );
