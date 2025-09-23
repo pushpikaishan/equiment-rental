@@ -105,7 +105,10 @@ function AdminDashboard() {
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
     textAlign: 'center',
     cursor: 'pointer',
-    transition: 'all 0.3s ease'
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center'
   };
 
   const profileImageStyle = {
@@ -114,7 +117,10 @@ function AdminDashboard() {
     borderRadius: '50%',
     border: '3px solid rgba(255, 255, 255, 0.2)',
     transition: 'all 0.3s ease',
-    marginBottom: sidebarCollapsed ? '0' : '12px'
+    marginBottom: sidebarCollapsed ? '0' : '12px',
+    display: 'block',
+    marginLeft: 'auto',
+    marginRight: 'auto'
   };
 
   const profileNameStyle = {
@@ -157,8 +163,30 @@ function AdminDashboard() {
       {/* Sidebar */}
       <div style={sidebarStyle}>
         <div style={sidebarHeaderStyle}>
-          <div style={logoStyle}>
-            {sidebarCollapsed ? 'A' : 'Admin Panel'}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              cursor: 'pointer'
+            }}
+            onClick={() => setActiveSection('dashboard')}
+            title="EvoqRentals Admin"
+          >
+            <img
+              src="/logo-evoqrentals-dark.svg"
+              alt="EvoqRentals"
+              style={{
+                height: sidebarCollapsed ? '28px' : '40px',
+                width: 'auto',
+                filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.2))'
+              }}
+            />
+            {!sidebarCollapsed && (
+              <span style={{ ...logoStyle, color: '#93c5fd', fontSize: '18px', marginTop: '8px' }}>
+                Admin Panel
+              </span>
+            )}
           </div>
         </div>
 
