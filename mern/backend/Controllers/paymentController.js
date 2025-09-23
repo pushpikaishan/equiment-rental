@@ -12,11 +12,11 @@ function ensureAdmin(req, res) {
   return true;
 }
 
-// List my successful payments (user-facing)
+// List my successful payments and refunds (user-facing)
 exports.my = async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const q = { userId: req.user.id, status: { $in: ['paid', 'partial_refunded'] } };
+    const q = { userId: req.user.id, status: { $in: ['paid', 'partial_refunded', 'refunded'] } };
     const items = await Payment.find(q).sort({ createdAt: -1 });
     res.json({ items });
   } catch (e) {
@@ -50,7 +50,33 @@ exports.list = async (req, res) => {
       Payment.find(q).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
       Payment.countDocuments(q)
     ]);
-    res.json({ items, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
+
+    // attach booking details for richer management view
+    const bookingIds = items.map(p => p.bookingId).filter(Boolean);
+    let bookingMap = new Map();
+    if (bookingIds.length) {
+      const bookings = await Booking.find({ _id: { $in: bookingIds } });
+      bookingMap = new Map(bookings.map(b => [String(b._id), b]));
+    }
+    const itemsWithBooking = items.map(p => {
+      const b = bookingMap.get(String(p.bookingId));
+      return Object.assign(p.toObject(), {
+        booking: b ? {
+          _id: b._id,
+          status: b.status,
+          bookingDate: b.bookingDate,
+          createdAt: b.createdAt,
+          deliveryAddress: b.deliveryAddress || '',
+          disputed: !!b.disputed,
+          customerName: b.customerName,
+          customerEmail: b.customerEmail,
+          customerPhone: b.customerPhone,
+          total: b.total,
+        } : null
+      });
+    });
+
+    res.json({ items: itemsWithBooking, total, page: Number(page), pages: Math.ceil(total / Number(limit)) });
   } catch (e) {
     console.error('Payments list error:', e);
     res.status(500).json({ message: 'Server error' });
@@ -164,15 +190,124 @@ exports.exportPDF = async (req, res) => {
   try {
     if (!ensureAdmin(req, res)) return;
     const items = await Payment.find({}).sort({ createdAt: -1 }).lean();
-    const doc = new PDFDocument({ margin: 30, size: 'A4' });
+
+    // Create PDF
+    const doc = new PDFDocument({ margin: 36, size: 'A4' }); // 0.5in margins
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="payments-${Date.now()}.pdf"`);
     doc.pipe(res);
-    doc.fontSize(18).text('Payments Report', { align: 'center' });
-    doc.moveDown();
-    items.forEach((it) => {
-      doc.fontSize(10).text(`${it.createdAt} | ${it.orderId || it._id} | ${it.customerName || ''} | ${it.method} | ${it.status} | ${it.currency} ${it.amount}`);
+
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const margin = doc.page.margins.left; // assume left/right equal
+    const contentWidth = pageWidth - margin * 2;
+
+    // Title
+    doc.font('Helvetica-Bold').fontSize(18).fillColor('#0f172a');
+    doc.text('Payments Report', { align: 'center' });
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fontSize(10).fillColor('#334155');
+    const generatedAt = new Date().toLocaleString();
+    doc.text(`Generated at: ${generatedAt}`, { align: 'center' });
+    doc.moveDown(1);
+
+    // Table header styling
+    const headers = ['Created', 'Order', 'Customer', 'Method', 'Status', 'Curr', 'Amount'];
+    // Column widths must sum to contentWidth
+    const colWidths = [100, 90, 120, 55, 65, 35, 70]; // total 535 for A4 with 36 margins
+    const startX = margin;
+    let y = doc.y;
+
+    const drawHeader = () => {
+      // Header background
+      doc.save();
+      doc.fillColor('#e2e8f0');
+      doc.rect(startX, y, contentWidth, 22).fill();
+      doc.restore();
+      // Header text
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#0f172a');
+      let x = startX + 6;
+      headers.forEach((h, idx) => {
+        doc.text(h, x, y + 6, { width: colWidths[idx] - 12, ellipsis: true });
+        x += colWidths[idx];
+      });
+      y += 22;
+    };
+
+    const truncateToWidth = (text, width, fontSize = 9, font = 'Helvetica') => {
+      doc.font(font).fontSize(fontSize);
+      const s = String(text ?? '');
+      let out = s;
+      if (doc.widthOfString(out) <= width) return out;
+      const ell = '…';
+      let low = 0, high = out.length;
+      while (low < high) {
+        const mid = Math.floor((low + high) / 2);
+        const candidate = out.slice(0, mid) + ell;
+        if (doc.widthOfString(candidate) <= width) low = mid + 1; else high = mid;
+      }
+      return out.slice(0, Math.max(0, low - 1)) + ell;
+    };
+
+    const rowHeight = 20;
+
+    const drawRow = (row, zebra) => {
+      // zebra background
+      if (zebra) {
+        doc.save();
+        doc.fillColor('#f8fafc');
+        doc.rect(startX, y, contentWidth, rowHeight).fill();
+        doc.restore();
+      }
+      // text
+      doc.font('Helvetica').fontSize(9).fillColor('#0f172a');
+      let x = startX + 6;
+      row.forEach((val, idx) => {
+        const width = colWidths[idx] - 12;
+        const alignRight = headers[idx] === 'Amount';
+        const text = truncateToWidth(val, width);
+        if (alignRight) {
+          const tw = doc.widthOfString(text);
+          doc.text(text, x + width - tw, y + 6, { width, ellipsis: true });
+        } else {
+          doc.text(text, x, y + 6, { width, ellipsis: true });
+        }
+        x += colWidths[idx];
+      });
+      y += rowHeight;
+    };
+
+    const ensureSpace = (next = rowHeight) => {
+      if (y + next > pageHeight - margin) {
+        doc.addPage();
+        y = margin; // reset top
+        drawHeader();
+      }
+    };
+
+    // Draw initial header
+    drawHeader();
+
+    // Rows
+    items.forEach((it, idx) => {
+      ensureSpace();
+      const created = new Date(it.createdAt).toLocaleString();
+      const order = it.orderId || it._id;
+      const customer = it.customerName || it.customerEmail || '';
+      const method = it.method || it.gateway || '';
+      const status = (it.status || '').replace(/_/g, ' ');
+      const curr = it.currency || '';
+      const amount = (Number(it.amount) || 0).toFixed(2);
+      drawRow([created, order, customer, method, status, curr, amount], idx % 2 === 1);
     });
+
+    // Footer note
+    ensureSpace(30);
+    doc.moveTo(startX, y).lineTo(startX + contentWidth, y).strokeColor('#e2e8f0').stroke();
+    y += 8;
+    doc.font('Helvetica-Oblique').fontSize(8).fillColor('#64748b');
+    doc.text('End of report', startX, y, { align: 'left' });
+
     doc.end();
   } catch (e) {
     console.error('Payments exportPDF error:', e);

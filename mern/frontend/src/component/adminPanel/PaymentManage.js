@@ -12,6 +12,9 @@ export default function PaymentManagement() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState(null);
+  const [refundModal, setRefundModal] = useState(null); // holds selected payment
+  const [refundAmount, setRefundAmount] = useState('');
+  const [successPopup, setSuccessPopup] = useState('');
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -43,10 +46,23 @@ export default function PaymentManagement() {
     await axios.put(`${baseUrl}/payments/${id}/mark-received`, { method: 'cash' }, { headers });
     fetchData();
   };
-  const refund = async (id) => {
-    const amount = window.prompt('Enter refund amount (leave blank for full):');
-    await axios.post(`${baseUrl}/payments/${id}/refund`, amount ? { amount: Number(amount) } : {}, { headers });
-    fetchData();
+  const openRefundModal = (payment) => {
+    setRefundModal(payment);
+    setRefundAmount('');
+  };
+  const closeRefundModal = () => {
+    setRefundModal(null);
+    setRefundAmount('');
+  };
+  const refund = async () => {
+    if (!refundModal) return;
+    const body = {};
+    if (refundAmount) body.amount = Number(refundAmount);
+    await axios.post(`${baseUrl}/payments/${refundModal._id}/refund`, body, { headers });
+    closeRefundModal();
+    await fetchData();
+    setSuccessPopup('Refund processed successfully');
+    setTimeout(() => setSuccessPopup(''), 2000);
   };
   const download = (blob, filename) => {
     const url = URL.createObjectURL(blob);
@@ -131,11 +147,14 @@ export default function PaymentManagement() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: 10 }}>Date</th>
+                <th style={{ padding: 10 }}>Created</th>
                 <th style={{ padding: 10 }}>Order</th>
                 <th style={{ padding: 10 }}>Customer</th>
+                <th style={{ padding: 10 }}>Address</th>
+                <th style={{ padding: 10 }}>Booking Date</th>
+                <th style={{ padding: 10 }}>Booking Status</th>
                 <th style={{ padding: 10 }}>Method</th>
-                <th style={{ padding: 10 }}>Status</th>
+                <th style={{ padding: 10 }}>Payment Status</th>
                 <th style={{ padding: 10, textAlign: 'right' }}>Amount</th>
                 <th style={{ padding: 10 }}>Actions</th>
               </tr>
@@ -149,14 +168,42 @@ export default function PaymentManagement() {
                 items.map((it) => (
                   <tr key={it._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: 10 }}>{new Date(it.createdAt).toLocaleString()}</td>
-                    <td style={{ padding: 10 }}>{it.orderId || it.bookingId || it._id}</td>
-                    <td style={{ padding: 10 }}>{it.customerName || it.customerEmail}</td>
+                    <td style={{ padding: 10 }}><code>{it.orderId || it.bookingId || it._id}</code></td>
+                    <td style={{ padding: 10 }}>{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
+                    <td style={{ padding: 10 }}>{it.booking?.deliveryAddress || '-'}</td>
+                    <td style={{ padding: 10 }}>{it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-'}</td>
+                    <td style={{ padding: 10 }}>
+                      <span style={{
+                        textTransform: 'capitalize',
+                        padding: '2px 8px',
+                        borderRadius: 9999,
+                        background: it.booking?.status === 'cancelled' ? '#fee2e2' : it.booking?.status === 'confirmed' ? '#dcfce7' : '#e2e8f0',
+                        color: it.booking?.status === 'cancelled' ? '#dc2626' : it.booking?.status === 'confirmed' ? '#166534' : '#334155',
+                        fontWeight: 600,
+                        fontSize: 12
+                      }}>{it.booking?.status || '-'}</span>
+                    </td>
                     <td style={{ padding: 10 }}>{it.method || it.gateway || '-'}</td>
                     <td style={{ padding: 10, textTransform: 'capitalize' }}>{it.status}</td>
                     <td style={{ padding: 10, textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
-                    <td style={{ padding: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button onClick={() => markReceived(it._id)} style={btn('#22c55e')}>Mark Received</button>
-                      <button onClick={() => refund(it._id)} style={btn('#ef4444')}>Refund</button>
+                    <td style={{ padding: 10, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      {/* Determine refund state */}
+                      {!(it.status === 'paid' || it.status === 'refunded' || it.status === 'partial_refunded') && (
+                        <button onClick={() => markReceived(it._id)} style={btn('#22c55e')}>Mark Received</button>
+                      )}
+                      {(it.booking?.status === 'cancelled' && !(it.status === 'refunded' || it.status === 'partial_refunded')) && (
+                        <button onClick={() => openRefundModal(it)} style={btn('#ef4444')}>Refund</button>
+                      )}
+                      {(it.status === 'refunded' || it.status === 'partial_refunded') && (
+                        <span style={{
+                          background: it.status === 'refunded' ? '#dcfce7' : '#fef3c7',
+                          color: it.status === 'refunded' ? '#166534' : '#92400e',
+                          padding: '4px 10px',
+                          borderRadius: 9999,
+                          fontWeight: 600,
+                          fontSize: 12
+                        }}>{it.status === 'refunded' ? 'Refunded' : 'Partial Refunded'}</span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -164,6 +211,55 @@ export default function PaymentManagement() {
             </tbody>
           </table>
         </div>
+
+        {/* Refund Modal */}
+        {refundModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+            <div style={{ background: 'white', padding: 20, borderRadius: 12, width: 480 }}>
+              <h3 style={{ marginTop: 0 }}>Process Refund</h3>
+              <div style={{ marginBottom: 10, color: '#64748b' }}>Confirm customer and amount below.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 10, marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Customer Name</div>
+                  <div style={{ fontWeight: 600 }}>{refundModal.booking?.customerName || refundModal.customerName || '-'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Customer Email</div>
+                  <div>{refundModal.booking?.customerEmail || refundModal.customerEmail || '-'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Customer Phone</div>
+                  <div>{refundModal.booking?.customerPhone || '-'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>Address</div>
+                  <div>{refundModal.booking?.deliveryAddress || '-'}</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 10px' }}>
+                    <span style={{ color: '#64748b', fontSize: 12, marginRight: 6 }}>Paid Amount</span>
+                    <strong>{refundModal.currency} {Number(refundModal.amount || 0).toFixed(2)}</strong>
+                  </div>
+                </div>
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 6 }}>Refund Amount (leave blank for full)</label>
+                <input type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} min="0" step="0.01" style={{ width: '100%', padding: 10, border: '1px solid #e2e8f0', borderRadius: 8 }} />
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+                <button onClick={closeRefundModal} style={btn('#64748b')}>Cancel</button>
+                <button onClick={refund} style={btn('#ef4444')}>Proceed</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Popup */}
+        {!!successPopup && (
+          <div style={{ position: 'fixed', right: 20, bottom: 20, background: '#22c55e', color: 'white', padding: '10px 14px', borderRadius: 8, boxShadow: '0 10px 20px rgba(0,0,0,0.15)' }}>
+            {successPopup}
+          </div>
+        )}
 
         {/* Pagination */}
         <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between' }}>

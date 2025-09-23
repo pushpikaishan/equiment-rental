@@ -11,14 +11,16 @@ export default function BookingManagement() {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(''); // '', 'confirmed', 'cancelled', 'pending'
   const [summary, setSummary] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-  // Show only confirmed bookings as requested
-  const params = new URLSearchParams({ page, limit: 10, status: 'confirmed' });
-  const res = await axios.get(`${baseUrl}/bookings/admin?${params.toString()}`, { headers });
+      const paramsObj = { page, limit: 10 };
+      if (statusFilter) paramsObj.status = statusFilter;
+      const params = new URLSearchParams(paramsObj);
+      const res = await axios.get(`${baseUrl}/bookings/admin?${params.toString()}`, { headers });
       setItems(res.data.items || []);
       setTotal(res.data.total || 0);
     } catch (e) {
@@ -35,7 +37,7 @@ export default function BookingManagement() {
     } catch {}
   };
 
-  useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [page]);
+  useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [page, statusFilter]);
   useEffect(() => { fetchSummary(); /* eslint-disable-next-line */ }, []);
 
   const toggleDispute = async (id, current) => {
@@ -97,10 +99,17 @@ export default function BookingManagement() {
         )}
       </div>
 
-      {/* Toolbar with export actions (filters removed) */}
-      <div style={{ ...card, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ fontWeight: 600, color: '#334155' }}>Confirmed Bookings</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+      {/* Toolbar with simple status filter and export actions */}
+      <div style={{ ...card, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ fontWeight: 600, color: '#334155' }}>Bookings</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <label style={{ color: '#334155', fontSize: 14 }}>Status:</label>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={select}>
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
           <button onClick={exportCSV} style={btn('#16a34a')}>Export CSV</button>
           <button onClick={exportPDF} style={btn('#f59e0b')}>Export PDF</button>
         </div>
@@ -133,7 +142,17 @@ export default function BookingManagement() {
                     <td style={{ padding: 10 }}><code>{b._id}</code></td>
                     <td style={{ padding: 10 }}>{b.customerName} ({b.customerEmail})</td>
                     <td style={{ padding: 10 }}>{new Date(b.bookingDate).toLocaleDateString()}</td>
-                    <td style={{ padding: 10, textTransform: 'capitalize' }}>{b.status}</td>
+                    <td style={{ padding: 10 }}>
+                      <span style={{
+                        textTransform: 'capitalize',
+                        padding: '2px 8px',
+                        borderRadius: 9999,
+                        background: b.status === 'cancelled' ? '#fee2e2' : b.status === 'confirmed' ? '#dcfce7' : '#e2e8f0',
+                        color: b.status === 'cancelled' ? '#dc2626' : b.status === 'confirmed' ? '#166534' : '#334155',
+                        fontWeight: 600,
+                        fontSize: 12
+                      }}>{b.status}</span>
+                    </td>
                     <td style={{ padding: 10 }}>{b.disputed ? 'Yes' : 'No'}</td>
                     <td style={{ padding: 10, textAlign: 'right' }}>{Number(b.total).toFixed(2)}</td>
                     <td style={{ padding: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>

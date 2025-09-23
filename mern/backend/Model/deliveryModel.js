@@ -6,7 +6,7 @@ const deliverySchema = new mongoose.Schema({
   driver: { type: String, default: '' },
   driverId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
   driverEmail: { type: String, default: '' },
-  status: { type: String, enum: ['unassigned', 'assigned', 'delivered'], default: 'unassigned' },
+  status: { type: String, enum: ['unassigned', 'assigned', 'in-progress', 'delivered', 'failed'], default: 'unassigned' },
   assignedAt: { type: Date },
   deliveredAt: { type: Date },
 }, { timestamps: true });
