@@ -401,6 +401,68 @@ function InventoryManagement() {
         )}
       </div>
 
+      {/* Damaged List Section */}
+      <div style={{ marginTop: 40 }}>
+        <h3 style={{ margin: 0 }}>Damaged List</h3>
+        <p style={{ color: '#64748b', marginTop: 6 }}>Items with reported damage from recollect reports.</p>
+        {(() => {
+          const damagedItems = (items || []).filter(it => Number(it.damagedCount || 0) > 0);
+          if (damagedItems.length === 0) {
+            return <div style={{ padding: 12, color: '#64748b' }}>No damaged items reported.</div>;
+          }
+          return (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f1f5f9' }}>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Image</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Name</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Category</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Damaged Count</th>
+                    <th style={{ textAlign: 'left', padding: 8 }}>Recent Damages</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {damagedItems.map((it) => (
+                    <tr key={it._id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                      <td style={{ padding: 8 }}>
+                        {it.image ? (
+                          <img src={`http://localhost:5000${it.image}`} alt={it.name} style={{ width: 60, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                        ) : (
+                          <div style={{ width: 60, height: 40, background: '#e2e8f0', borderRadius: 6 }} />
+                        )}
+                      </td>
+                      <td style={{ padding: 8 }}>{it.name}</td>
+                      <td style={{ padding: 8 }}>{it.category}</td>
+                      <td style={{ padding: 8 }}>{Number(it.damagedCount || 0)}</td>
+                      <td style={{ padding: 8 }}>
+                        {(it.damageLogs || []).length === 0 ? (
+                          <span style={{ color: '#64748b' }}>No log entries</span>
+                        ) : (
+                          <details>
+                            <summary style={{ cursor: 'pointer', color: '#2563eb' }}>View latest logs</summary>
+                            <div style={{ padding: '6px 0', color: '#475569' }}>
+                              {(it.damageLogs || []).slice().reverse().slice(0,5).map((log, idx) => (
+                                <div key={idx} style={{ borderTop: '1px dashed #e2e8f0', paddingTop: 6, marginTop: 6 }}>
+                                  <div><strong>Date:</strong> {new Date(log.at).toLocaleString()}</div>
+                                  <div><strong>Qty:</strong> {log.qty} | <strong>Condition:</strong> {log.condition}</div>
+                                  {log.note && <div><strong>Note:</strong> {log.note}</div>}
+                                </div>
+                              ))}
+                              {it.damageLogs.length > 5 && <div style={{ marginTop: 6, fontSize: 12, color: '#94a3b8' }}>(showing latest 5)</div>}
+                            </div>
+                          </details>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* Edit Modal (simple inline panel) */}
       {editing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

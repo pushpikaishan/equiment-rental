@@ -7,9 +7,9 @@ const PDFDocument = require('pdfkit');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Helper to compute totals and deposit (10% deposit by default)
+// Helper to compute totals and deposit (30% deposit by default)
 // Uses number of rental days = max(1, ceil((returnDate - bookingDate)/DAY_MS))
-function computeTotals(items, bookingDate, returnDate, depositRate = 0.1) {
+function computeTotals(items, bookingDate, returnDate, depositRate = 0.3) {
   let days = 1;
   if (bookingDate && returnDate) {
     const bd = new Date(bookingDate).getTime();

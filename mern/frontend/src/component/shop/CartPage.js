@@ -66,7 +66,7 @@ export default function CartPage() {
       });
       // Navigate to dummy payment gateway with booking data and deposit amount
       const booking = res.data?.booking || res.data;
-      const amount = booking?.securityDeposit ?? total * 0.1;
+  const amount = booking?.securityDeposit ?? total * 0.3;
       navigate('/payment', { state: { booking, amount, currency: 'LKR' } });
     } catch (e) {
       const msg = e.response?.data?.message || e.message;
@@ -164,8 +164,8 @@ export default function CartPage() {
           <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <button onClick={handleClear} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 8 }}>Clear Cart</button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>Security deposit (10%):</span>
-              <strong>LKR {(total * 0.10).toFixed(2)}</strong>
+              <span>Security deposit (30%):</span>
+              <strong>LKR {(total * 0.30).toFixed(2)}</strong>
             </div>
             <div style={{ fontWeight: 700 }}>Total (per day): LKR {total.toFixed(2)}</div>
             <button onClick={createBooking} disabled={creating || cart.length === 0} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 8, opacity: creating ? 0.8 : 1 }}>{creating ? 'Creating…' : 'Proceed to Payment'}</button>

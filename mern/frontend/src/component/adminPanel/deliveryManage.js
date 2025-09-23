@@ -32,18 +32,29 @@ export default function DeliveryManagement() {
   useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [page]);
 
   const [assigning, setAssigning] = useState(null); // bookingId
+  const [assignMode, setAssignMode] = useState('deliver'); // 'deliver' | 'recollect'
   const [drivers, setDrivers] = useState([]);
   const [driverId, setDriverId] = useState('');
 
   const startAssign = (bookingId, current) => {
+    setAssignMode('deliver');
     setAssigning(bookingId);
     setDriverId(current?.driverId || '');
+  };
+  const startRecollect = (bookingId, current) => {
+    setAssignMode('recollect');
+    setAssigning(bookingId);
+    setDriverId(current?.recollectDriverId || '');
   };
 
   const submitAssign = async () => {
     if (!assigning) return;
     if (!driverId) { alert('Select a driver'); return; }
-    await axios.post(`${baseUrl}/deliveries/admin/${assigning}/assign`, { driverId }, { headers });
+    if (assignMode === 'deliver') {
+      await axios.post(`${baseUrl}/deliveries/admin/${assigning}/assign`, { driverId }, { headers });
+    } else {
+      await axios.post(`${baseUrl}/deliveries/admin/${assigning}/recollect/assign`, { driverId }, { headers });
+    }
     setAssigning(null);
     setDriverId('');
     fetchData();
@@ -93,6 +104,7 @@ export default function DeliveryManagement() {
                 <th style={{ padding: 10 }}>Date</th>
                 <th style={{ padding: 10 }}>Driver</th>
                 <th style={{ padding: 10 }}>Delivery Status</th>
+                <th style={{ padding: 10 }}>Recollect Status</th>
                 <th style={{ padding: 10 }}>Actions</th>
               </tr>
             </thead>
@@ -111,9 +123,18 @@ export default function DeliveryManagement() {
                     <td style={{ padding: 10 }}>{new Date(b.bookingDate).toLocaleDateString()}</td>
                     <td style={{ padding: 10 }}>{d?.driver || '-'}</td>
                     <td style={{ padding: 10, textTransform: 'capitalize' }}>{d?.status || 'unassigned'}</td>
+                    <td style={{ padding: 10, textTransform: 'capitalize' }}>{d?.recollectStatus || 'none'}</td>
                     <td style={{ padding: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button onClick={() => startAssign(b._id, d)} style={btn('#2563eb')}>{d ? 'Reassign' : 'Assign'}</button>
+                      {d?.status === 'delivered' ? (
+                        <button onClick={() => startRecollect(b._id, d)} style={btn('#7c3aed')}>Recollect</button>
+                      ) : (
+                        <button onClick={() => startAssign(b._id, d)} style={btn('#2563eb')}>{d ? 'Reassign' : 'Assign'}</button>
+                      )}
                       <button onClick={() => markDelivered(b._id)} disabled={!d || d.status !== 'assigned'} style={btn('#16a34a')}>Mark Delivered</button>
+                      {/* After driver submits report, admin can mark returned */}
+                      {(d?.recollectStatus === 'report_submitted') && (
+                        <button onClick={async () => { await axios.put(`${baseUrl}/deliveries/admin/${b._id}/recollect/returned`, {}, { headers }); fetchData(); }} style={btn('#059669')}>Back to Warehouse</button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -132,7 +153,7 @@ export default function DeliveryManagement() {
       {assigning && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'white', padding: 20, borderRadius: 12, width: 420 }}>
-            <h3 style={{ marginTop: 0 }}>Assign Delivery</h3>
+            <h3 style={{ marginTop: 0 }}>{assignMode === 'deliver' ? 'Assign Delivery' : 'Assign Recollect'}</h3>
             <div style={{ display: 'grid', gap: 10 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Choose Driver (Staff)</label>
@@ -145,7 +166,7 @@ export default function DeliveryManagement() {
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button onClick={() => setAssigning(null)} style={btn('#64748b')}>Cancel</button>
-                <button onClick={submitAssign} style={btn('#2563eb')}>Assign</button>
+                <button onClick={submitAssign} style={btn('#2563eb')}>{assignMode === 'deliver' ? 'Assign' : 'Assign Recollect'}</button>
               </div>
             </div>
           </div>

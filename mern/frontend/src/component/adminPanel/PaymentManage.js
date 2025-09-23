@@ -14,6 +14,7 @@ export default function PaymentManagement() {
   const [summary, setSummary] = useState(null);
   const [refundModal, setRefundModal] = useState(null); // holds selected payment
   const [refundAmount, setRefundAmount] = useState('');
+  const [refundType, setRefundType] = useState('custom'); // 'custom' | 'deposit'
   const [successPopup, setSuccessPopup] = useState('');
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
@@ -49,6 +50,13 @@ export default function PaymentManagement() {
   const openRefundModal = (payment) => {
     setRefundModal(payment);
     setRefundAmount('');
+    setRefundType('custom');
+  };
+  const openDepositRefund = (payment) => {
+    setRefundModal(payment);
+    const amt = Number(payment?.recollect?.suggestedRefund || 0);
+    setRefundAmount(amt > 0 ? amt.toFixed(2) : '');
+    setRefundType('deposit');
   };
   const closeRefundModal = () => {
     setRefundModal(null);
@@ -58,6 +66,7 @@ export default function PaymentManagement() {
     if (!refundModal) return;
     const body = {};
     if (refundAmount) body.amount = Number(refundAmount);
+    if (refundType === 'deposit') body.note = 'Security deposit refund after recollect report';
     await axios.post(`${baseUrl}/payments/${refundModal._id}/refund`, body, { headers });
     closeRefundModal();
     await fetchData();
@@ -194,6 +203,10 @@ export default function PaymentManagement() {
                       {(it.booking?.status === 'cancelled' && !(it.status === 'refunded' || it.status === 'partial_refunded')) && (
                         <button onClick={() => openRefundModal(it)} style={btn('#ef4444')}>Refund</button>
                       )}
+                      {/* Refund deposit after recollect report */}
+                      {(it?.recollect?.suggestedRefund > 0 && !(it.status === 'refunded' || it.status === 'partial_refunded')) && (
+                        <button onClick={() => openDepositRefund(it)} style={btn('#0ea5e9')}>Refund Deposit</button>
+                      )}
                       {(it.status === 'refunded' || it.status === 'partial_refunded') && (
                         <span style={{
                           background: it.status === 'refunded' ? '#dcfce7' : '#fef3c7',
@@ -202,7 +215,7 @@ export default function PaymentManagement() {
                           borderRadius: 9999,
                           fontWeight: 600,
                           fontSize: 12
-                        }}>{it.status === 'refunded' ? 'Refunded' : 'Partial Refunded'}</span>
+                        }}>{it.depositRefunded ? 'Security Deposit Refunded' : (it.status === 'refunded' ? 'Refunded' : 'Partial Refunded')}</span>
                       )}
                     </td>
                   </tr>
@@ -216,8 +229,10 @@ export default function PaymentManagement() {
         {refundModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
             <div style={{ background: 'white', padding: 20, borderRadius: 12, width: 480 }}>
-              <h3 style={{ marginTop: 0 }}>Process Refund</h3>
-              <div style={{ marginBottom: 10, color: '#64748b' }}>Confirm customer and amount below.</div>
+              <h3 style={{ marginTop: 0 }}>{refundType === 'deposit' ? 'Refund Security Deposit' : 'Process Refund'}</h3>
+              <div style={{ marginBottom: 10, color: '#64748b' }}>
+                {refundType === 'deposit' ? 'Security deposit minus estimate total calculated from recollect report.' : 'Confirm customer and amount below.'}
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 10, marginBottom: 10 }}>
                 <div>
                   <div style={{ fontSize: 12, color: '#94a3b8' }}>Customer Name</div>
@@ -242,13 +257,34 @@ export default function PaymentManagement() {
                     <span style={{ color: '#64748b', fontSize: 12, marginRight: 6 }}>Paid Amount</span>
                     <strong>{refundModal.currency} {Number(refundModal.amount || 0).toFixed(2)}</strong>
                   </div>
+                  {refundModal?.recollect?.hasReport && (
+                    <>
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 10px' }}>
+                        <span style={{ color: '#64748b', fontSize: 12, marginRight: 6 }}>Security Deposit</span>
+                        <strong>{refundModal.currency} {Number(refundModal.recollect.deposit || 0).toFixed(2)}</strong>
+                      </div>
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 10px' }}>
+                        <span style={{ color: '#64748b', fontSize: 12, marginRight: 6 }}>Estimate Total</span>
+                        <strong>{refundModal.currency} {Number(refundModal.recollect.estimateTotal || 0).toFixed(2)}</strong>
+                      </div>
+                      <div style={{ background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: 8, padding: '8px 10px' }}>
+                        <span style={{ color: '#0891b2', fontSize: 12, marginRight: 6 }}>Suggested Refund</span>
+                        <strong>{refundModal.currency} {Number(refundModal.recollect.suggestedRefund || 0).toFixed(2)}</strong>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <label style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 6 }}>Refund Amount (leave blank for full)</label>
-                <input type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)} min="0" step="0.01" style={{ width: '100%', padding: 10, border: '1px solid #e2e8f0', borderRadius: 8 }} />
+                <label style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 6 }}>
+                  {refundType === 'deposit' ? 'Refund Amount (calculated)' : 'Refund Amount (leave blank for full)'}
+                </label>
+                <input type="number" value={refundAmount}
+                  onChange={(e) => refundType === 'deposit' ? null : setRefundAmount(e.target.value)}
+                  min="0" step="0.01" style={{ width: '100%', padding: 10, border: '1px solid #e2e8f0', borderRadius: 8 }}
+                  readOnly={refundType === 'deposit'} />
               </div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
                 <button onClick={closeRefundModal} style={btn('#64748b')}>Cancel</button>
-                <button onClick={refund} style={btn('#ef4444')}>Proceed</button>
+                <button onClick={refund} style={btn('#ef4444')}>{refundType === 'deposit' ? 'Refund Deposit' : 'Proceed'}</button>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 const Payment = require('../Model/paymentModel');
 const PaymentAudit = require('../Model/paymentAuditModel');
 const Booking = require('../Model/bookingModel');
+const Delivery = require('../Model/deliveryModel');
 const PDFDocument = require('pdfkit');
 
 // Admin guard helper
@@ -54,12 +55,44 @@ exports.list = async (req, res) => {
     // attach booking details for richer management view
     const bookingIds = items.map(p => p.bookingId).filter(Boolean);
     let bookingMap = new Map();
+    let deliveryMap = new Map();
     if (bookingIds.length) {
-      const bookings = await Booking.find({ _id: { $in: bookingIds } });
+      const [bookings, deliveries] = await Promise.all([
+        Booking.find({ _id: { $in: bookingIds } }),
+        Delivery.find({ bookingId: { $in: bookingIds } })
+      ]);
       bookingMap = new Map(bookings.map(b => [String(b._id), b]));
+      deliveryMap = new Map(deliveries.map(d => [String(d.bookingId), d]));
     }
+    // Fetch audits for these payments to detect deposit refunds
+    const paymentIds = items.map(p => p._id);
+    let auditByPayment = new Map();
+    if (paymentIds.length) {
+      const audits = await PaymentAudit.find({ paymentId: { $in: paymentIds } }).sort({ createdAt: -1 }).lean();
+      for (const a of audits) {
+        const key = String(a.paymentId);
+        if (!auditByPayment.has(key)) auditByPayment.set(key, []);
+        auditByPayment.get(key).push(a);
+      }
+    }
+
     const itemsWithBooking = items.map(p => {
       const b = bookingMap.get(String(p.bookingId));
+      const d = deliveryMap.get(String(p.bookingId));
+      // Compute recollect refund suggestion if a recollect report exists
+      let recollect = null;
+      if (b && d && d.recollectReport && (typeof d.recollectReport === 'object')) {
+        const deposit = Number(b.securityDeposit || 0);
+        const estimateTotal = Number(d.recollectReport.grandTotal || 0);
+        const lateFine = Number(d.recollectReport.lateFine || 0);
+        const repairCostTotal = Number(d.recollectReport.repairCostTotal || 0);
+        const lateDays = Number(d.recollectReport.lateDays || 0);
+        const suggestedRefund = Math.max(0, deposit - estimateTotal);
+        recollect = { hasReport: true, deposit, estimateTotal, suggestedRefund, lateFine, repairCostTotal, lateDays };
+      }
+      // Detect if a deposit refund has been processed via audit notes
+      const audits = auditByPayment.get(String(p._id)) || [];
+      const depositRefunded = audits.some(a => (a.action === 'partial_refund' || a.action === 'refund') && typeof a.note === 'string' && a.note.toLowerCase().includes('deposit'));
       return Object.assign(p.toObject(), {
         booking: b ? {
           _id: b._id,
@@ -72,7 +105,9 @@ exports.list = async (req, res) => {
           customerEmail: b.customerEmail,
           customerPhone: b.customerPhone,
           total: b.total,
-        } : null
+        } : null,
+        recollect,
+        depositRefunded,
       });
     });
 
@@ -119,7 +154,7 @@ exports.refund = async (req, res) => {
   try {
     if (!ensureAdmin(req, res)) return;
     const { id } = req.params;
-    const { amount, note } = req.body || {};
+  const { amount, note } = req.body || {};
     const pay = await Payment.findById(id);
     if (!pay) return res.status(404).json({ message: 'Payment not found' });
     const refundAmount = Number(amount || pay.amount);
@@ -128,8 +163,8 @@ exports.refund = async (req, res) => {
     let action = 'refund';
     if (refundAmount < pay.amount) action = 'partial_refund';
     pay.status = refundAmount < pay.amount ? 'partial_refunded' : 'refunded';
-    await pay.save();
-    await PaymentAudit.create({ paymentId: pay._id, action, amount: refundAmount, actorId: req.user.id, actorRole: req.user.role, note });
+  await pay.save();
+  await PaymentAudit.create({ paymentId: pay._id, action, amount: refundAmount, actorId: req.user.id, actorRole: req.user.role, note: note || '' });
     res.json({ payment: pay });
   } catch (e) {
     console.error('Payments refund error:', e);
