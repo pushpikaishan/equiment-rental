@@ -22,6 +22,13 @@ const BookingSchema = new mongoose.Schema({
   securityDeposit: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },
   status: { type: String, enum: ['pending', 'confirmed', 'cancelled'], default: 'pending' },
+  // Admin management fields
+  disputed: { type: Boolean, default: false },
+  disputeNote: { type: String, default: '' },
+  cancelledAt: { type: Date },
+  cancelReason: { type: String, default: '' },
+  cancelledByRole: { type: String, enum: ['user', 'supplier', 'staff', 'admin', 'system'], default: undefined },
+  cancelledById: { type: mongoose.Schema.Types.ObjectId, refPath: 'cancelledByRole' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Booking', BookingSchema);

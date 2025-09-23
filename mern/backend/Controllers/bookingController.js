@@ -1,6 +1,9 @@
 const Booking = require('../Model/bookingModel');
 const Equipment = require('../Model/equipmentModel');
 const { generateInvoicePDF } = require('./invoiceHelper');
+const Payment = require('../Model/paymentModel');
+const PaymentAudit = require('../Model/paymentAuditModel');
+const PDFDocument = require('pdfkit');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -155,9 +158,356 @@ exports.confirm = async (req, res) => {
 
     // Generate invoice PDF (still created on server, but no notification is sent)
     const invoicePath = await generateInvoicePDF(booking);
-    return res.json({ booking, invoicePath });
+
+    // Create or update a Payment record for admin management
+    let payment = await Payment.findOne({ bookingId: booking._id });
+    const transactionId = `DUMMY-${Date.now()}`;
+    if (!payment) {
+      payment = await Payment.create({
+        bookingId: booking._id,
+        orderId: String(booking._id),
+        userId: booking.userId,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        method: 'card',
+        status: 'paid',
+        currency: 'LKR',
+        amount: Number(booking.total) || 0,
+        subtotal: Number(booking.subtotal) || 0,
+        deposit: Number(booking.securityDeposit) || 0,
+        taxes: 0,
+        discount: 0,
+        transactionId,
+        gateway: 'dummy',
+        invoicePath,
+        meta: { source: 'checkout_confirm' },
+      });
+      await PaymentAudit.create({ paymentId: payment._id, action: 'created', actorId: booking.userId, actorRole: booking.userRole, note: 'Payment captured via dummy gateway', amount: payment.amount });
+    } else {
+      payment.status = 'paid';
+      payment.invoicePath = invoicePath;
+      payment.transactionId = transactionId;
+      payment.method = payment.method || 'card';
+      payment.gateway = payment.gateway || 'dummy';
+      await payment.save();
+      await PaymentAudit.create({ paymentId: payment._id, action: 'updated', actorId: booking.userId, actorRole: booking.userRole, note: 'Payment updated on confirm', amount: payment.amount });
+    }
+
+    return res.json({ booking, invoicePath, payment });
   } catch (e) {
     console.error('Confirm booking error:', e);
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// --- Admin endpoints ---
+function ensureAdmin(req, res) {
+  const role = req.user?.role;
+  const ok = role === 'admin' || role === 'staff';
+  if (!ok) {
+    res.status(403).json({ message: 'Admin/staff only' });
+  }
+  return ok;
+}
+
+// GET /bookings/admin - list with filters & pagination
+exports.adminList = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { status, customer = '', orderId = '', from = '', to = '', disputed = '' } = req.query;
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || '10', 10)));
+    const q = {};
+    if (status) q.status = status;
+    if (orderId) q._id = orderId.match(/^\w+$/) ? orderId : undefined; // allow exact id
+    if (typeof q._id === 'undefined' && orderId) {
+      // if not valid id, match none
+      q._id = null;
+    }
+    if (customer) {
+      q.$or = [
+        { customerName: new RegExp(customer, 'i') },
+        { customerEmail: new RegExp(customer, 'i') },
+      ];
+    }
+    if (disputed === 'true') q.disputed = true;
+    if (disputed === 'false') q.disputed = false;
+    // Date range on createdAt by default
+    if (from || to) {
+      q.createdAt = {};
+      if (from) q.createdAt.$gte = new Date(from);
+      if (to) {
+        const d = new Date(to);
+        d.setHours(23, 59, 59, 999);
+        q.createdAt.$lte = d;
+      }
+    }
+
+    const total = await Booking.countDocuments(q);
+    const items = await Booking.find(q).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+    res.json({ items, total, page, limit });
+  } catch (e) {
+    console.error('Admin bookings list error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /bookings/admin/summary - usage metrics
+exports.adminSummary = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const [total, pending, confirmed, cancelled, disputed] = await Promise.all([
+      Booking.countDocuments({}),
+      Booking.countDocuments({ status: 'pending' }),
+      Booking.countDocuments({ status: 'confirmed' }),
+      Booking.countDocuments({ status: 'cancelled' }),
+      Booking.countDocuments({ disputed: true }),
+    ]);
+    // Revenue approximations based on booking totals
+    const agg = await Booking.aggregate([
+      { $group: { _id: null, totalAmount: { $sum: '$total' }, subtotal: { $sum: '$subtotal' }, deposit: { $sum: '$securityDeposit' } } },
+    ]);
+    const totals = agg[0] || { totalAmount: 0, subtotal: 0, deposit: 0 };
+    res.json({ total, pending, confirmed, cancelled, disputed, totals });
+  } catch (e) {
+    console.error('Admin bookings summary error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// PUT /bookings/admin/:id/cancel - cancel a booking
+exports.adminCancel = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { id } = req.params;
+    const { reason = '' } = req.body || {};
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    booking.status = 'cancelled';
+    booking.cancelledAt = new Date();
+    booking.cancelReason = reason;
+    booking.cancelledByRole = req.user.role;
+    booking.cancelledById = req.user.id;
+    await booking.save();
+    res.json({ booking });
+  } catch (e) {
+    console.error('Admin cancel booking error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// PUT /bookings/admin/:id/dispute - toggle or set dispute
+exports.toggleDispute = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { id } = req.params;
+    const { disputed, note = '' } = req.body || {};
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (typeof disputed === 'boolean') booking.disputed = disputed; else booking.disputed = !booking.disputed;
+    if (note) booking.disputeNote = note;
+    await booking.save();
+    res.json({ booking });
+  } catch (e) {
+    console.error('Admin toggle dispute error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /bookings/admin/export/csv
+exports.exportCSV = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    // We now export ALL bookings (filters removed by UI), keep server-side support if sent
+    const { status, customer = '', orderId = '', from = '', to = '', disputed = '' } = req.query || {};
+    const q = {};
+    if (status) q.status = status;
+    if (orderId) q._id = orderId;
+    if (customer) q.$or = [{ customerName: new RegExp(customer, 'i') }, { customerEmail: new RegExp(customer, 'i') }];
+    if (disputed === 'true') q.disputed = true;
+    if (disputed === 'false') q.disputed = false;
+    if (from || to) {
+      q.createdAt = {};
+      if (from) q.createdAt.$gte = new Date(from);
+      if (to) { const d = new Date(to); d.setHours(23,59,59,999); q.createdAt.$lte = d; }
+    }
+    const rows = await Booking.find(q).sort({ createdAt: -1 });
+
+    const headers = [
+      'Booking ID','Created At','Booking Date','Customer Name','Customer Email','Phone','Status','Disputed','Subtotal','Security Deposit','Total','Cancelled At','Cancel Reason'
+    ];
+    const lines = [headers.join(',')];
+
+    let totals = { subtotal: 0, deposit: 0, total: 0 };
+    for (const b of rows) {
+      totals.subtotal += Number(b.subtotal) || 0;
+      totals.deposit += Number(b.securityDeposit) || 0;
+      totals.total += Number(b.total) || 0;
+      const rec = [
+        String(b._id),
+        new Date(b.createdAt).toISOString(),
+        b.bookingDate ? new Date(b.bookingDate).toISOString().slice(0,10) : '',
+        b.customerName || '',
+        b.customerEmail || '',
+        b.customerPhone || '',
+        b.status || '',
+        b.disputed ? 'Yes' : 'No',
+        (Number(b.subtotal) || 0).toFixed(2),
+        (Number(b.securityDeposit) || 0).toFixed(2),
+        (Number(b.total) || 0).toFixed(2),
+        b.cancelledAt ? new Date(b.cancelledAt).toISOString() : '',
+        b.cancelReason || '',
+      ].map(v => (typeof v === 'string' && (v.includes(',') || v.includes('"'))) ? '"' + v.replace(/"/g,'""') + '"' : v);
+      lines.push(rec.join(','));
+    }
+    // Totals row
+    const totalsRow = ['Totals','','','','','','','', totals.subtotal.toFixed(2), totals.deposit.toFixed(2), totals.total.toFixed(2),'',''];
+    lines.push(totalsRow.join(','));
+
+    const csv = lines.join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="bookings-report.csv"');
+    res.send(csv);
+  } catch (e) {
+    console.error('Admin bookings CSV export error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /bookings/admin/export/pdf
+exports.exportPDF = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { status, customer = '', orderId = '', from = '', to = '', disputed = '' } = req.query || {};
+    const q = {};
+    if (status) q.status = status;
+    if (orderId) q._id = orderId;
+    if (customer) q.$or = [{ customerName: new RegExp(customer, 'i') }, { customerEmail: new RegExp(customer, 'i') }];
+    if (disputed === 'true') q.disputed = true;
+    if (disputed === 'false') q.disputed = false;
+    if (from || to) {
+      q.createdAt = {};
+      if (from) q.createdAt.$gte = new Date(from);
+      if (to) { const d = new Date(to); d.setHours(23,59,59,999); q.createdAt.$lte = d; }
+    }
+    const rows = await Booking.find(q).sort({ createdAt: -1 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="bookings-report.pdf"');
+    const doc = new PDFDocument({ margin: 36, size: 'A4', layout: 'landscape' });
+    doc.pipe(res);
+
+    const title = 'Bookings Report';
+    const generatedOn = new Date().toLocaleString();
+    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const startX = doc.page.margins.left;
+    const startY = doc.page.margins.top;
+    let y = startY;
+
+    // Header text
+    doc.font('Helvetica-Bold').fontSize(20).text(title, startX, y, { width: contentWidth, align: 'center' });
+    y += 26;
+    doc.font('Helvetica').fontSize(10).fillColor('#555').text(`Generated on: ${generatedOn}`, startX, y, { width: contentWidth, align: 'center' });
+    doc.fillColor('black');
+    y += 16;
+
+    // Table columns (fractions of content width)
+    const headers = ['Created At','Booking ID','Customer','Email','Status','Disputed','Total'];
+  const fracs = [0.2, 0.15, 0.18, 0.27, 0.07, 0.06, 0.07];
+  const colWidths = fracs.map(f => Math.floor(f * contentWidth));
+  const rowH = 26; // taller rows to avoid visual overlap
+
+    const drawHeader = () => {
+      // background bar
+      doc.save();
+      doc.rect(startX, y, contentWidth, rowH).fill('#e2e8f0');
+      doc.restore();
+      // header text
+      let x = startX;
+      doc.font('Helvetica-Bold').fontSize(11);
+      headers.forEach((h, i) => {
+        const w = colWidths[i];
+        doc.fillColor('#0f172a').text(h, x + 6, y + 6, { width: w - 12, ellipsis: true, lineBreak: false });
+        x += w;
+      });
+      doc.fillColor('black');
+      // bottom line
+      doc.moveTo(startX, y + rowH).lineTo(startX + contentWidth, y + rowH).strokeColor('#94a3b8').stroke();
+      y += rowH;
+    };
+
+    const ensurePage = () => {
+      if (y + rowH > doc.page.height - doc.page.margins.bottom) {
+        doc.addPage({ layout: 'landscape' });
+        y = startY;
+        drawHeader();
+      }
+    };
+
+    // helper: truncate text to fit width with ellipsis (single-line)
+    const ellipsize = (text, maxWidth, font = 'Helvetica', size = 10) => {
+      const t = String(text ?? '');
+      doc.font(font).fontSize(size);
+      if (doc.widthOfString(t) <= maxWidth) return t;
+      const ell = '…';
+      let lo = 0, hi = t.length, best = '';
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        const cand = t.slice(0, mid) + ell;
+        if (doc.widthOfString(cand) <= maxWidth) { best = cand; lo = mid + 1; } else { hi = mid; }
+      }
+      return best || ell;
+    };
+
+    drawHeader();
+    let totalSum = 0;
+    rows.forEach((b, idx) => {
+      ensurePage();
+      const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
+      // zebra background
+      doc.save();
+      doc.rect(startX, y, contentWidth, rowH).fill(bg);
+      doc.restore();
+
+      let x = startX;
+      const values = [
+        new Date(b.createdAt).toLocaleString(),
+        String(b._id),
+        b.customerName || '',
+        b.customerEmail || '',
+        b.status || '',
+        b.disputed ? 'Yes' : 'No',
+        (Number(b.total) || 0).toFixed(2),
+      ];
+      totalSum += Number(b.total) || 0;
+
+      values.forEach((v, i) => {
+        const w = colWidths[i];
+        const text = ellipsize(v, w - 12, 'Helvetica', 10);
+        const opts = { width: w - 12, lineBreak: false };
+        doc.font('Helvetica').fontSize(10);
+        // right-align for Total column
+        if (i === values.length - 1) {
+          doc.text(text, x + 6, y + 6, { ...opts, align: 'right' });
+        } else if (i === 4 || i === 5) {
+          // status/disputed center
+          doc.text(text, x + 6, y + 6, { ...opts, align: 'center' });
+        } else {
+          doc.text(text, x + 6, y + 6, opts);
+        }
+        x += w;
+      });
+      // row bottom line
+      doc.moveTo(startX, y + rowH).lineTo(startX + contentWidth, y + rowH).strokeColor('#e2e8f0').stroke();
+      y += rowH;
+    });
+
+    // Totals footer
+    ensurePage();
+    y += 8;
+    doc.font('Helvetica-Bold').fontSize(12).text(`Grand Total: ${totalSum.toFixed(2)}`, startX, y, { width: contentWidth, align: 'right' });
+    doc.end();
+  } catch (e) {
+    console.error('Admin bookings PDF export error:', e);
+    res.status(500).json({ message: 'Server error' });
   }
 };

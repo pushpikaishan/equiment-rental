@@ -3,6 +3,14 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const ctrl = require('../Controllers/bookingController');
 
+// Admin routes (must come before dynamic :id routes)
+router.get('/admin', auth, ctrl.adminList);
+router.get('/admin/summary', auth, ctrl.adminSummary);
+router.put('/admin/:id/cancel', auth, ctrl.adminCancel);
+router.put('/admin/:id/dispute', auth, ctrl.toggleDispute);
+router.get('/admin/export/csv', auth, ctrl.exportCSV);
+router.get('/admin/export/pdf', auth, ctrl.exportPDF);
+
 // Create a booking from cart snapshot
 router.post('/', auth, ctrl.create);
 // Get my bookings

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import UserNavbar from './UserNavbar';
 import SiteFooter from '../common/SiteFooter';
 import { addToCart } from '../../utils/cart';
+import FeedbackSection from '../home/FeedbackSection';
 
 const categories = [
   'All',
@@ -84,7 +85,15 @@ export default function EquipmentList() {
             <div key={it._id} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
               <Link to={`/equipment/${it._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 {it.image ? (
-                  <img src={`${baseUrl}${it.image}`} alt={it.name} style={{ width: '100%', height: 150, objectFit: 'cover' }} />
+                  <img
+                    src={
+                      it.image.startsWith('http')
+                        ? it.image
+                        : `${baseUrl}${it.image.startsWith('/') ? '' : '/'}${it.image}`
+                    }
+                    alt={it.name}
+                    style={{ width: '100%', height: 150, objectFit: 'cover' }}
+                  />
                 ) : (
                   <div style={{ width: '100%', height: 150, background: '#e2e8f0' }} />
                 )}
@@ -121,6 +130,7 @@ export default function EquipmentList() {
         </div>
       )}
       </div>
+      <FeedbackSection />
       <SiteFooter />
     </div>
   );

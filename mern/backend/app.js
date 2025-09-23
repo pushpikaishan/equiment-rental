@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
 require("dotenv").config();
 
 // Import route files
@@ -12,6 +13,8 @@ const adminRoutes = require("./Route/adminRouts");
 const authRoutes = require("./Route/authRouts");
 const equipmentRoutes = require("./Route/equipmentRouts");
 const bookingRoutes = require("./Route/bookingRoutes");
+const paymentRoutes = require("./Route/paymentRoutes");
+const feedbackRoutes = require("./Route/feedbackRoutes");
 
 
 const app = express();
@@ -30,8 +33,10 @@ app.use("/admins", adminRoutes);
 app.use("/auth", authRoutes);
 app.use("/equipment", equipmentRoutes);
 app.use("/bookings", bookingRoutes);
+app.use("/payments", paymentRoutes);
+app.use("/feedback", feedbackRoutes);
 // notifications route removed per revert request
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import FeedbackSection from "./FeedbackSection";
 
 function Home() {
   return (
@@ -56,9 +57,8 @@ function Home() {
       </Link>
 
 
-      
+      <FeedbackSection />
     </div>
-
   );
 }
 
