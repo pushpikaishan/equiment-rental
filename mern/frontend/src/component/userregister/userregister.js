@@ -10,6 +10,7 @@ function UserRegister() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessages, setSuccessMessages] = useState({});
+  
 
   const togglePassword = (field) => {
     if (field === "password") {
@@ -231,7 +232,7 @@ function UserRegister() {
 
     sendRequest().then(() => {
       setIsLoading(false);
-      navigate("/allusers"); // navigate to profile page
+      navigate("/userlog"); // navigate to profile page
     }).catch((error) => {
       setIsLoading(false);
       console.error('Registration error:', error);

@@ -94,6 +94,8 @@ export default function EquipmentList() {
                     alt={it.name}
                     style={{ width: '100%', height: 150, objectFit: 'cover' }}
                   />
+                  <img src={`${baseUrl}${it.image}`} alt={it.name} style={{ width: '100%', height: 300, objectFit: 'cover' }} />
+
                 ) : (
                   <div style={{ width: '100%', height: 150, background: '#e2e8f0' }} />
                 )}
