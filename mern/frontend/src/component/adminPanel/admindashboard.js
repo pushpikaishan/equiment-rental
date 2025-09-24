@@ -544,21 +544,25 @@ function DashboardContent() {
             </ResponsiveContainer>
           </div>
         </div>
-        {/* Payments by Method (interactive pie) */}
+        {/* Delivery Details as Pie (like Bookings by Status) */}
         <div style={{ background: 'white', padding: 20, borderRadius: 16, border: '2px solid #f1f5f9', position: 'relative' }}>
-          <h3 style={{ marginTop: 0 }}>Payments by Method</h3>
-          {loading ? 'Loading…' : (
+          <h3 style={{ marginTop: 0 }}>Deliveries by Status</h3>
+          {loading ? (
+            'Loading…'
+          ) : !deliverySummary || !deliverySummary.byStatus || Object.keys(deliverySummary.byStatus).length === 0 ? (
+            <div>No delivery data available.</div>
+          ) : (
             <div style={{ width: '100%', height: 260 }}>
               <ResponsiveContainer>
                 <PieChart>
                   <defs>
-                    <filter id="pieShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <filter id="pieShadowDel" x="-20%" y="-20%" width="140%" height="140%">
                       <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#94a3b8" floodOpacity="0.4" />
                     </filter>
                   </defs>
                   <Pie
                     dataKey="value"
-                    data={Object.entries(paySummary?.byMethod || {}).map(([name, value]) => ({ name, value: Number(value || 0) }))}
+                    data={Object.entries(deliverySummary.byStatus).map(([name, value]) => ({ name, value: Number(value || 0) }))}
                     cx="50%"
                     cy="50%"
                     innerRadius={40}
@@ -571,15 +575,26 @@ function DashboardContent() {
                       const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
                       const radiusBoost = 6;
                       return (
-                        <g filter="url(#pieShadow)">
+                        <g filter="url(#pieShadowDel)">
                           <path d={props.sectorPath(cx, cy, innerRadius, outerRadius + radiusBoost, startAngle, endAngle)} fill={fill} />
                         </g>
                       );
                     }}
                   >
-                    {Object.entries(paySummary?.byMethod || {}).map(([name], idx) => (
-                      <Cell key={`pm-${name}`} fill={["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#64748b"][idx % 7]} />
-                    ))}
+                    {Object.entries(deliverySummary.byStatus).map(([name], idx) => {
+                      const colorMap = {
+                        delivered: '#10b981',
+                        pending: '#e2e8f0',
+                        inTransit: '#06b6d4',
+                        outForDelivery: '#06b6d4',
+                        cancelled: '#ef4444',
+                        returned: '#f59e0b',
+                        failed: '#ef4444',
+                      };
+                      const palette = ["#10b981","#e2e8f0","#06b6d4","#f59e0b","#ef4444","#8b5cf6","#64748b"];
+                      const fill = colorMap[name] || palette[idx % palette.length];
+                      return <Cell key={`del-${name}`} fill={fill} />;
+                    })}
                   </Pie>
                   <Tooltip content={({ active, payload }) => {
                     if (!active || !payload || !payload.length) return null;
