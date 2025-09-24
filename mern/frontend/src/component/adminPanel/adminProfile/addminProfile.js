@@ -28,6 +28,17 @@ function UserProfile() {
     fetchProfile();
   }, []);
 
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userId");
+    } catch (_) {
+      // ignore
+    }
+    navigate("/");
+  };
+
   //profile image upload handler handleFileChange
  const handleFileChange = async (e) => {
   const file = e.target.files[0];
@@ -95,19 +106,20 @@ function UserProfile() {
       user: { primary: "#4f46e5", secondary: "#7c3aed", light: "#e0e7ff" },
       staff: { primary: "#059669", secondary: "#0d9488", light: "#d1fae5" },
       supplier: { primary: "#dc2626", secondary: "#ea580c", light: "#fee2e2" },
-      admin: { primary: "#7c3aed", secondary: "#c026d3", light: "#f3e8ff" },
+      admin: { primary: "#06216cff", secondary: "#1d4ed8", light: "#3b82f6" },
     };
     return roleColors[role] || roleColors.user;
   };
 
   const containerStyle = {
     minHeight: "100vh",
-    padding: "20px",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      background: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #f8fafc 100%)",
+      padding: "2rem 1rem",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
   };
 
   const cardStyle = {
-    maxWidth: "800px",
+    maxWidth: "600px",
     margin: "0 auto",
     background: "white",
     borderRadius: "24px",
@@ -152,7 +164,7 @@ function UserProfile() {
   const commonFields = [
     { label: "Name", value: profile.name },
     { label: "Email", value: profile.email },
-    { label: "Role", value: profile.role },
+   // { label: "Role", value: profile.role },
   ];
 
   // Optional fields for different roles
@@ -180,7 +192,7 @@ function UserProfile() {
       ];
       break;
     case "admin":
-      extraFields = []; // Admin only has name, email, role
+      extraFields = [{ label: "ID", value: profile._id }]; // Admin only has name, email, role
       break;
     default:
       extraFields = [];
@@ -196,26 +208,34 @@ function UserProfile() {
     position: "relative",
   };
 
-  // Settings button styles
-  const settingsButtonStyle = {
+  const logoutButtonStyle = {
     position: "absolute",
     top: "20px",
-    right: "20px",
-    width: "45px",
+    left: "20px",
     height: "45px",
+    padding: "0 14px",
     background: "rgba(255, 255, 255, 0.15)",
-    border: "none",
-    borderRadius: "50%",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "18px",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    borderRadius: "12px",
     color: "white",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    fontWeight: 600,
     transition: "all 0.3s ease",
     backdropFilter: "blur(10px)",
-    boxShadow: "0 4px 15px rgba(0, 0, 0, 0.1)",
   };
+
+  // Stack and center avatar + upload button
+  const centerStackStyle = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
+ 
 
   const profileImageContainerStyle = {
     position: "relative",
@@ -225,8 +245,8 @@ function UserProfile() {
   };
 
   const profileImageStyle = {
-    width: "120px",
-    height: "120px",
+    width: "150px",
+    height: "150px",
     borderRadius: "50%",
     border: "6px solid rgba(255, 255, 255, 0.9)",
     boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
@@ -309,18 +329,20 @@ function UserProfile() {
   const fieldsGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "20px",
-    marginTop: "30px",
+    gap: "10px",
+    marginTop: "10px",
+    
   };
 
   const fieldCardStyle = {
-    background: roleColors.light,
-    padding: "20px",
-    borderRadius: "16px",
-    border: `2px solid ${roleColors.primary}20`,
+    background: "white",
+    padding: "2rem",
+    borderRadius: "15px",
+    //border: `2px solid ${roleColors.primary}20`,
     transition: "all 0.3s ease",
     position: "relative",
-    overflow: "hidden",
+    overflow: "hidden"
+   
   };
 
   const fieldLabelStyle = {
@@ -402,54 +424,78 @@ function UserProfile() {
 
       <div style={cardStyle}>
         <div style={headerStyle}>
+          <button
+            style={logoutButtonStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)";
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.4)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)";
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.3)";
+            }}
+            onClick={handleLogout}
+            title="Log out"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Logout
+          </button>
           
 
-          <div style={profileImageContainerStyle}>
-            <img
-              src={
-                profile.profileImage
-                  ? `http://localhost:5000${profile.profileImage}`
-                  : getAvatarUrl(profile.name, profile.role)
-              }
-              alt="Profile"
-              style={profileImageStyle}
-              onMouseOver={(e) => {
-                e.target.style.transform = "scale(1.1) rotate(5deg)";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = "scale(1) rotate(0deg)";
-              }}
-            />
-            <div style={roleIconStyle}>{getRoleIcon(profile.role)}</div>
-          </div>
+          <div style={centerStackStyle}>
+            <div style={profileImageContainerStyle}>
+              <img
+                src={
+                  profile.profileImage
+                    ? `http://localhost:5000${profile.profileImage}`
+                    : getAvatarUrl(profile.name, profile.role)
+                }
+                alt="Profile"
+                style={profileImageStyle}
+                onMouseOver={(e) => {
+                  e.target.style.transform = "scale(1.1) rotate(5deg)";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.transform = "scale(1) rotate(0deg)";
+                }}
+              />
+              <div style={roleIconStyle}>{getRoleIcon(profile.role)}</div>
+            </div>
 
-          {/* Custom File Upload Button */}
-          <div style={fileUploadContainerStyle}>
-            <input
-              type="file"
-              accept="image/*"
-              id="profileUpload"
-              onChange={handleFileChange}
-              style={hiddenFileInputStyle}
-            />
-            <label
-              htmlFor="profileUpload"
-              style={customFileButtonStyle}
-              onMouseOver={(e) => {
-                e.target.style.background = "rgba(255, 255, 255, 0.3)";
-                e.target.style.borderColor = "rgba(255, 255, 255, 0.5)";
-                e.target.style.transform = "translateY(-2px)";
-                e.target.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.15)";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = "rgba(255, 255, 255, 0.2)";
-                e.target.style.borderColor = "rgba(255, 255, 255, 0.3)";
-                e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "none";
-              }}
-            >
-              📷 Update Photo
-            </label>
+            {/* Custom File Upload Button */}
+            <div style={fileUploadContainerStyle}>
+              <input
+                type="file"
+                accept="image/*"
+                id="profileUpload"
+                onChange={handleFileChange}
+                style={hiddenFileInputStyle}
+              />
+              <label
+                htmlFor="profileUpload"
+                style={customFileButtonStyle}
+                onMouseOver={(e) => {
+                  e.target.style.background = "rgba(255, 255, 255, 0.3)";
+                  e.target.style.borderColor = "rgba(255, 255, 255, 0.5)";
+                  e.target.style.transform = "translateY(-2px)";
+                  e.target.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.15)";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = "rgba(255, 255, 255, 0.2)";
+                  e.target.style.borderColor = "rgba(255, 255, 255, 0.3)";
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "none";
+                }}
+              >
+                Update Photo
+              </label>
+            </div>
           </div>
 
          {/* <h2 style={titleStyle}>{profile.role.toUpperCase()} Profile</h2> */}
