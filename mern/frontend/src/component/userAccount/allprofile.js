@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import UserNavbar from "../shop/UserNavbar";
-import SupplierTopbar from "../supplierPanel/SupplierTopbar";
 import SiteFooter from "../common/SiteFooter";
 
 function UserProfile() {
@@ -37,7 +36,7 @@ function UserProfile() {
     };
 
     fetchProfile();
-  }, [navigate]);
+  }, []);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -85,6 +84,7 @@ function UserProfile() {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       localStorage.removeItem("userId");
+      // Optionally clear other app-specific keys here
     } catch (_) {
       // ignore
     }
@@ -114,15 +114,24 @@ function UserProfile() {
     return icons[role] || "👤";
   };
 
+  // Role-based color palette (from admin profile)
+  const getRoleColors = (role) => {
+    const roleColors = {
+      user: { primary: "#4f46e5", secondary: "#7c3aed", light: "#e0e7ff" },
+      staff: { primary: "#059669", secondary: "#0d9488", light: "#d1fae5" },
+      supplier: { primary: "#dc2626", secondary: "#ea580c", light: "#fee2e2" },
+      admin: { primary: "#7c3aed", secondary: "#c026d3", light: "#f3e8ff" },
+    };
+    return roleColors[role] || roleColors.user;
+  };
+
   // CSS Styles
   const styles = {
     profileContainer: {
       minHeight: "100vh",
-      background:
-        "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #f8fafc 100%)",
+      background: "linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #f8fafc 100%)",
       padding: "2rem 1rem",
-      fontFamily:
-        "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     },
     loadingWrapper: {
       display: "flex",
@@ -132,7 +141,7 @@ function UserProfile() {
       gap: "1rem",
       color: "#64748b",
       fontSize: "1.1rem",
-      fontWeight: "500",
+      fontWeight: "500"
     },
     loadingSpinner: {
       width: "32px",
@@ -140,26 +149,25 @@ function UserProfile() {
       border: "3px solid #e2e8f0",
       borderTop: "3px solid #3b82f6",
       borderRadius: "50%",
-      animation: "spin 1s linear infinite",
+      animation: "spin 1s linear infinite"
     },
     profileCard: {
       maxWidth: "650px",
       margin: "0 auto",
       background: "#ffffff",
       borderRadius: "24px",
-      boxShadow:
-        "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
       overflow: "hidden",
       border: "1px solid #e2e8f0",
-      animation: "slideUp 0.6s ease-out",
+      animation: "slideUp 0.6s ease-out"
     },
     profileHeader: {
-      background:
-        "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #1d4ed8 100%)",
+      // Will be overridden dynamically below using role colors
+      background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #1d4ed8 100%)",
       padding: "3rem 2rem",
       textAlign: "center",
       color: "white",
-      position: "relative",
+      position: "relative"
     },
     settingsBtn: {
       position: "absolute",
@@ -176,7 +184,7 @@ function UserProfile() {
       alignItems: "center",
       justifyContent: "center",
       transition: "all 0.3s ease",
-      backdropFilter: "blur(10px)",
+      backdropFilter: "blur(10px)"
     },
     logoutBtn: {
       position: "absolute",
@@ -194,28 +202,29 @@ function UserProfile() {
       gap: "8px",
       fontWeight: 600,
       transition: "all 0.3s ease",
-      backdropFilter: "blur(10px)",
+      backdropFilter: "blur(10px)"
     },
     avatarWrapper: {
       position: "relative",
       display: "inline-block",
-      marginBottom: "0.75rem",
+      marginBottom: "0.75rem"
     },
     avatarSection: {
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: "2rem",
+      marginBottom: "2rem"
     },
     profileAvatar: {
       width: "150px",
       height: "150px",
       borderRadius: "50%",
-      border: "4px solid rgba(255, 255, 255, 0.9)",
+      border: "6px solid rgba(255, 255, 255, 0.9)",
       boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
       transition: "all 0.3s ease",
       objectFit: "cover",
+      
     },
     roleBadge: {
       position: "absolute",
@@ -230,7 +239,7 @@ function UserProfile() {
       alignItems: "center",
       justifyContent: "center",
       fontSize: "16px",
-      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)"
     },
     fileInput: {
       position: "absolute",
@@ -241,7 +250,7 @@ function UserProfile() {
       overflow: "hidden",
       clip: "rect(0,0,0,0)",
       whiteSpace: "nowrap",
-      border: "0",
+      border: "0"
     },
     uploadBtn: {
       display: "inline-flex",
@@ -249,8 +258,8 @@ function UserProfile() {
       gap: "0.5rem",
       padding: "0.75rem 1.5rem",
       background: "rgba(255, 255, 255, 0.2)",
-      border: "1px solid rgba(255, 255, 255, 0.3)",
-      borderRadius: "12px",
+      border: "2px solid rgba(255, 255, 255, 0.3)",
+      borderRadius: "25px",
       color: "white",
       fontSize: "0.875rem",
       fontWeight: "600",
@@ -259,22 +268,31 @@ function UserProfile() {
       backdropFilter: "blur(10px)",
       textDecoration: "none",
       marginTop: "0.5rem",
+      letterSpacing: "0.5px"
     },
     profileName: {
       fontSize: "2.25rem",
       fontWeight: "500",
       margin: "0 0 0.5rem 0",
       letterSpacing: "-0.025em",
-      textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+      textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+     
+    },
+    profileRole: {
+      fontSize: "1.125rem",
+      opacity: "0.9",
+      fontWeight: "500",
+      margin: "0",
+      textTransform: "capitalize"
     },
     profileContent: {
       padding: "3rem 2rem",
-      background: "#fafafa",
+      background: "#fafafa"
     },
     fieldsGrid: {
       display: "grid",
       gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-      gap: "1rem",
+      gap: "1rem"
     },
     fieldCard: {
       background: "white",
@@ -283,13 +301,13 @@ function UserProfile() {
       transition: "all 0.3s ease",
       animation: "fadeInUp 0.6s ease-out forwards",
       opacity: "0",
-      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.2)",
+      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.2)"
     },
     fieldHeader: {
       display: "flex",
       alignItems: "center",
       gap: "0.75rem",
-      marginBottom: "0.75rem",
+      marginBottom: "0.75rem"
     },
     fieldIcon: {
       fontSize: "1.25rem",
@@ -300,22 +318,22 @@ function UserProfile() {
       height: "32px",
       background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
       borderRadius: "8px",
-      filter: "grayscale(0.2)",
+      filter: "grayscale(0.2)"
     },
     fieldLabel: {
       fontSize: "0.875rem",
       fontWeight: "700",
       color: "#64748b",
       textTransform: "uppercase",
-      letterSpacing: "0.05em",
+      letterSpacing: "0.05em"
     },
     fieldValue: {
       fontSize: "1.125rem",
       fontWeight: "600",
       color: "#1e293b",
       wordBreak: "break-word",
-      paddingLeft: "2.75rem",
-    },
+      paddingLeft: "2.75rem"
+    }
   };
 
   if (!profile) {
@@ -341,9 +359,12 @@ function UserProfile() {
     );
   }
 
+  // Dynamic fields based on role
+  const roleColors = getRoleColors(profile.role);
   const commonFields = [
     { label: "Full Name", value: profile.name, icon: "👤" },
     { label: "Email Address", value: profile.email, icon: "📧" },
+   // { label: "Account Type", value: profile.role, icon: "🏷️" },
   ];
 
   let extraFields = [];
@@ -377,14 +398,7 @@ function UserProfile() {
 
   return (
     <>
-      {profile?.role === "supplier" ? (
-        <SupplierTopbar title="Supplier Profile" hideProfile />
-      ) : profile?.role === "staff" ? (
-        <SupplierTopbar title="Driver Profile" hideProfile />
-      ) : (
-        <UserNavbar />
-      )}
-
+      <UserNavbar />
       <div style={styles.profileContainer}>
         <style>
           {`
@@ -443,26 +457,67 @@ function UserProfile() {
               box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
               border-color: #3b82f6 !important;
             }
+
+            @media (max-width: 768px) {
+              .profile-container {
+                padding: 1rem 0.5rem !important;
+              }
+              
+              .profile-header {
+                padding: 2rem 1rem !important;
+              }
+              
+              .profile-content {
+                padding: 2rem 1rem !important;
+              }
+              
+              .fields-grid {
+                grid-template-columns: 1fr !important;
+              }
+              
+              .profile-name {
+                font-size: 1.75rem !important;
+              }
+              
+              .settings-btn {
+                width: 40px !important;
+                height: 40px !important;
+                top: 1rem !important;
+                right: 1rem !important;
+              }
+            }
           `}
         </style>
-
+        
         <div style={styles.profileCard}>
-          <div style={styles.profileHeader}>
+          {/* Header Section */}
+          <div style={{
+            ...styles.profileHeader,
+            background: `linear-gradient(135deg, ${roleColors.primary}, ${roleColors.secondary})`
+          }}>
             <button
               style={styles.logoutBtn}
               className="logout-btn"
               onClick={handleLogout}
               title="Log out"
             >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
               Logout
             </button>
-            <button
-              style={styles.settingsBtn}
+            <button 
+              style={styles.settingsBtn} 
               className="settings-btn"
-              onClick={handleSettingsClick}
+              onClick={handleSettingsClick} 
               title="Settings"
             >
-              ⚙
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
             </button>
 
             <div style={styles.avatarSection}>
@@ -477,7 +532,9 @@ function UserProfile() {
                   style={styles.profileAvatar}
                   className="profile-avatar"
                 />
-                <div style={styles.roleBadge}>{getRoleIcon(profile.role)}</div>
+                <div style={styles.roleBadge}>
+                  {getRoleIcon(profile.role)}
+                </div>
               </div>
 
               <input
@@ -492,33 +549,40 @@ function UserProfile() {
                 style={styles.uploadBtn}
                 className="upload-btn"
               >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
                 Update Photo
               </label>
             </div>
 
             <div style={{ marginTop: "1rem" }}>
               <h1 style={styles.profileName}>{profile.name || "User"}</h1>
+              {/* <p style={styles.profileRole}>{profile.role?.charAt(0).toUpperCase() + profile.role?.slice(1)} Account</p> */}
             </div>
           </div>
 
+          {/* Content Section */}
           <div style={styles.profileContent}>
             <div style={styles.fieldsGrid}>
               {commonFields.concat(extraFields).map((field, index) => (
-                <div
-                  key={field.label}
-                  style={{
-                    ...styles.fieldCard,
-                    animationDelay: `${index * 0.1}s`,
-                  }}
+                <div 
+                  key={field.label} 
+                  style={{...styles.fieldCard, animationDelay: `${index * 0.1}s`}}
                   className="field-card"
                 >
                   <div style={styles.fieldHeader}>
-                    <span style={styles.fieldIcon}>{field.icon}</span>
-                    <span style={styles.fieldLabel}>{field.label}</span>
+                    <span style={{
+                      ...styles.fieldIcon,
+                      background: `linear-gradient(135deg, ${roleColors.primary}, ${roleColors.secondary})`
+                    }}>{field.icon}</span>
+                    <span style={{
+                      ...styles.fieldLabel,
+                      color: roleColors.primary
+                    }}>{field.label}</span>
                   </div>
-                  <div style={styles.fieldValue}>
-                    {field.value || "Not specified"}
-                  </div>
+                  <div style={styles.fieldValue}>{field.value || "Not specified"}</div>
                 </div>
               ))}
             </div>
