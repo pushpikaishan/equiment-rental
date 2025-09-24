@@ -263,6 +263,9 @@ export default function EquipmentList() {
                       </span>
                     )}
                   </div>
+                  <div style={{ marginBottom: 14, color: '#475569', fontSize: 12, fontWeight: 600 }}>
+                    In stock: {Math.max(0, Number(it.quantity) || 0)}
+                  </div>
                   <div style={{ 
                     fontWeight: 800, 
                     fontSize: 18,
