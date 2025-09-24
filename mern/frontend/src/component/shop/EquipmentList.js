@@ -210,7 +210,7 @@ export default function EquipmentList() {
                         : `${baseUrl}${it.image.startsWith('/') ? '' : '/'}${it.image}`
                     }
                     alt={it.name}
-                    style={{ width: '100%', height: 150, objectFit: 'cover' }}
+                    style={{ width: '100%', height: 250, objectFit: 'cover' }}
                   />
 
                 ) : (
