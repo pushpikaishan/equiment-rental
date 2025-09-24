@@ -66,7 +66,7 @@ function StaffRegister() {
     try {
       await axios.post("http://localhost:5000/staff", inputs);
       setIsLoading(false);
-      navigate(-1);
+      navigate("/adminDashbooard");
     } catch (err) {
       setIsLoading(false);
       alert("Registration failed");

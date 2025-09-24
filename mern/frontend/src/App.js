@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 
 
 import Log from "./component/userlog/login";
+import ForgotPassword from "./component/userlog/ForgotPassword";
 
 //register
 import UserRegister from "./component/userregister/userregister";
@@ -53,6 +54,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Log />} />
           <Route path="/userlog" element={<Log />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route path="/userRegister" element={<UserRegister />} />
           <Route path="/SupplierRegister" element={<SupplierRegister />} />
