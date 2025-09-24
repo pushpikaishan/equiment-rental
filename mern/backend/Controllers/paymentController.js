@@ -350,6 +350,119 @@ exports.exportPDF = async (req, res) => {
   }
 };
 
+// Generate invoice PDF (for paid payments)
+exports.invoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pay = await Payment.findById(id).lean();
+    if (!pay) return res.status(404).json({ message: 'Payment not found' });
+    // Authorization: owner can access; admin/staff can access
+    const isOwner = req.user && String(pay.userId) === String(req.user.id);
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'staff');
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Forbidden' });
+    if (pay.status !== 'paid' && pay.status !== 'partial_refunded') {
+      return res.status(400).json({ message: 'Invoice available only for paid or partially refunded payments' });
+    }
+    const doc = new PDFDocument({ margin: 36, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${pay.orderId || pay._id}.pdf"`);
+    doc.pipe(res);
+
+    doc.font('Helvetica-Bold').fontSize(20).text('INVOICE', { align: 'right' });
+    doc.moveDown();
+    doc.font('Helvetica').fontSize(10);
+    doc.text(`Invoice No: ${pay.orderId || pay._id}`);
+    doc.text(`Date: ${new Date(pay.createdAt).toLocaleString()}`);
+    doc.moveDown();
+    doc.text(`Billed To:`);
+    doc.font('Helvetica-Bold').text(`${pay.customerName || ''}`);
+    doc.font('Helvetica').text(`${pay.customerEmail || ''}`);
+    doc.moveDown();
+    doc.text(`Payment Method: ${pay.method || pay.gateway || 'N/A'}`);
+    doc.text(`Status: ${(pay.status || '').replace(/_/g, ' ')}`);
+    doc.moveDown();
+    doc.font('Helvetica-Bold').text('Summary');
+    doc.font('Helvetica');
+    const lines = [
+      ['Subtotal', `${pay.currency || 'LKR'} ${(Number(pay.subtotal || pay.amount) || 0).toFixed(2)}`],
+      ['Deposit', `${pay.currency || 'LKR'} ${(Number(pay.deposit || 0) || 0).toFixed(2)}`],
+      ['Taxes', `${pay.currency || 'LKR'} ${(Number(pay.taxes || 0) || 0).toFixed(2)}`],
+      ['Discount', `${pay.currency || 'LKR'} ${(Number(pay.discount || 0) || 0).toFixed(2)}`],
+      ['Total Paid', `${pay.currency || 'LKR'} ${(Number(pay.amount || 0) || 0).toFixed(2)}`],
+    ];
+    const labelWidth = 120;
+    lines.forEach(([k, v]) => {
+      const y = doc.y;
+      doc.text(k, 36, y, { width: labelWidth });
+      doc.text(v, 36 + labelWidth + 10, y);
+      doc.moveDown(0.5);
+    });
+    doc.moveDown(2);
+    doc.font('Helvetica-Oblique').fontSize(9).fillColor('#64748b').text('Thank you for your business.');
+    doc.end();
+  } catch (e) {
+    console.error('Invoice PDF error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Generate receipt PDF (for refunded payments)
+exports.receipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pay = await Payment.findById(id).lean();
+    if (!pay) return res.status(404).json({ message: 'Payment not found' });
+    // Authorization: owner can access; admin/staff can access
+    const isOwner = req.user && String(pay.userId) === String(req.user.id);
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'staff');
+    if (!isOwner && !isAdmin) return res.status(403).json({ message: 'Forbidden' });
+    if (pay.status !== 'refunded' && pay.status !== 'partial_refunded') {
+      return res.status(400).json({ message: 'Receipt available only for refunded payments' });
+    }
+    // Fetch last refund audit as reference
+    const lastRefund = await PaymentAudit.findOne({ paymentId: id, action: { $in: ['refund', 'partial_refund'] } }).sort({ createdAt: -1 }).lean();
+    const doc = new PDFDocument({ margin: 36, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="receipt-${pay.orderId || pay._id}.pdf"`);
+    doc.pipe(res);
+
+    doc.font('Helvetica-Bold').fontSize(20).text('REFUND RECEIPT', { align: 'right' });
+    doc.moveDown();
+    doc.font('Helvetica').fontSize(10);
+    doc.text(`Receipt No: ${pay.orderId || pay._id}`);
+    doc.text(`Date: ${new Date((lastRefund?.createdAt) || pay.updatedAt || Date.now()).toLocaleString()}`);
+    doc.moveDown();
+    doc.text(`Customer:`);
+    doc.font('Helvetica-Bold').text(`${pay.customerName || ''}`);
+    doc.font('Helvetica').text(`${pay.customerEmail || ''}`);
+    doc.moveDown();
+    const refunded = Number(lastRefund?.amount || 0);
+    const title = (pay.status === 'partial_refunded') ? 'Partial Refund Amount' : 'Refund Amount';
+    const currency = pay.currency || 'LKR';
+    doc.font('Helvetica-Bold').text('Summary');
+    doc.font('Helvetica');
+    const lines = [
+      [title, `${currency} ${refunded ? refunded.toFixed(2) : (Number(pay.amount || 0)).toFixed(2)}`],
+      ['Original Payment', `${currency} ${(Number(pay.amount || 0)).toFixed(2)}`],
+      ['Status', (pay.status || '').replace(/_/g, ' ')],
+      ['Note', lastRefund?.note || ''],
+    ];
+    const labelWidth = 150;
+    lines.forEach(([k, v]) => {
+      const y = doc.y;
+      doc.text(k, 36, y, { width: labelWidth });
+      doc.text(String(v), 36 + labelWidth + 10, y);
+      doc.moveDown(0.5);
+    });
+    doc.moveDown(2);
+    doc.font('Helvetica-Oblique').fontSize(9).fillColor('#64748b').text('This receipt acknowledges the refund to your original payment method.');
+    doc.end();
+  } catch (e) {
+    console.error('Receipt PDF error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // DELETE payment (admin/staff)
 exports.remove = async (req, res) => {
   try {
