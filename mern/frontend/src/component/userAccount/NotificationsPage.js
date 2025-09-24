@@ -59,6 +59,31 @@ export default function NotificationsPage() {
 
 	const fakeTrack = (id) => alert(`Live tracking (demo): Booking ${id} — driver en route…`);
 
+	const download = (blob, filename) => {
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		URL.revokeObjectURL(url);
+	};
+
+	const downloadInvoice = async (id, orderId) => {
+		try {
+			const res = await axios.get(`${baseUrl}/payments/${id}/invoice`, { headers, responseType: 'blob' });
+			download(new Blob([res.data], { type: 'application/pdf' }), `invoice-${orderId || id}.pdf`);
+		} catch (e) { alert('Failed to download invoice'); }
+	};
+
+	const downloadReceipt = async (id, orderId) => {
+		try {
+			const res = await axios.get(`${baseUrl}/payments/${id}/receipt`, { headers, responseType: 'blob' });
+			download(new Blob([res.data], { type: 'application/pdf' }), `receipt-${orderId || id}.pdf`);
+		} catch (e) { alert('Failed to download receipt'); }
+	};
+
 	return (
 		<div>
 			<UserNavbar />
@@ -118,6 +143,7 @@ export default function NotificationsPage() {
 										<th style={{ padding: 8 }}>Order ID</th>
 										<th style={{ padding: 8 }}>Status</th>
 										<th style={{ padding: 8 }}>Amount</th>
+										<th style={{ padding: 8 }}>Actions</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -137,6 +163,14 @@ export default function NotificationsPage() {
 												}}>{(p.status || '').replace(/_/g, ' ')}</span>
 											</td>
 											<td style={{ padding: 8 }}>LKR {Number(p.amount || 0).toFixed(2)}</td>
+											<td style={{ padding: 8 }}>
+												{p.status === 'paid' && (
+													<button onClick={() => downloadInvoice(p._id, p.orderId)} style={btn('#0284c7')}>Download Invoice</button>
+												)}
+												{(p.status === 'refunded' || p.status === 'partial_refunded') && (
+													<button onClick={() => downloadReceipt(p._id, p.orderId)} style={btn('#16a34a')}>Download Receipt</button>
+												)}
+											</td>
 										</tr>
 									))}
 								</tbody>
