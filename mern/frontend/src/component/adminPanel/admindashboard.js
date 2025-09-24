@@ -8,6 +8,7 @@ import InventoryManagement from "./inventoryManage";
 import PaymentManagement from "./PaymentManage";
 import BookingManagement from "./bookingManage";
 import DeliveryManagement from "./deliveryManage";
+// Removed SupplierManage page per request
 
 import  Setting from "./adminProfile/adminMenu";
 import  Profile from "./adminProfile/addminProfile";
@@ -389,7 +390,7 @@ function AdminDashboard() {
         {activeSection === 'deleteProfile' && <UserManagement />}
         {activeSection === 'users' && <UserManagement />}
         {activeSection === 'inventory' && <InventoryManagement />}
-        {activeSection === 'bookings' && <BookingManagement />}
+  {activeSection === 'bookings' && <BookingManagement />}
         {activeSection === 'payments' && <PaymentManagement />}
         {activeSection === 'delivery' && <DeliveryManagement />}
       </div>

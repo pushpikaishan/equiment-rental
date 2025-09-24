@@ -36,9 +36,11 @@ export default function MyBookings() {
 
   useEffect(() => { fetchBookings(); }, []);
 
-  // Edit allowed until 24h before the booking date
+  // Edit allowed only within 1 hour after creation (matches backend rule)
   const canEdit = (b) => {
-    const cutoff = new Date(b.bookingDate).getTime() - 24 * 60 * 60 * 1000;
+    const created = new Date(b.createdAt).getTime();
+    if (isNaN(created)) return false;
+    const cutoff = created + 60 * 60 * 1000; // 1 hour window
     return Date.now() <= cutoff;
   };
 
@@ -153,7 +155,7 @@ export default function MyBookings() {
                 <div style={{ padding: 12, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: 12, color: '#64748b', fontSize: 12 }}>
                     {isCancelled(b) && <span>Edit locked (cancelled)</span>}
-                    {!isCancelled(b) && !canEdit(b) && <span>Edit locked (within 24h of booking date)</span>}
+                    {!isCancelled(b) && !canEdit(b) && <span>Edit locked (only within 1 hour of creation)</span>}
                     {!canDelete(b) && <span>Delete locked (after 24h from creation)</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>

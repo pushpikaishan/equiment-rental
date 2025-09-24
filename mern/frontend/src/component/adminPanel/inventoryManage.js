@@ -42,6 +42,18 @@ function InventoryManagement() {
       return;
     }
 
+    // Numeric validation: price and quantity must be > 0
+    const priceNum = Number(form.rentalPrice);
+    const qtyNum = Number(form.quantity);
+    if (!(priceNum > 0)) {
+      setMessage('Rental price must be greater than 0.');
+      return;
+    }
+    if (!(qtyNum > 0)) {
+      setMessage('Quantity must be greater than 0.');
+      return;
+    }
+
     const data = new FormData();
     data.append('name', form.name);
     data.append('description', form.description);
@@ -246,6 +258,11 @@ function InventoryManagement() {
 
   const saveEdit = async () => {
     if (!editing) return;
+    // Validate price and quantity > 0
+    const priceNum = Number(editing.rentalPrice);
+    const qtyNum = Number(editing.quantity);
+    if (!(priceNum > 0)) { alert('Rental price must be greater than 0.'); return; }
+    if (!(qtyNum > 0)) { alert('Quantity must be greater than 0.'); return; }
     const token = localStorage.getItem('token');
     const data = new FormData();
     data.append('name', editing.name || '');
@@ -325,11 +342,11 @@ function InventoryManagement() {
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Rental Price (per day)</label>
-            <input type="number" step="0.01" min="0" name="rentalPrice" value={form.rentalPrice} onChange={handleChange} placeholder="e.g., 1500" style={{ ...inputBox, width: '100%' }} />
+            <input type="number" step="0.01" min="0.01" name="rentalPrice" value={form.rentalPrice} onChange={handleChange} placeholder="e.g., 1500" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Quantity</label>
-            <input type="number" min="0" name="quantity" value={form.quantity} onChange={handleChange} placeholder="e.g., 10" style={{ ...inputBox, width: '100%' }} />
+            <input type="number" min="1" name="quantity" value={form.quantity} onChange={handleChange} placeholder="e.g., 10" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Image</label>
@@ -492,11 +509,11 @@ function InventoryManagement() {
               </div>
               <div>
                 <label>Price</label>
-                <input type="number" value={editing.rentalPrice} onChange={(e) => setEditing({ ...editing, rentalPrice: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                <input type="number" step="0.01" min="0.01" value={editing.rentalPrice} onChange={(e) => setEditing({ ...editing, rentalPrice: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
               </div>
               <div>
                 <label>Quantity</label>
-                <input type="number" value={editing.quantity} onChange={(e) => setEditing({ ...editing, quantity: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                <input type="number" min="1" value={editing.quantity} onChange={(e) => setEditing({ ...editing, quantity: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
               </div>
               <div style={{ gridColumn: 'span 2', display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input type="checkbox" id="editAvailable" checked={!!editing.available} onChange={(e) => setEditing({ ...editing, available: e.target.checked })} />

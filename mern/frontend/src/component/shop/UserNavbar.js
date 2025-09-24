@@ -258,6 +258,24 @@ export default function UserNavbar() {
           >
             My Bookings
           </Link>
+          <Link
+            to="/suppliers-inventories"
+            style={link}
+            onMouseOver={(e) => { 
+              e.currentTarget.style.background = 'rgba(59,130,246,0.08)'; 
+              e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)'; 
+              e.currentTarget.style.color = '#2563eb';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => { 
+              e.currentTarget.style.background = 'transparent'; 
+              e.currentTarget.style.borderColor = 'transparent'; 
+              e.currentTarget.style.color = '#1e293b';
+              e.currentTarget.style.transform = 'none';
+            }}
+          >
+            Nearby Suppliers
+          </Link>
         </div>
         <div style={right}>
           <Link to="/notifications" style={link} 

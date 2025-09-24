@@ -25,7 +25,7 @@ function Login() {
           navigate("/home");
           break;
         case "supplier":
-          navigate("/userAccount/profile");
+          navigate("/supplier/dashboard");
           break;
         case "admin":
           navigate("/adminDashbooard");
