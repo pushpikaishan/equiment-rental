@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { pageContainer, headerCard, headerTitle, headerSub, tabButton, card as cardBox } from './adminStyles';
 
 import Adduser from "../userregister/userregister";
 import Addadmin from "../userregister/adminRegister";
@@ -57,13 +58,7 @@ function UserOverview() {
 function UserManagement() {
   const [activeTab, setActiveTab] = useState('overview');
 
-  const headerStyle = {
-    background: 'white',
-    padding: '30px',
-    borderRadius: '16px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-    marginBottom: '30px'
-  };
+  const headerStyle = headerCard;
 
   const tabsStyle = {
     display: 'flex',
@@ -72,24 +67,9 @@ function UserManagement() {
     flexWrap: 'wrap'
   };
 
-  const tabStyle = (isActive) => ({
-    padding: '12px 20px',
-    borderRadius: '8px',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '600',
-    transition: 'all 0.3s ease',
-    background: isActive ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : '#f1f5f9',
-    color: isActive ? 'white' : '#64748b'
-  });
+  const tabStyle = (isActive) => tabButton(isActive);
 
-  const cardStyle = {
-    background: 'white',
-    padding: '30px',
-    borderRadius: '16px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
-  };
+  const cardStyle = { ...cardBox, padding: '30px' };
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -104,14 +84,10 @@ function UserManagement() {
   ];
 
   return (
-    <div>
+    <div style={pageContainer}>
       <div style={headerStyle}>
-        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#1e293b', margin: '0 0 8px 0' }}>
-          User Management
-        </h1>
-        <p style={{ color: '#64748b', margin: '0' }}>
-          Manage all user accounts and permissions
-        </p>
+        <h1 style={headerTitle}>User Management</h1>
+        <p style={headerSub}>Manage all user accounts and permissions</p>
       </div>
 
       <div style={tabsStyle}>

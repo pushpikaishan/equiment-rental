@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './PaymentManage.css';
+import { headerCard, headerTitle, headerSub } from './adminStyles';
 
 export default function PaymentManagement() {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -135,9 +136,9 @@ export default function PaymentManagement() {
 
   return (
     <div className="pm-container">
-      <div className="pm-card" style={{ marginBottom: 16 }}>
-        <h2 className="pm-title">Payment Management</h2>
-        <p className="pm-subtitle">Monitor transactions, process refunds, export reports.</p>
+      <div style={headerCard}>
+        <h1 style={headerTitle}>Payment Management</h1>
+        <p style={headerSub}>Monitor transactions, process refunds, export reports.</p>
         {summary && (
           <div className="pm-metrics">
             <div className="pm-pill">Total revenue: {summary.totalRevenue.toFixed(2)}</div>

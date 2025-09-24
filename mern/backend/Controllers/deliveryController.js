@@ -330,3 +330,48 @@ exports.submitRecollectReport = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// GET /deliveries/admin/summary - aggregate delivery status for confirmed bookings
+exports.adminSummary = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+
+    // Total confirmed bookings (eligible for delivery)
+    const totalConfirmed = await Booking.countDocuments({ status: 'confirmed' });
+
+    // Count delivery documents by status for confirmed bookings only
+    const byStatusAgg = await Delivery.aggregate([
+      {
+        $lookup: {
+          from: 'bookings',
+          localField: 'bookingId',
+          foreignField: '_id',
+          as: 'booking'
+        }
+      },
+      { $unwind: '$booking' },
+      { $match: { 'booking.status': 'confirmed' } },
+      { $group: { _id: '$status', count: { $sum: 1 } } }
+    ]);
+
+    const allowed = ['unassigned', 'assigned', 'in-progress', 'delivered', 'failed'];
+    const byStatus = Object.fromEntries(allowed.map(s => [s, 0]));
+    let withDoc = 0;
+    for (const row of byStatusAgg) {
+      const key = String(row._id || 'unassigned');
+      const c = Number(row.count || 0);
+      if (!Number.isFinite(c)) continue;
+      withDoc += c;
+      if (byStatus[key] !== undefined) byStatus[key] += c; else byStatus[key] = c;
+    }
+
+    // Bookings with no delivery document at all are effectively "unassigned"
+    const missing = Math.max(0, totalConfirmed - withDoc);
+    byStatus['unassigned'] = (byStatus['unassigned'] || 0) + missing;
+
+    res.json({ totalConfirmed, byStatus });
+  } catch (e) {
+    console.error('Admin delivery summary error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

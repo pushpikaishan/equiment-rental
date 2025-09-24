@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { headerCard, headerTitle, headerSub, card as cardBox, input as inputBox, select as selectBox, btn as btnFilled } from './adminStyles';
 
 export default function BookingManagement() {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -77,16 +78,16 @@ export default function BookingManagement() {
     }
   };
 
-  const card = { background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' };
-  const input = { padding: 10, border: '1px solid #e2e8f0', borderRadius: 8 };
-  const select = input;
-  const btn = (bg) => ({ background: bg, color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' });
+  const card = { ...cardBox };
+  const input = { ...inputBox };
+  const select = { ...selectBox };
+  const btn = (bg) => ({ ...btnFilled(bg) });
 
   return (
     <div>
-      <div style={{ ...card, marginBottom: 16 }}>
-        <h2 style={{ marginTop: 0 }}>Booking Management</h2>
-        <p style={{ color: '#64748b', marginTop: 4 }}>Monitor system usage, handle disputes/cancellations, and export booking reports.</p>
+      <div style={headerCard}>
+        <h1 style={headerTitle}>Booking Management</h1>
+        <p style={headerSub}>Monitor system usage, handle disputes/cancellations, and export booking reports.</p>
         {summary && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
             <div style={{ ...input }}>Total: {summary.total}</div>
