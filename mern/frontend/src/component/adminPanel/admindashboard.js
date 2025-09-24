@@ -53,7 +53,7 @@ function AdminDashboard() {
   const handleSignOut = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
-    navigate('/login');
+    navigate('/userlog');
   };
 
   const handleProfileClick = () => {
