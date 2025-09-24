@@ -117,10 +117,10 @@ function UserProfile() {
   // Role-based color palette (from admin profile)
   const getRoleColors = (role) => {
     const roleColors = {
-      user: { primary: "#4f46e5", secondary: "#7c3aed", light: "#e0e7ff" },
-      staff: { primary: "#059669", secondary: "#0d9488", light: "#d1fae5" },
-      supplier: { primary: "#dc2626", secondary: "#ea580c", light: "#fee2e2" },
-      admin: { primary: "#7c3aed", secondary: "#c026d3", light: "#f3e8ff" },
+      user: { primary: "#1e40af", secondary: "#3b82f6", light: "#1d4ed8" },
+      staff: {primary: "#1d3ca3ff", secondary: "#3b82f6", light: "#1d4ed8" },
+      supplier: { primary: "#264dccff", secondary: "#3b82f6", light: "#1d4ed8" },
+      admin: { primary: "#163083ff", secondary: "#3b82f6", light: "#1d4ed8" },
     };
     return roleColors[role] || roleColors.user;
   };
@@ -163,7 +163,7 @@ function UserProfile() {
     },
     profileHeader: {
       // Will be overridden dynamically below using role colors
-      background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #1d4ed8 100%)",
+      //background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #1d4ed8 100%)",
       padding: "3rem 2rem",
       textAlign: "center",
       color: "white",

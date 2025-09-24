@@ -173,7 +173,8 @@ function AdminDashboard() {
     { id: 'users', icon: '👥', label: 'User Manage', color: '#f59e0b' },
     { id: 'bookings', icon: '📋', label: 'Booking Manage', color: '#8b5cf6' },
     { id: 'payments', icon: '💳', label: 'Payment Manage', color: '#06b6d4' },
-    { id: 'delivery', icon: '🚚', label: 'Delivery Manage', color: '#ef4444' }
+    { id: 'delivery', icon: '🚚', label: 'Delivery Manage', color: '#ef4444' },
+    { id: 'other', icon: '🧩', label: 'Other Management', color: '#22c55e' }
   ];
 
   return (
@@ -393,6 +394,12 @@ function AdminDashboard() {
   {activeSection === 'bookings' && <BookingManagement />}
         {activeSection === 'payments' && <PaymentManagement />}
         {activeSection === 'delivery' && <DeliveryManagement />}
+        {activeSection === 'other' && <OtherManagement setActiveSection={setActiveSection} />}
+        {activeSection === 'feedback' && <FeedbackManagement />}
+        {activeSection === 'faq' && <FaqManagement />}
+        {activeSection === 'terms' && <TermsManagement />}
+        {activeSection === 'privacy' && <PrivacyManagement />}
+        {activeSection === 'support' && <SupportManagement />}
       </div>
     </div>
   );
@@ -794,3 +801,111 @@ function DashboardContent() {
 
 
 export default AdminDashboard;
+
+// Other Management placeholder section
+function OtherManagement({ setActiveSection }) {
+  const grid = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: 20,
+  };
+  const card = {
+    background: 'white',
+    padding: 20,
+    borderRadius: 16,
+    border: '2px solid #f1f5f9',
+    minHeight: 120
+  };
+  const head = { marginTop: 0, marginBottom: 8 };
+  const desc = { color: '#64748b', fontSize: 13, margin: 0 };
+  const btn = {
+    marginTop: 12,
+    padding: '8px 12px',
+    background: '#111827',
+    color: 'white',
+    border: 'none',
+    borderRadius: 10,
+    cursor: 'pointer'
+  };
+  const items = [
+    { id: 'feedback', icon: '💬', title: 'Feedback', text: 'Read and respond to customer feedback.' },
+    { id: 'faq', icon: '❓', title: 'FAQ', text: 'Manage frequently asked questions for users.' },
+    { id: 'terms', icon: '�', title: 'Terms & Conditions', text: 'Update your platform terms and policies.' },
+    { id: 'privacy', icon: '🛡️', title: 'Privacy Policy', text: 'Configure and publish privacy policy details.' },
+    { id: 'support', icon: '🛟', title: 'Support', text: 'Handle support topics and contact options.' },
+  ];
+
+  return (
+    <div>
+      <div style={{ background: 'white', padding: 20, borderRadius: 16, border: '2px solid #f1f5f9', marginBottom: 20 }}>
+        <h2 style={{ margin: 0 }}>Other Management</h2>
+        <p style={{ margin: 0, color: '#64748b' }}>Quick access to additional administration areas.</p>
+      </div>
+      <div style={grid}>
+        {items.map((it) => (
+          <div key={it.title} style={card}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={head}>{it.title}</h3>
+              <div style={{ fontSize: 26, background: '#f1f5f9', padding: 10, borderRadius: 12 }}>{it.icon}</div>
+            </div>
+            <p style={desc}>{it.text}</p>
+            <button style={btn} onClick={() => setActiveSection(it.id)}>Open</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionShell({ title, children }) {
+  return (
+    <div>
+      <div style={{ background: 'white', padding: 20, borderRadius: 16, border: '2px solid #f1f5f9', marginBottom: 20 }}>
+        <h2 style={{ margin: 0 }}>{title}</h2>
+      </div>
+      <div style={{ background: 'white', padding: 20, borderRadius: 16, border: '2px solid #f1f5f9' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FeedbackManagement() {
+  return (
+    <SectionShell title="Feedback">
+      <p style={{ color: '#64748b', margin: 0 }}>This is a placeholder for Feedback management. Wire to your feedback list and response tools.</p>
+    </SectionShell>
+  );
+}
+
+function FaqManagement() {
+  return (
+    <SectionShell title="FAQ">
+      <p style={{ color: '#64748b', margin: 0 }}>Manage frequently asked questions for customers. Add, edit, and reorder items here.</p>
+    </SectionShell>
+  );
+}
+
+function TermsManagement() {
+  return (
+    <SectionShell title="Terms & Conditions">
+      <p style={{ color: '#64748b', margin: 0 }}>Maintain your Terms & Conditions content. Consider versioning and publish dates.</p>
+    </SectionShell>
+  );
+}
+
+function PrivacyManagement() {
+  return (
+    <SectionShell title="Privacy Policy">
+      <p style={{ color: '#64748b', margin: 0 }}>Edit and publish your Privacy Policy, including data retention and contact info.</p>
+    </SectionShell>
+  );
+}
+
+function SupportManagement() {
+  return (
+    <SectionShell title="Support">
+      <p style={{ color: '#64748b', margin: 0 }}>Configure support channels (email, phone, chat) and helpful links for users.</p>
+    </SectionShell>
+  );
+}
