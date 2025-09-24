@@ -6,6 +6,7 @@ const ctrl = require('../Controllers/bookingController');
 // Admin routes (must come before dynamic :id routes)
 router.get('/admin', auth, ctrl.adminList);
 router.get('/admin/summary', auth, ctrl.adminSummary);
+router.get('/admin/upcoming', auth, ctrl.adminUpcoming);
 router.put('/admin/:id/cancel', auth, ctrl.adminCancel);
 router.put('/admin/:id/dispute', auth, ctrl.toggleDispute);
 router.get('/admin/export/csv', auth, ctrl.exportCSV);

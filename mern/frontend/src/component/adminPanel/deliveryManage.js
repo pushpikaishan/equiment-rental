@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { headerCard, headerTitle, headerSub, card as cardBox, btn as btnFilled, input as inputBox, select as selectBox } from './adminStyles';
 
 export default function DeliveryManagement() {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -11,9 +12,9 @@ export default function DeliveryManagement() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const card = { background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' };
-  const btn = (bg) => ({ background: bg, color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' });
-  const input = { padding: 10, border: '1px solid #e2e8f0', borderRadius: 8 };
+  const card = { ...cardBox };
+  const btn = (bg) => ({ ...btnFilled(bg) });
+  const input = { ...inputBox };
 
   const fetchData = async () => {
     setLoading(true);
@@ -84,9 +85,9 @@ export default function DeliveryManagement() {
 
   return (
     <div>
-      <div style={{ ...card, marginBottom: 16 }}>
-        <h2 style={{ marginTop: 0 }}>Delivery Management</h2>
-        <p style={{ color: '#64748b', marginTop: 4 }}>Manage deliveries for confirmed bookings only. Assign a staff driver and mark as delivered.</p>
+      <div style={headerCard}>
+        <h1 style={headerTitle}>Delivery Management</h1>
+        <p style={headerSub}>Manage deliveries for confirmed bookings only. Assign a staff driver and mark as delivered.</p>
         <div>
           <button onClick={purgeAll} style={btn('#dc2626')}>Remove All Deliveries</button>
         </div>
@@ -157,7 +158,7 @@ export default function DeliveryManagement() {
             <div style={{ display: 'grid', gap: 10 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Choose Driver (Staff)</label>
-                <select value={driverId} onChange={(e) => setDriverId(e.target.value)} style={input}>
+                <select value={driverId} onChange={(e) => setDriverId(e.target.value)} style={selectBox}>
                   <option value="">-- Select driver --</option>
                   {drivers.map(d => (
                     <option key={d._id} value={d._id}>{d.name} ({d.email})</option>

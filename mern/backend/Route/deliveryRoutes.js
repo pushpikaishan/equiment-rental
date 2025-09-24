@@ -4,6 +4,7 @@ const auth = require('../middleware/authMiddleware');
 const ctrl = require('../Controllers/deliveryController');
 
 router.get('/admin', auth, ctrl.adminList);
+router.get('/admin/summary', auth, ctrl.adminSummary);
 router.get('/admin/drivers', auth, ctrl.listDrivers);
 router.post('/admin/:bookingId/assign', auth, ctrl.assign);
 router.put('/admin/:bookingId/complete', auth, ctrl.complete);

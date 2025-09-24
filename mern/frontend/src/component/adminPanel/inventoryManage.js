@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import jsPDF from 'jspdf';
+import { headerCard, headerTitle, headerSub, card as cardBox, btn as btnFilled, input as inputBox, select as selectBox } from './adminStyles';
 
 function InventoryManagement() {
   const [form, setForm] = useState({
@@ -297,19 +298,22 @@ function InventoryManagement() {
   ];
 
   return (
-    <div style={{ background: 'white', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)', maxWidth: 1000, margin: '0 auto' }}>
-      <h2 style={{ color: '#1e293b', margin: '0 0 20px 0' }}>Inventory Management</h2>
-      <p style={{ color: '#64748b' }}>Add, edit, and delete event equipment.</p>
+    <div>
+      <div style={headerCard}>
+        <h1 style={headerTitle}>Inventory Management</h1>
+        <p style={headerSub}>Add, edit, and delete event equipment.</p>
+      </div>
 
+      <div style={{ ...cardBox, padding: 20 }}>
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Name</label>
-            <input name="name" value={form.name} onChange={handleChange} placeholder="e.g., Stage Light" style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+            <input name="name" value={form.name} onChange={handleChange} placeholder="e.g., Stage Light" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Category</label>
-            <select name="category" value={form.category} onChange={handleChange} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+            <select name="category" value={form.category} onChange={handleChange} style={{ ...selectBox, width: '100%' }}>
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -317,15 +321,15 @@ function InventoryManagement() {
           </div>
           <div style={{ gridColumn: 'span 2' }}>
             <label style={{ display: 'block', marginBottom: 6 }}>Description</label>
-            <textarea name="description" value={form.description} onChange={handleChange} rows={3} placeholder="Short description" style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+            <textarea name="description" value={form.description} onChange={handleChange} rows={3} placeholder="Short description" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Rental Price (per day)</label>
-            <input type="number" step="0.01" min="0" name="rentalPrice" value={form.rentalPrice} onChange={handleChange} placeholder="e.g., 1500" style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+            <input type="number" step="0.01" min="0" name="rentalPrice" value={form.rentalPrice} onChange={handleChange} placeholder="e.g., 1500" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Quantity</label>
-            <input type="number" min="0" name="quantity" value={form.quantity} onChange={handleChange} placeholder="e.g., 10" style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #e2e8f0' }} />
+            <input type="number" min="0" name="quantity" value={form.quantity} onChange={handleChange} placeholder="e.g., 10" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: 6 }}>Image</label>
@@ -338,19 +342,20 @@ function InventoryManagement() {
         </div>
 
         <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
-          <button type="submit" disabled={submitting} style={{ background: '#2563eb', color: 'white', padding: '10px 16px', borderRadius: 8, border: 'none' }}>
+          <button type="submit" disabled={submitting} style={btnFilled('#2563eb')}>
             {submitting ? 'Adding...' : 'Add Equipment'}
           </button>
           {message && <span style={{ color: message.includes('success') ? '#16a34a' : '#dc2626' }}>{message}</span>}
         </div>
       </form>
+      </div>
 
-      <div style={{ marginTop: 30 }}>
+      <div style={{ ...cardBox, padding: 20, marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <h3 style={{ margin: 0 }}>Equipment List</h3>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={exportPDF} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export PDF</button>
-            <button onClick={exportCSV} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export CSV</button>
+            <button onClick={exportPDF} style={btnFilled('#f59e0b')}>Export PDF</button>
+            <button onClick={exportCSV} style={btnFilled('#16a34a')}>Export CSV</button>
           </div>
         </div>
         {loading ? (

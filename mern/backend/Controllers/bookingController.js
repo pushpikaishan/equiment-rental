@@ -600,3 +600,69 @@ exports.exportPDF = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// GET /bookings/admin/upcoming?days=7 - upcoming bookings within next N days with payment method and counts
+exports.adminUpcoming = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const days = Math.max(1, Math.min(30, parseInt(req.query.days || '7', 10)));
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + (days - 1));
+    end.setHours(23, 59, 59, 999);
+
+    // Fetch bookings in range by bookingDate
+    const bookings = await Booking.find({
+      bookingDate: { $gte: start, $lte: end },
+    }).sort({ bookingDate: 1 });
+
+    // Attach payment method
+    const ids = bookings.map(b => b._id);
+    const payments = ids.length ? await Payment.find({ bookingId: { $in: ids } }).select('bookingId method') : [];
+    const pmap = new Map(payments.map(p => [String(p.bookingId), p.method || 'card']));
+
+    // Group by date string (YYYY-MM-DD)
+    const fmt = (d) => new Date(d).toISOString().slice(0, 10);
+    const dayMap = new Map();
+    for (const b of bookings) {
+      const key = fmt(b.bookingDate);
+      if (!dayMap.has(key)) dayMap.set(key, []);
+      dayMap.get(key).push({
+        _id: b._id,
+        bookingDate: b.bookingDate,
+        returnDate: b.returnDate,
+        status: b.status,
+        disputed: !!b.disputed,
+        customerName: b.customerName,
+        customerEmail: b.customerEmail,
+        customerPhone: b.customerPhone,
+        items: Array.isArray(b.items) ? b.items.map(it => ({ name: it.name, qty: it.qty, pricePerDay: it.pricePerDay })) : [],
+        total: b.total,
+        paymentMethod: pmap.get(String(b._id)) || 'cash',
+      });
+    }
+
+    // Build continuous days array even for no bookings days
+    const daysArr = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const key = fmt(d);
+      daysArr.push({ date: key, items: dayMap.get(key) || [] });
+    }
+
+    // Counts by status across the window
+    const countsByStatus = { pending: 0, confirmed: 0, cancelled: 0, disputed: 0 };
+    for (const b of bookings) {
+      if (countsByStatus[b.status] !== undefined) countsByStatus[b.status] += 1;
+      if (b.disputed) countsByStatus.disputed += 1;
+    }
+
+    res.json({ days: daysArr, countsByStatus });
+  } catch (e) {
+    console.error('Admin upcoming bookings error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
