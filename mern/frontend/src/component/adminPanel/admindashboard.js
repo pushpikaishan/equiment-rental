@@ -131,6 +131,7 @@ function AdminDashboard() {
     setActiveSection('profile');
   };
 
+  // Define styles
   const containerStyle = {
     display: 'flex',
     minHeight: '100vh',
@@ -209,6 +210,16 @@ function AdminDashboard() {
     { id: 'reports', icon: '📈', label: 'Reports', color: '#22c55e' },
     { id: 'settings', icon: '⚙️', label: 'Settings', color: '#14b8a6' }
   ];
+
+  // Main content style
+  const mainContentStyle = {
+    flex: 1,
+    marginLeft: sidebarCollapsed ? '70px' : '280px',
+    transition: 'margin-left 0.3s ease',
+    padding: '20px',
+    background: 'var(--bg)',
+    minHeight: '100vh'
+  };
 
   return (
     <div style={containerStyle}>
