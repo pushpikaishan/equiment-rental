@@ -274,7 +274,7 @@ function SupplierRegister() {
     padding: 0,
     boxSizing: 'border-box',
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    background: 'linear-gradient(135deg, #14a06f 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #ffffffff 0%, #ffffffff 100%)',
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
