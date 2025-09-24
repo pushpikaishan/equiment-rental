@@ -4,6 +4,9 @@ const User = require("../Model/userModel");
 const Supplier = require("../Model/supplierModel");
 const Admin = require("../Model/adminModel");
 const Staff = require("../Model/staffModel");
+const PasswordReset = require("../Model/passwordResetModel");
+const { sendPasswordCode, sendMail } = require("../helpers/emailHelper");
+const crypto = require("crypto");
 
 // Generate JWT
 const generateToken = (user) => {
@@ -102,5 +105,140 @@ exports.getProfile = async (req, res) => {
   } catch (err) {
     console.error("Get profile error:", err);
     res.status(500).send("Server error");
+  }
+};
+
+// Request password reset code
+exports.requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ msg: "Email is required" });
+    const trimmedEmail = String(email).trim();
+
+    // Verify user exists in any role
+    const account =
+      (await User.findOne({ email: trimmedEmail })) ||
+      (await Supplier.findOne({ email: trimmedEmail })) ||
+      (await Admin.findOne({ email: trimmedEmail })) ||
+      (await Staff.findOne({ email: trimmedEmail }));
+    if (!account) return res.status(404).json({ msg: "No account for that email" });
+
+    // Generate a 6-digit code
+    const code = (Math.floor(100000 + Math.random() * 900000)).toString();
+    // Hash the code for storage
+    const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Invalidate previous codes for this email
+    await PasswordReset.updateMany({ email: trimmedEmail, used: false }, { used: true });
+    // Save new code
+    await PasswordReset.create({ email: trimmedEmail, codeHash, expiresAt });
+
+    // Send email with code
+    await sendPasswordCode(trimmedEmail, code);
+
+    return res.json({ msg: "Reset code sent to email" });
+  } catch (err) {
+    console.error("requestPasswordReset error:", err);
+    return res.status(500).json({ msg: "Server error" });
+  }
+};
+
+// Reset password with code
+exports.resetPasswordWithCode = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ msg: "Email, code and newPassword are required" });
+    }
+    const trimmedEmail = String(email).trim();
+
+    // Find latest reset record
+    const record = await PasswordReset.findOne({ email: trimmedEmail, used: false })
+      .sort({ createdAt: -1 });
+    if (!record) return res.status(400).json({ msg: "Invalid or expired code" });
+    if (record.expiresAt < new Date()) {
+      record.used = true;
+      await record.save();
+      return res.status(400).json({ msg: "Code expired" });
+    }
+
+    // Compare hashes
+    const codeHash = crypto.createHash("sha256").update(String(code)).digest("hex");
+    if (codeHash !== record.codeHash) {
+      record.attempts = (record.attempts || 0) + 1;
+      if (record.attempts >= 5) record.used = true; // lock after too many attempts
+      await record.save();
+      return res.status(400).json({ msg: "Invalid code" });
+    }
+
+    // Find account in any collection and update password (hash if necessary)
+    const collections = [User, Supplier, Admin, Staff];
+    let account = null;
+    for (const Model of collections) {
+      const found = await Model.findOne({ email: trimmedEmail });
+      if (found) { account = { doc: found, Model }; break; }
+    }
+    if (!account) return res.status(404).json({ msg: "Account not found" });
+
+    // Always hash new password
+    const hashed = await bcrypt.hash(String(newPassword), 10);
+    account.doc.password = hashed;
+    await account.doc.save();
+
+    // Mark code as used
+    record.used = true;
+    await record.save();
+
+    return res.json({ msg: "Password updated successfully" });
+  } catch (err) {
+    console.error("resetPasswordWithCode error:", err);
+    return res.status(500).json({ msg: "Server error" });
+  }
+};
+
+// Check if an email exists in any collection (user, supplier, admin, staff)
+exports.checkEmailExists = async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ msg: "Email is required" });
+    const trimmedEmail = String(email).trim();
+
+    const collections = [
+      { Model: User, role: 'user' },
+      { Model: Supplier, role: 'supplier' },
+      { Model: Admin, role: 'admin' },
+      { Model: Staff, role: 'staff' },
+    ];
+    for (const { Model, role } of collections) {
+      const found = await Model.findOne({ email: trimmedEmail }).select('_id');
+      if (found) return res.json({ exists: true, role, id: found._id });
+    }
+    return res.json({ exists: false });
+  } catch (err) {
+    console.error('checkEmailExists error:', err);
+    return res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Dev-only: send a test email to verify SMTP configuration
+exports.testEmail = async (req, res) => {
+  try {
+    if (!String(process.env.ENABLE_TEST_EMAIL || '').toLowerCase() === 'true') {
+      return res.status(403).json({ msg: 'Test email endpoint disabled' });
+    }
+  } catch {}
+
+  try {
+    const { to, subject, text, html } = req.body || {};
+    if (!to) return res.status(400).json({ msg: 'Field "to" is required' });
+    const sub = subject || 'Test email from Equipment Rental';
+    const bodyText = text || 'This is a test email to verify SMTP setup.';
+    const bodyHtml = html || `<p>This is a <strong>test email</strong> to verify SMTP setup.</p>`;
+    const info = await sendMail({ to, subject: sub, text: bodyText, html: bodyHtml });
+    return res.json({ msg: 'Sent', id: info && (info.messageId || info.response || 'ok') });
+  } catch (err) {
+    console.error('testEmail error:', err);
+    return res.status(500).json({ msg: 'Failed to send test email', error: String(err && err.message || err) });
   }
 };
