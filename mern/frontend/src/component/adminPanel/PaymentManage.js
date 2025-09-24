@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import './PaymentManage.css';
 
 export default function PaymentManagement() {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -54,7 +55,8 @@ export default function PaymentManagement() {
   };
   const openDepositRefund = (payment) => {
     setRefundModal(payment);
-    const amt = Number(payment?.recollect?.suggestedRefund || 0);
+    const rec = computeRecollect(payment);
+    const amt = Number(rec?.suggestedRefund || 0);
     setRefundAmount(amt > 0 ? amt.toFixed(2) : '');
     setRefundType('deposit');
   };
@@ -70,7 +72,7 @@ export default function PaymentManagement() {
     await axios.post(`${baseUrl}/payments/${refundModal._id}/refund`, body, { headers });
     closeRefundModal();
     await fetchData();
-    setSuccessPopup('Refund processed successfully');
+    setSuccessPopup('Refund completed');
     setTimeout(() => setSuccessPopup(''), 2000);
   };
   const download = (blob, filename) => {
@@ -107,29 +109,49 @@ export default function PaymentManagement() {
     }
   };
 
-  const card = 'bg-white dark:bg-[var(--surface)] rounded-2xl shadow-md border border-gray-200 dark:border-[var(--border)] p-5';
-  const input = 'px-3 py-2 border border-gray-300 dark:border-[var(--border)] rounded-md bg-white dark:bg-[var(--surface-2)] text-gray-800 dark:text-[var(--text)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500';
-  const select = input;
-  const btn = (extra) => `inline-flex items-center justify-center px-3 py-2 rounded-md font-semibold text-white shadow-sm ${extra}`;
+  const statusChip = (status) => {
+    if (status === 'paid') return <span className="pm-chip pm-chip--paid">Paid</span>;
+    if (status === 'failed') return <span className="pm-chip pm-chip--failed">Failed</span>;
+    if (status === 'refunded') return <span className="pm-chip pm-chip--refunded">Refunded</span>;
+    if (status === 'partial_refunded') return <span className="pm-chip pm-chip--partial">Partial Refunded</span>;
+    return <span className="pm-chip pm-chip--pending">{String(status || 'pending').replace('_',' ')}</span>;
+  };
+
+  const bookingChip = (status) => {
+    if (status === 'confirmed') return <span className="pm-chip pm-chip--confirmed">Confirmed</span>;
+    if (status === 'cancelled') return <span className="pm-chip pm-chip--cancelled">Cancelled</span>;
+    return <span className="pm-chip pm-chip--pending">Pending</span>;
+  };
+
+  // Compute recollect-derived refund values if backend hasn't materialized them
+  const computeRecollect = (it) => {
+    const r = it?.recollect || {};
+    const deposit = Number(r.deposit || 0);
+    const estimateTotal = Number(r.estimateTotal || 0);
+    const hasReport = Boolean(r.hasReport || (deposit > 0 || estimateTotal > 0));
+    const suggestedRefund = Math.max(0, deposit - estimateTotal);
+    return { deposit, estimateTotal, hasReport, suggestedRefund };
+  };
 
   return (
-    <div>
-      <div className={`${card} mb-4`}>
-        <h2 className="m-0 text-2xl font-bold text-gray-900 dark:text-[var(--text)]">Payment Management</h2>
-        <p className="text-sm text-gray-500 mt-1">Monitor transactions, process refunds, export reports.</p>
+    <div className="pm-container">
+      <div className="pm-card" style={{ marginBottom: 16 }}>
+        <h2 className="pm-title">Payment Management</h2>
+        <p className="pm-subtitle">Monitor transactions, process refunds, export reports.</p>
         {summary && (
-          <div className="flex flex-wrap gap-3 mt-2">
-            <div className={`${input}`}>Total revenue: {summary.totalRevenue.toFixed(2)}</div>
-            <div className={`${input}`}>Monthly: {summary.monthlyRevenue.toFixed(2)}</div>
-            <div className={`${input}`}>Today: {summary.dailyRevenue.toFixed(2)}</div>
-            <div className={`${input}`}>By method: {Object.entries(summary.byMethod).map(([m,c]) => `${m}:${c}`).join(', ')}</div>
+          <div className="pm-metrics">
+            <div className="pm-pill">Total revenue: {summary.totalRevenue.toFixed(2)}</div>
+            <div className="pm-pill">Monthly: {summary.monthlyRevenue.toFixed(2)}</div>
+            <div className="pm-pill">Today: {summary.dailyRevenue.toFixed(2)}</div>
+            <div className="pm-pill">By method: {Object.entries(summary.byMethod).map(([m,c]) => `${m}:${c}`).join(', ')}</div>
           </div>
         )}
       </div>
 
-      <div className={`${card} mb-4`}>
-        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          <select value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value })} className={select}>
+      <div className="pm-card" style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, color: '#334155', marginBottom: 8 }}>Payments</div>
+        <div className="pm-grid-auto" style={{ marginBottom: 8 }}>
+          <select value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value })} className="pm-select">
             <option value="">Status</option>
             <option value="paid">Paid</option>
             <option value="pending">Pending</option>
@@ -137,7 +159,7 @@ export default function PaymentManagement() {
             <option value="refunded">Refunded</option>
             <option value="partial_refunded">Partial Refunded</option>
           </select>
-          <select value={q.method} onChange={(e) => setQ({ ...q, method: e.target.value })} className={select}>
+          <select value={q.method} onChange={(e) => setQ({ ...q, method: e.target.value })} className="pm-select">
             <option value="">Method</option>
             <option value="card">Card</option>
             <option value="cash">Cash</option>
@@ -146,79 +168,81 @@ export default function PaymentManagement() {
             <option value="stripe">Stripe</option>
             <option value="payhere">PayHere</option>
           </select>
-          <input placeholder="Gateway" value={q.gateway} onChange={(e) => setQ({ ...q, gateway: e.target.value })} className={input} />
-          <input placeholder="Customer/email" value={q.customer} onChange={(e) => setQ({ ...q, customer: e.target.value })} className={input} />
-          <input placeholder="Order ID" value={q.orderId} onChange={(e) => setQ({ ...q, orderId: e.target.value })} className={input} />
-          <input type="date" value={q.from} onChange={(e) => setQ({ ...q, from: e.target.value })} className={input} />
-          <input type="date" value={q.to} onChange={(e) => setQ({ ...q, to: e.target.value })} className={input} />
+          <input placeholder="Gateway" value={q.gateway} onChange={(e) => setQ({ ...q, gateway: e.target.value })} className="pm-input" />
+          <input placeholder="Customer/email" value={q.customer} onChange={(e) => setQ({ ...q, customer: e.target.value })} className="pm-input" />
+          <input placeholder="Order ID" value={q.orderId} onChange={(e) => setQ({ ...q, orderId: e.target.value })} className="pm-input" />
+          <input type="date" value={q.from} onChange={(e) => setQ({ ...q, from: e.target.value })} className="pm-input" />
+          <input type="date" value={q.to} onChange={(e) => setQ({ ...q, to: e.target.value })} className="pm-input" />
         </div>
-        <div className="mt-2 flex gap-2 items-center">
-          <button onClick={() => { setPage(1); fetchData(); }} className={btn('bg-sky-600 hover:bg-sky-700')}>Apply Filters</button>
-          <button onClick={() => { setQ({ status:'', method:'', gateway:'', customer:'', orderId:'', from:'', to:'' }); setPage(1); fetchData(); }} className={btn('bg-slate-500 hover:bg-slate-600')}>Reset</button>
-          <div className="ml-auto flex gap-2">
-            <button onClick={exportCSV} className={btn('bg-emerald-600 hover:bg-emerald-700')}>Export CSV</button>
-            <button onClick={exportPDF} className={btn('bg-amber-500 hover:bg-amber-600')}>Export PDF</button>
-          </div>
+        <div className="pm-toolbar">
+          <button onClick={() => { setPage(1); fetchData(); }} className="pm-btn pm-btn--info">Apply Filters</button>
+          <button onClick={() => { setQ({ status:'', method:'', gateway:'', customer:'', orderId:'', from:'', to:'' }); setPage(1); fetchData(); }} className="pm-btn pm-btn--secondary">Reset</button>
+          <div className="pm-spacer" />
+          <button onClick={exportCSV} className="pm-btn pm-btn--csv">Export CSV</button>
+          <button onClick={exportPDF} className="pm-btn pm-btn--pdf">Export PDF</button>
         </div>
       </div>
 
-      <div className={`${card}`}>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+      <div className="pm-card">
+        <div style={{ overflowX: 'auto' }}>
+          <table className="pm-table">
             <thead>
-              <tr className="text-left border-b border-gray-200 dark:border-[var(--border)]">
-                <th className="p-2">Created</th>
-                <th className="p-2">Order</th>
-                <th className="p-2">Customer</th>
-                <th className="p-2">Address</th>
-                <th className="p-2">Booking Date</th>
-                <th className="p-2">Booking Status</th>
-                <th className="p-2">Method</th>
-                <th className="p-2">Payment Status</th>
-                <th className="p-2 text-right">Amount</th>
-                <th className="p-2">Actions</th>
+              <tr>
+                <th>Created</th>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Address</th>
+                <th>Booking Date</th>
+                <th>Booking Status</th>
+                <th>Method</th>
+                <th>Payment Status</th>
+                <th className="text-right">Amount</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="10" className="p-2">Loading…</td></tr>
+                <tr><td colSpan="10">Loading…</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan="10" className="p-2">No payments found.</td></tr>
+                <tr><td colSpan="10">No payments found.</td></tr>
               ) : (
                 items.map((it) => (
-                  <tr key={it._id} className="border-b border-gray-100 dark:border-[var(--border)]">
-                    <td className="p-2">{new Date(it.createdAt).toLocaleString()}</td>
-                    <td className="p-2"><code>{it.orderId || it.bookingId || it._id}</code></td>
-                    <td className="p-2">{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
-                    <td className="p-2">{it.booking?.deliveryAddress || '-'}</td>
-                    <td className="p-2">{it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-'}</td>
-                    <td className="p-2">
-                      <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-semibold ${it.booking?.status === 'cancelled' ? 'bg-red-100 text-red-600' : it.booking?.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
-                        {it.booking?.status || '-'}
-                      </span>
-                    </td>
-                    <td className="p-2">{it.method || it.gateway || '-'}</td>
-                    <td className="p-2 capitalize">{it.status}</td>
-                    <td className="p-2 text-right">{it.currency} {Number(it.amount).toFixed(2)}</td>
-                    <td className="p-2">
-                      <div className="flex gap-1 flex-wrap items-center">
-                      {/* Determine refund state */}
-                      {!(it.status === 'paid' || it.status === 'refunded' || it.status === 'partial_refunded') && (
-                        <button onClick={() => markReceived(it._id)} className={btn('bg-emerald-600 hover:bg-emerald-700')}>Mark Received</button>
-                      )}
-                      {(it.booking?.status === 'cancelled' && !(it.status === 'refunded' || it.status === 'partial_refunded')) && (
-                        <button onClick={() => openRefundModal(it)} className={btn('bg-rose-600 hover:bg-rose-700')}>Refund</button>
-                      )}
-                      {/* Refund deposit after recollect report */}
-                      {(it?.recollect?.suggestedRefund > 0 && !(it.status === 'refunded' || it.status === 'partial_refunded')) && (
-                        <button onClick={() => openDepositRefund(it)} className={btn('bg-sky-600 hover:bg-sky-700')}>Refund Deposit</button>
-                      )}
-                      {(it.status === 'refunded' || it.status === 'partial_refunded') && (
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${it.status === 'refunded' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {it.depositRefunded ? 'Security Deposit Refunded' : (it.status === 'refunded' ? 'Refunded' : 'Partial Refunded')}
-                        </span>
-                      )}
-                      <button onClick={() => removePayment(it._id)} className={btn('bg-slate-700 hover:bg-slate-800')}>Delete</button>
+                  <tr key={it._id}>
+                    <td>{new Date(it.createdAt).toLocaleString()}</td>
+                    <td><code>{it.orderId || it.bookingId || it._id}</code></td>
+                    <td>{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
+                    <td>{it.booking?.deliveryAddress || '-'}</td>
+                    <td>{it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-'}</td>
+                    <td>{bookingChip(it.booking?.status)}</td>
+                    <td>{it.method || it.gateway || '-'}</td>
+                    <td>{statusChip(it.status)}</td>
+                    <td style={{ textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {(it.status === 'refunded' || it.status === 'partial_refunded') ? (
+                          // If refunded (full or partial), show only Delete in the actions section
+                          <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
+                        ) : (
+                          (() => {
+                            const rec = computeRecollect(it);
+                            return (
+                              <>
+                                {!(it.status === 'paid') && (
+                                  <button onClick={() => markReceived(it._id)} className="pm-btn pm-btn--success">Mark Received</button>
+                                )}
+                                {/* Prefer staff-report-based refund if available; else allow cancel-based refund */}
+                                {(rec.suggestedRefund > 0) ? (
+                                  <button onClick={() => openDepositRefund(it)} className="pm-btn pm-btn--info">Refund</button>
+                                ) : (
+                                  (it.booking?.status === 'cancelled') && (
+                                    <button onClick={() => openRefundModal(it)} className="pm-btn pm-btn--refund">Refund</button>
+                                  )
+                                )}
+                                <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
+                              </>
+                            );
+                          })()
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -230,64 +254,56 @@ export default function PaymentManagement() {
 
         {/* Refund Modal */}
         {refundModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-[var(--surface)] p-5 rounded-xl w-[480px] border border-gray-200 dark:border-[var(--border)]">
-              <h3 className="mt-0 text-lg font-bold">{refundType === 'deposit' ? 'Refund Security Deposit' : 'Process Refund'}</h3>
-              <div className="mb-2 text-slate-500 text-sm">
+          <div className="pm-modal">
+            <div className="pm-modal__content">
+              <h3 className="pm-modal__title">{refundType === 'deposit' ? 'Refund Security Deposit' : 'Process Refund'}</h3>
+              <div className="pm-modal__hint">
                 {refundType === 'deposit' ? 'Security deposit minus estimate total calculated from recollect report.' : 'Confirm customer and amount below.'}
               </div>
-              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))' }}>
+              <div className="pm-modal__grid">
                 <div>
-                  <div className="text-xs text-slate-400">Customer Name</div>
-                  <div className="font-semibold">{refundModal.booking?.customerName || refundModal.customerName || '-'}</div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Customer Name</div>
+                  <div style={{ fontWeight: 600, color: '#0f172a' }}>{refundModal.booking?.customerName || refundModal.customerName || '-'}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400">Customer Email</div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Customer Email</div>
                   <div>{refundModal.booking?.customerEmail || refundModal.customerEmail || '-'}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400">Customer Phone</div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Customer Phone</div>
                   <div>{refundModal.booking?.customerPhone || '-'}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-400">Address</div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Address</div>
                   <div>{refundModal.booking?.deliveryAddress || '-'}</div>
                 </div>
               </div>
-              <div className="mt-2">
-                <div className="flex gap-3 flex-wrap mb-2">
-                  <div className="bg-slate-50 dark:bg-[var(--surface-2)] border border-gray-200 dark:border-[var(--border)] rounded-md px-3 py-2">
-                    <span className="text-xs text-slate-500 mr-2">Paid Amount</span>
-                    <strong>{refundModal.currency} {Number(refundModal.amount || 0).toFixed(2)}</strong>
-                  </div>
-                  {refundModal?.recollect?.hasReport && (
-                    <>
-                      <div className="bg-slate-50 dark:bg-[var(--surface-2)] border border-gray-200 dark:border-[var(--border)] rounded-md px-3 py-2">
-                        <span className="text-xs text-slate-500 mr-2">Security Deposit</span>
-                        <strong>{refundModal.currency} {Number(refundModal.recollect.deposit || 0).toFixed(2)}</strong>
-                      </div>
-                      <div className="bg-slate-50 dark:bg-[var(--surface-2)] border border-gray-200 dark:border-[var(--border)] rounded-md px-3 py-2">
-                        <span className="text-xs text-slate-500 mr-2">Estimate Total</span>
-                        <strong>{refundModal.currency} {Number(refundModal.recollect.estimateTotal || 0).toFixed(2)}</strong>
-                      </div>
-                      <div className="bg-cyan-50 border border-cyan-200 rounded-md px-3 py-2">
-                        <span className="text-xs text-cyan-700 mr-2">Suggested Refund</span>
-                        <strong>{refundModal.currency} {Number(refundModal.recollect.suggestedRefund || 0).toFixed(2)}</strong>
-                      </div>
-                    </>
-                  )}
-                </div>
-                <label className="block text-xs text-slate-700 dark:text-[var(--text)] mb-1">
+              <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className="pm-pill">Paid: <strong>{refundModal.currency} {Number(refundModal.amount || 0).toFixed(2)}</strong></div>
+                {refundModal?.recollect?.hasReport && (
+                  <>
+                    {(() => { const rec = computeRecollect(refundModal); return (
+                      <>
+                        <div className="pm-pill">Deposit: <strong>{refundModal.currency} {rec.deposit.toFixed(2)}</strong></div>
+                        <div className="pm-pill">Estimate: <strong>{refundModal.currency} {rec.estimateTotal.toFixed(2)}</strong></div>
+                        <div className="pm-pill">Suggested: <strong>{refundModal.currency} {rec.suggestedRefund.toFixed(2)}</strong></div>
+                      </>
+                    ); })()}
+                  </>
+                )}
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <label style={{ display: 'block', color: '#0f172a', fontSize: 12, marginBottom: 6 }}>
                   {refundType === 'deposit' ? 'Refund Amount (calculated)' : 'Refund Amount (leave blank for full)'}
                 </label>
                 <input type="number" value={refundAmount}
                   onChange={(e) => refundType === 'deposit' ? null : setRefundAmount(e.target.value)}
-                  min="0" step="0.01" className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border)] rounded-md"
+                  min="0" step="0.01" className="pm-input" style={{ width: '100%' }}
                   readOnly={refundType === 'deposit'} />
               </div>
-              <div className="flex gap-2 justify-end mt-3">
-                <button onClick={closeRefundModal} className={btn('bg-slate-500 hover:bg-slate-600')}>Cancel</button>
-                <button onClick={refund} className={btn('bg-rose-600 hover:bg-rose-700')}>{refundType === 'deposit' ? 'Refund Deposit' : 'Proceed'}</button>
+              <div className="pm-modal__footer">
+                <button onClick={closeRefundModal} className="pm-btn pm-btn--secondary">Cancel</button>
+                <button onClick={refund} className="pm-btn pm-btn--refund">{refundType === 'deposit' ? 'Refund Deposit' : 'Proceed'}</button>
               </div>
             </div>
           </div>
@@ -295,17 +311,15 @@ export default function PaymentManagement() {
 
         {/* Success Popup */}
         {!!successPopup && (
-          <div className="fixed right-5 bottom-5 bg-emerald-600 text-white px-3 py-2 rounded-md shadow-xl">
-            {successPopup}
-          </div>
+          <div className="pm-toast">{successPopup}</div>
         )}
 
         {/* Pagination */}
-        <div className="mt-2 flex items-center justify-between">
+        <div className="pm-pagination">
           <div>Page {page} of {Math.max(1, Math.ceil(total / 10))}</div>
-          <div className="flex gap-2">
-            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className={btn('bg-slate-500 hover:bg-slate-600 disabled:opacity-50')}>Prev</button>
-            <button disabled={page >= Math.ceil(total / 10)} onClick={() => setPage((p) => p + 1)} className={btn('bg-slate-500 hover:bg-slate-600 disabled:opacity-50')}>Next</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="pm-btn pm-btn--secondary">Prev</button>
+            <button disabled={page >= Math.ceil(total / 10)} onClick={() => setPage((p) => p + 1)} className="pm-btn pm-btn--secondary">Next</button>
           </div>
         </div>
       </div>
