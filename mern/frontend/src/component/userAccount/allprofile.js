@@ -119,16 +119,19 @@ function UserProfile() {
 
   const containerStyle = {
     minHeight: "100vh",
-    padding: "20px",
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    padding: "60px 32px",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%)',
   };
 
   const cardStyle = {
-    maxWidth: "800px",
+    maxWidth: "900px",
     margin: "0 auto",
-    background: "white",
+    background: 'rgba(255, 255, 255, 0.8)',
     borderRadius: "24px",
-    boxShadow: "0 25px 50px rgba(0, 0, 0, 0.15)",
+    boxShadow: "0 32px 64px rgba(0, 0, 0, 0.12), 0 8px 32px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(255, 255, 255, 0.8) inset",
+    backdropFilter: 'saturate(180%) blur(20px)',
+    border: '1px solid rgba(226, 232, 240, 0.6)',
     overflow: "hidden",
     animation: "slideUp 0.6s ease-out",
     position: "relative",
@@ -206,32 +209,34 @@ function UserProfile() {
   const roleColors = getRoleColors(profile.role);
 
   const headerStyle = {
-    background: `linear-gradient(135deg, ${roleColors.primary}, ${roleColors.secondary})`,
-    padding: "40px 30px",
+    background: `linear-gradient(135deg, ${roleColors.primary} 0%, ${roleColors.secondary} 50%, ${roleColors.primary} 100%)`,
+    padding: "48px 40px",
     textAlign: "center",
     color: "white",
     position: "relative",
+    backdropFilter: 'blur(20px)',
+    boxShadow: '0 1px 0 rgba(255, 255, 255, 0.1) inset',
   };
 
   // Settings button styles
   const settingsButtonStyle = {
     position: "absolute",
-    top: "20px",
-    right: "20px",
-    width: "45px",
-    height: "45px",
-    background: "rgba(255, 255, 255, 0.15)",
-    border: "none",
-    borderRadius: "50%",
+    top: "24px",
+    right: "24px",
+    width: "48px",
+    height: "48px",
+    background: "rgba(255, 255, 255, 0.2)",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    borderRadius: "16px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "18px",
+    fontSize: "20px",
     color: "white",
-    transition: "all 0.3s ease",
-    backdropFilter: "blur(10px)",
-    boxShadow: "0 4px 15px rgba(0, 0, 0, 0.1)",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    backdropFilter: "blur(15px)",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.15), 0 1px 0 rgba(255, 255, 255, 0.2) inset",
   };
 
   const profileImageContainerStyle = {
@@ -242,27 +247,29 @@ function UserProfile() {
   };
 
   const profileImageStyle = {
-    width: "120px",
-    height: "120px",
+    width: "140px",
+    height: "140px",
     borderRadius: "50%",
-    border: "6px solid rgba(255, 255, 255, 0.9)",
-    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.3)",
-    transition: "transform 0.3s ease",
+    border: "6px solid rgba(255, 255, 255, 0.95)",
+    boxShadow: "0 16px 48px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(0, 0, 0, 0.1)",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   };
 
   const roleIconStyle = {
     position: "absolute",
-    bottom: "5px",
-    right: "5px",
-    width: "35px",
-    height: "35px",
-    background: "rgba(255, 255, 255, 0.95)",
+    bottom: "8px",
+    right: "8px",
+    width: "40px",
+    height: "40px",
+    background: "rgba(255, 255, 255, 0.98)",
+    border: "2px solid rgba(255, 255, 255, 1)",
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "16px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+    fontSize: "18px",
+    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1)",
+    backdropFilter: "blur(10px)",
   };
 
   // Custom file upload styles
@@ -285,75 +292,82 @@ function UserProfile() {
   };
 
   const customFileButtonStyle = {
-  
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    padding: "10px 20px",
-    background: "rgba(255, 255, 255, 0.2)",
-    border: "2px solid rgba(255, 255, 255, 0.3)",
-    borderRadius: "25px",
+    padding: "12px 24px",
+    background: "rgba(255, 255, 255, 0.25)",
+    border: "1px solid rgba(255, 255, 255, 0.4)",
+    borderRadius: "16px",
     color: "white",
     fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    transition: "all 0.3s ease",
-    backdropFilter: "blur(10px)",
-    letterSpacing: "0.5px",
-    gap: "8px"
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    backdropFilter: "blur(15px)",
+    letterSpacing: "0.025em",
+    gap: "10px",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.15), 0 1px 0 rgba(255, 255, 255, 0.2) inset"
   };
 
   const titleStyle = {
-    fontSize: "32px",
-    fontWeight: "700",
-    marginBottom: "8px",
-    textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-    margin: "0 0 8px 0",
+    fontSize: "36px",
+    fontWeight: "800",
+    marginBottom: "12px",
+    textShadow: "0 4px 8px rgba(0, 0, 0, 0.15)",
+    margin: "0 0 12px 0",
+    letterSpacing: "-0.025em",
   };
 
   const subtitleStyle = {
-    fontSize: "18px",
-    opacity: "0.9",
-    fontWeight: "400",
+    fontSize: "20px",
+    opacity: "0.95",
+    fontWeight: "500",
     textTransform: "capitalize",
     margin: "0",
+    letterSpacing: "0.025em",
   };
 
   const contentStyle = {
-    padding: "40px 30px",
+    padding: "48px 40px",
+    background: 'rgba(255, 255, 255, 0.5)',
+    backdropFilter: 'blur(10px)',
   };
 
   const fieldsGridStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "20px",
-    marginTop: "30px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+    gap: "24px",
+    marginTop: "40px",
   };
 
   const fieldCardStyle = {
-    background: roleColors.light,
-    padding: "20px",
-    borderRadius: "16px",
-    border: `2px solid ${roleColors.primary}20`,
-    transition: "all 0.3s ease",
+    background: 'rgba(255, 255, 255, 0.8)',
+    padding: "24px",
+    borderRadius: "20px",
+    border: `1px solid rgba(226, 232, 240, 0.6)`,
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     position: "relative",
     overflow: "hidden",
+    backdropFilter: 'blur(15px)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255, 255, 255, 0.8) inset',
   };
 
   const fieldLabelStyle = {
-    fontSize: "14px",
-    fontWeight: "700",
-    color: roleColors.primary,
-    marginBottom: "8px",
+    fontSize: "12px",
+    fontWeight: "800",
+    color: '#64748b',
+    marginBottom: "12px",
     textTransform: "uppercase",
-    letterSpacing: "0.8px",
+    letterSpacing: "0.1em",
   };
 
   const fieldValueStyle = {
     fontSize: "18px",
     fontWeight: "600",
-    color: "#2d3748",
+    color: "#1e293b",
     wordBreak: "break-word",
+    letterSpacing: "-0.025em",
   };
 
   const getRoleIcon = (role) => {
@@ -426,14 +440,16 @@ function UserProfile() {
             style={settingsButtonStyle}
             onClick={handleSettingsClick}
             onMouseOver={(e) => {
-              e.target.style.background = "rgba(255, 255, 255, 0.25)";
-              e.target.style.transform = "scale(1.1)";
-              e.target.style.boxShadow = "0 6px 20px rgba(0, 0, 0, 0.15)";
+              e.target.style.background = "rgba(255, 255, 255, 0.35)";
+              e.target.style.transform = "scale(1.05) rotate(90deg)";
+              e.target.style.boxShadow = "0 12px 48px rgba(0, 0, 0, 0.2)";
+              e.target.style.borderColor = "rgba(255, 255, 255, 0.6)";
             }}
             onMouseOut={(e) => {
-              e.target.style.background = "rgba(255, 255, 255, 0.15)";
-              e.target.style.transform = "scale(1)";
-              e.target.style.boxShadow = "0 4px 15px rgba(0, 0, 0, 0.1)";
+              e.target.style.background = "rgba(255, 255, 255, 0.2)";
+              e.target.style.transform = "scale(1) rotate(0deg)";
+              e.target.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.15), 0 1px 0 rgba(255, 255, 255, 0.2) inset";
+              e.target.style.borderColor = "rgba(255, 255, 255, 0.3)";
             }}
             title="Settings"
           >
@@ -450,10 +466,12 @@ function UserProfile() {
               alt="Profile"
               style={profileImageStyle}
               onMouseOver={(e) => {
-                e.target.style.transform = "scale(1.1) rotate(5deg)";
+                e.target.style.transform = "scale(1.1) rotate(8deg)";
+                e.target.style.boxShadow = "0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.1)";
               }}
               onMouseOut={(e) => {
                 e.target.style.transform = "scale(1) rotate(0deg)";
+                e.target.style.boxShadow = "0 16px 48px rgba(0, 0, 0, 0.25), 0 8px 16px rgba(0, 0, 0, 0.1)";
               }}
             />
             <div style={roleIconStyle}>{getRoleIcon(profile.role)}</div>
@@ -472,16 +490,16 @@ function UserProfile() {
               htmlFor="profileUpload"
               style={customFileButtonStyle}
               onMouseOver={(e) => {
-                e.target.style.background = "rgba(255, 255, 255, 0.3)";
-                e.target.style.borderColor = "rgba(255, 255, 255, 0.5)";
-                e.target.style.transform = "translateY(-2px)";
-                e.target.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.15)";
+                e.target.style.background = "rgba(255, 255, 255, 0.35)";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.6)";
+                e.target.style.transform = "translateY(-4px)";
+                e.target.style.boxShadow = "0 16px 48px rgba(0, 0, 0, 0.2)";
               }}
               onMouseOut={(e) => {
-                e.target.style.background = "rgba(255, 255, 255, 0.2)";
-                e.target.style.borderColor = "rgba(255, 255, 255, 0.3)";
+                e.target.style.background = "rgba(255, 255, 255, 0.25)";
+                e.target.style.borderColor = "rgba(255, 255, 255, 0.4)";
                 e.target.style.transform = "translateY(0)";
-                e.target.style.boxShadow = "none";
+                e.target.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.15), 0 1px 0 rgba(255, 255, 255, 0.2) inset";
               }}
             >
               📷 Update Photo
@@ -512,14 +530,16 @@ function UserProfile() {
                   animationDelay: `${index * 0.1}s`,
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.transform = "translateY(-5px)";
-                  e.currentTarget.style.boxShadow = `0 10px 30px ${roleColors.primary}30`;
-                  e.currentTarget.style.borderColor = `${roleColors.primary}60`;
+                  e.currentTarget.style.transform = "translateY(-8px)";
+                  e.currentTarget.style.boxShadow = '0 16px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
                 }}
                 onMouseOut={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "none";
-                  e.currentTarget.style.borderColor = `${roleColors.primary}20`;
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 0 rgba(255, 255, 255, 0.8) inset';
+                  e.currentTarget.style.borderColor = 'rgba(226, 232, 240, 0.6)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.8)';
                 }}
               >
                 <div style={fieldLabelStyle}>{field.label}</div>
@@ -531,11 +551,11 @@ function UserProfile() {
                     position: "absolute",
                     top: "0",
                     right: "0",
-                    width: "30px",
-                    height: "30px",
-                    background: `linear-gradient(135deg, ${roleColors.primary}, ${roleColors.secondary})`,
+                    width: "40px",
+                    height: "40px",
+                    background: `linear-gradient(135deg, #3b82f6, #1d4ed8)`,
                     clipPath: "polygon(100% 0, 0 0, 100% 100%)",
-                    opacity: "0.1",
+                    opacity: "0.08",
                   }}
                 ></div>
               </div>

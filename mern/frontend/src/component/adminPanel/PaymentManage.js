@@ -95,27 +95,41 @@ export default function PaymentManagement() {
       download(new Blob([res.data], { type: 'application/pdf' }), 'payments-report.pdf');
     } catch (e) { alert('Failed to export PDF'); }
   };
+  const removePayment = async (id) => {
+    if (!window.confirm('Delete this payment? This cannot be undone.')) return;
+    try {
+      await axios.delete(`${baseUrl}/payments/${id}`, { headers });
+      await fetchData();
+      setSuccessPopup('Payment deleted');
+      setTimeout(() => setSuccessPopup(''), 1500);
+    } catch (e) {
+      alert('Failed to delete payment');
+    }
+  };
 
-  // Using global CSS utilities from index.css
+  const card = 'bg-white dark:bg-[var(--surface)] rounded-2xl shadow-md border border-gray-200 dark:border-[var(--border)] p-5';
+  const input = 'px-3 py-2 border border-gray-300 dark:border-[var(--border)] rounded-md bg-white dark:bg-[var(--surface-2)] text-gray-800 dark:text-[var(--text)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500';
+  const select = input;
+  const btn = (extra) => `inline-flex items-center justify-center px-3 py-2 rounded-md font-semibold text-white shadow-sm ${extra}`;
 
   return (
-    <div className="container">
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h2 className="section-title">Payment Management</h2>
-        <p className="muted" style={{ marginTop: 4 }}>Monitor transactions, process refunds, export reports.</p>
+    <div>
+      <div className={`${card} mb-4`}>
+        <h2 className="m-0 text-2xl font-bold text-gray-900 dark:text-[var(--text)]">Payment Management</h2>
+        <p className="text-sm text-gray-500 mt-1">Monitor transactions, process refunds, export reports.</p>
         {summary && (
-          <div className="actions" style={{ marginTop: 8 }}>
-            <div className="input">Total revenue: {summary.totalRevenue.toFixed(2)}</div>
-            <div className="input">Monthly: {summary.monthlyRevenue.toFixed(2)}</div>
-            <div className="input">Today: {summary.dailyRevenue.toFixed(2)}</div>
-            <div className="input">By method: {Object.entries(summary.byMethod).map(([m,c]) => `${m}:${c}`).join(', ')}</div>
+          <div className="flex flex-wrap gap-3 mt-2">
+            <div className={`${input}`}>Total revenue: {summary.totalRevenue.toFixed(2)}</div>
+            <div className={`${input}`}>Monthly: {summary.monthlyRevenue.toFixed(2)}</div>
+            <div className={`${input}`}>Today: {summary.dailyRevenue.toFixed(2)}</div>
+            <div className={`${input}`}>By method: {Object.entries(summary.byMethod).map(([m,c]) => `${m}:${c}`).join(', ')}</div>
           </div>
         )}
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-          <select value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value })} className="select">
+      <div className={`${card} mb-4`}>
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+          <select value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value })} className={select}>
             <option value="">Status</option>
             <option value="paid">Paid</option>
             <option value="pending">Pending</option>
@@ -123,7 +137,7 @@ export default function PaymentManagement() {
             <option value="refunded">Refunded</option>
             <option value="partial_refunded">Partial Refunded</option>
           </select>
-          <select value={q.method} onChange={(e) => setQ({ ...q, method: e.target.value })} className="select">
+          <select value={q.method} onChange={(e) => setQ({ ...q, method: e.target.value })} className={select}>
             <option value="">Method</option>
             <option value="card">Card</option>
             <option value="cash">Cash</option>
@@ -132,83 +146,80 @@ export default function PaymentManagement() {
             <option value="stripe">Stripe</option>
             <option value="payhere">PayHere</option>
           </select>
-          <input placeholder="Gateway" value={q.gateway} onChange={(e) => setQ({ ...q, gateway: e.target.value })} className="input" />
-          <input placeholder="Customer/email" value={q.customer} onChange={(e) => setQ({ ...q, customer: e.target.value })} className="input" />
-          <input placeholder="Order ID" value={q.orderId} onChange={(e) => setQ({ ...q, orderId: e.target.value })} className="input" />
-          <input type="date" value={q.from} onChange={(e) => setQ({ ...q, from: e.target.value })} className="input" />
-          <input type="date" value={q.to} onChange={(e) => setQ({ ...q, to: e.target.value })} className="input" />
+          <input placeholder="Gateway" value={q.gateway} onChange={(e) => setQ({ ...q, gateway: e.target.value })} className={input} />
+          <input placeholder="Customer/email" value={q.customer} onChange={(e) => setQ({ ...q, customer: e.target.value })} className={input} />
+          <input placeholder="Order ID" value={q.orderId} onChange={(e) => setQ({ ...q, orderId: e.target.value })} className={input} />
+          <input type="date" value={q.from} onChange={(e) => setQ({ ...q, from: e.target.value })} className={input} />
+          <input type="date" value={q.to} onChange={(e) => setQ({ ...q, to: e.target.value })} className={input} />
         </div>
-        <div className="actions" style={{ marginTop: 10 }}>
-          <button onClick={() => { setPage(1); fetchData(); }} className="btn btn-primary">Apply Filters</button>
-          <button onClick={() => { setQ({ status:'', method:'', gateway:'', customer:'', orderId:'', from:'', to:'' }); setPage(1); fetchData(); }} className="btn btn-ghost">Reset</button>
-          <div style={{ marginLeft: 'auto' }} className="actions">
-            <button onClick={exportCSV} className="btn btn-success">Export CSV</button>
-            <button onClick={exportPDF} className="btn btn-warning">Export PDF</button>
+        <div className="mt-2 flex gap-2 items-center">
+          <button onClick={() => { setPage(1); fetchData(); }} className={btn('bg-sky-600 hover:bg-sky-700')}>Apply Filters</button>
+          <button onClick={() => { setQ({ status:'', method:'', gateway:'', customer:'', orderId:'', from:'', to:'' }); setPage(1); fetchData(); }} className={btn('bg-slate-500 hover:bg-slate-600')}>Reset</button>
+          <div className="ml-auto flex gap-2">
+            <button onClick={exportCSV} className={btn('bg-emerald-600 hover:bg-emerald-700')}>Export CSV</button>
+            <button onClick={exportPDF} className={btn('bg-amber-500 hover:bg-amber-600')}>Export PDF</button>
           </div>
         </div>
       </div>
 
-      <div className="card">
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table">
+      <div className={`${card}`}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: 10 }}>Created</th>
-                <th style={{ padding: 10 }}>Order</th>
-                <th style={{ padding: 10 }}>Customer</th>
-                <th style={{ padding: 10 }}>Address</th>
-                <th style={{ padding: 10 }}>Booking Date</th>
-                <th style={{ padding: 10 }}>Booking Status</th>
-                <th style={{ padding: 10 }}>Method</th>
-                <th style={{ padding: 10 }}>Payment Status</th>
-                <th style={{ padding: 10, textAlign: 'right' }}>Amount</th>
-                <th style={{ padding: 10 }}>Actions</th>
+              <tr className="text-left border-b border-gray-200 dark:border-[var(--border)]">
+                <th className="p-2">Created</th>
+                <th className="p-2">Order</th>
+                <th className="p-2">Customer</th>
+                <th className="p-2">Address</th>
+                <th className="p-2">Booking Date</th>
+                <th className="p-2">Booking Status</th>
+                <th className="p-2">Method</th>
+                <th className="p-2">Payment Status</th>
+                <th className="p-2 text-right">Amount</th>
+                <th className="p-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="7" style={{ padding: 10 }}>Loading…</td></tr>
+                <tr><td colSpan="10" className="p-2">Loading…</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan="7" style={{ padding: 10 }}>No payments found.</td></tr>
+                <tr><td colSpan="10" className="p-2">No payments found.</td></tr>
               ) : (
                 items.map((it) => (
-                  <tr key={it._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: 10 }}>{new Date(it.createdAt).toLocaleString()}</td>
-                    <td style={{ padding: 10 }}><code>{it.orderId || it.bookingId || it._id}</code></td>
-                    <td style={{ padding: 10 }}>{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
-                    <td style={{ padding: 10 }}>{it.booking?.deliveryAddress || '-'}</td>
-                    <td style={{ padding: 10 }}>{it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-'}</td>
-                    <td style={{ padding: 10 }}>
-                      <span style={{
-                        textTransform: 'capitalize',
-                        padding: '2px 8px',
-                        borderRadius: 9999,
-                        background: it.booking?.status === 'cancelled' ? '#fee2e2' : it.booking?.status === 'confirmed' ? '#dcfce7' : '#e2e8f0',
-                        color: it.booking?.status === 'cancelled' ? '#dc2626' : it.booking?.status === 'confirmed' ? '#166534' : '#334155',
-                        fontWeight: 600,
-                        fontSize: 12
-                      }}>{it.booking?.status || '-'}</span>
+                  <tr key={it._id} className="border-b border-gray-100 dark:border-[var(--border)]">
+                    <td className="p-2">{new Date(it.createdAt).toLocaleString()}</td>
+                    <td className="p-2"><code>{it.orderId || it.bookingId || it._id}</code></td>
+                    <td className="p-2">{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
+                    <td className="p-2">{it.booking?.deliveryAddress || '-'}</td>
+                    <td className="p-2">{it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-'}</td>
+                    <td className="p-2">
+                      <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-semibold ${it.booking?.status === 'cancelled' ? 'bg-red-100 text-red-600' : it.booking?.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
+                        {it.booking?.status || '-'}
+                      </span>
                     </td>
-                    <td style={{ padding: 10 }}>{it.method || it.gateway || '-'}</td>
-                    <td style={{ padding: 10, textTransform: 'capitalize' }}>{it.status}</td>
-                    <td style={{ padding: 10, textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
-                    <td style={{ padding: 10, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <td className="p-2">{it.method || it.gateway || '-'}</td>
+                    <td className="p-2 capitalize">{it.status}</td>
+                    <td className="p-2 text-right">{it.currency} {Number(it.amount).toFixed(2)}</td>
+                    <td className="p-2">
+                      <div className="flex gap-1 flex-wrap items-center">
                       {/* Determine refund state */}
                       {!(it.status === 'paid' || it.status === 'refunded' || it.status === 'partial_refunded') && (
-                        <button onClick={() => markReceived(it._id)} className="btn btn-success">Mark Received</button>
+                        <button onClick={() => markReceived(it._id)} className={btn('bg-emerald-600 hover:bg-emerald-700')}>Mark Received</button>
                       )}
                       {(it.booking?.status === 'cancelled' && !(it.status === 'refunded' || it.status === 'partial_refunded')) && (
-                        <button onClick={() => openRefundModal(it)} className="btn btn-danger">Refund</button>
+                        <button onClick={() => openRefundModal(it)} className={btn('bg-rose-600 hover:bg-rose-700')}>Refund</button>
                       )}
                       {/* Refund deposit after recollect report */}
                       {(it?.recollect?.suggestedRefund > 0 && !(it.status === 'refunded' || it.status === 'partial_refunded')) && (
-                        <button onClick={() => openDepositRefund(it)} className="btn btn-primary">Refund Deposit</button>
+                        <button onClick={() => openDepositRefund(it)} className={btn('bg-sky-600 hover:bg-sky-700')}>Refund Deposit</button>
                       )}
                       {(it.status === 'refunded' || it.status === 'partial_refunded') && (
-                        <span className={`badge ${it.status === 'refunded' ? 'badge-success' : 'badge-warn'}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${it.status === 'refunded' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                           {it.depositRefunded ? 'Security Deposit Refunded' : (it.status === 'refunded' ? 'Refunded' : 'Partial Refunded')}
                         </span>
                       )}
+                      <button onClick={() => removePayment(it._id)} className={btn('bg-slate-700 hover:bg-slate-800')}>Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -219,64 +230,64 @@ export default function PaymentManagement() {
 
         {/* Refund Modal */}
         {refundModal && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-            <div className="card" style={{ width: 480 }}>
-              <h3 style={{ marginTop: 0 }}>{refundType === 'deposit' ? 'Refund Security Deposit' : 'Process Refund'}</h3>
-              <div className="muted" style={{ marginBottom: 10 }}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-[var(--surface)] p-5 rounded-xl w-[480px] border border-gray-200 dark:border-[var(--border)]">
+              <h3 className="mt-0 text-lg font-bold">{refundType === 'deposit' ? 'Refund Security Deposit' : 'Process Refund'}</h3>
+              <div className="mb-2 text-slate-500 text-sm">
                 {refundType === 'deposit' ? 'Security deposit minus estimate total calculated from recollect report.' : 'Confirm customer and amount below.'}
               </div>
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 10, marginBottom: 10 }}>
+              <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))' }}>
                 <div>
-                  <div className="muted" style={{ fontSize: 12 }}>Customer Name</div>
-                  <div style={{ fontWeight: 600 }}>{refundModal.booking?.customerName || refundModal.customerName || '-'}</div>
+                  <div className="text-xs text-slate-400">Customer Name</div>
+                  <div className="font-semibold">{refundModal.booking?.customerName || refundModal.customerName || '-'}</div>
                 </div>
                 <div>
-                  <div className="muted" style={{ fontSize: 12 }}>Customer Email</div>
+                  <div className="text-xs text-slate-400">Customer Email</div>
                   <div>{refundModal.booking?.customerEmail || refundModal.customerEmail || '-'}</div>
                 </div>
                 <div>
-                  <div className="muted" style={{ fontSize: 12 }}>Customer Phone</div>
+                  <div className="text-xs text-slate-400">Customer Phone</div>
                   <div>{refundModal.booking?.customerPhone || '-'}</div>
                 </div>
                 <div>
-                  <div className="muted" style={{ fontSize: 12 }}>Address</div>
+                  <div className="text-xs text-slate-400">Address</div>
                   <div>{refundModal.booking?.deliveryAddress || '-'}</div>
                 </div>
               </div>
-              <div style={{ marginTop: 8 }}>
-                <div className="actions" style={{ marginBottom: 8 }}>
-                  <div className="input" style={{ display: 'inline-block' }}>
-                    <span style={{ color: '#64748b', fontSize: 12, marginRight: 6 }}>Paid Amount</span>
+              <div className="mt-2">
+                <div className="flex gap-3 flex-wrap mb-2">
+                  <div className="bg-slate-50 dark:bg-[var(--surface-2)] border border-gray-200 dark:border-[var(--border)] rounded-md px-3 py-2">
+                    <span className="text-xs text-slate-500 mr-2">Paid Amount</span>
                     <strong>{refundModal.currency} {Number(refundModal.amount || 0).toFixed(2)}</strong>
                   </div>
                   {refundModal?.recollect?.hasReport && (
                     <>
-                      <div className="input" style={{ display: 'inline-block' }}>
-                        <span style={{ color: '#64748b', fontSize: 12, marginRight: 6 }}>Security Deposit</span>
+                      <div className="bg-slate-50 dark:bg-[var(--surface-2)] border border-gray-200 dark:border-[var(--border)] rounded-md px-3 py-2">
+                        <span className="text-xs text-slate-500 mr-2">Security Deposit</span>
                         <strong>{refundModal.currency} {Number(refundModal.recollect.deposit || 0).toFixed(2)}</strong>
                       </div>
-                      <div className="input" style={{ display: 'inline-block' }}>
-                        <span style={{ color: '#64748b', fontSize: 12, marginRight: 6 }}>Estimate Total</span>
+                      <div className="bg-slate-50 dark:bg-[var(--surface-2)] border border-gray-200 dark:border-[var(--border)] rounded-md px-3 py-2">
+                        <span className="text-xs text-slate-500 mr-2">Estimate Total</span>
                         <strong>{refundModal.currency} {Number(refundModal.recollect.estimateTotal || 0).toFixed(2)}</strong>
                       </div>
-                      <div className="input" style={{ display: 'inline-block', background: '#ecfeff', borderColor: '#a5f3fc' }}>
-                        <span style={{ color: '#0891b2', fontSize: 12, marginRight: 6 }}>Suggested Refund</span>
+                      <div className="bg-cyan-50 border border-cyan-200 rounded-md px-3 py-2">
+                        <span className="text-xs text-cyan-700 mr-2">Suggested Refund</span>
                         <strong>{refundModal.currency} {Number(refundModal.recollect.suggestedRefund || 0).toFixed(2)}</strong>
                       </div>
                     </>
                   )}
                 </div>
-                <label style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 6 }}>
+                <label className="block text-xs text-slate-700 dark:text-[var(--text)] mb-1">
                   {refundType === 'deposit' ? 'Refund Amount (calculated)' : 'Refund Amount (leave blank for full)'}
                 </label>
                 <input type="number" value={refundAmount}
                   onChange={(e) => refundType === 'deposit' ? null : setRefundAmount(e.target.value)}
-                  min="0" step="0.01" className="input"
+                  min="0" step="0.01" className="w-full px-3 py-2 border border-gray-300 dark:border-[var(--border)] rounded-md"
                   readOnly={refundType === 'deposit'} />
               </div>
-              <div className="actions" style={{ justifyContent: 'flex-end', marginTop: 14 }}>
-                <button onClick={closeRefundModal} className="btn btn-ghost">Cancel</button>
-                <button onClick={refund} className="btn btn-danger">{refundType === 'deposit' ? 'Refund Deposit' : 'Proceed'}</button>
+              <div className="flex gap-2 justify-end mt-3">
+                <button onClick={closeRefundModal} className={btn('bg-slate-500 hover:bg-slate-600')}>Cancel</button>
+                <button onClick={refund} className={btn('bg-rose-600 hover:bg-rose-700')}>{refundType === 'deposit' ? 'Refund Deposit' : 'Proceed'}</button>
               </div>
             </div>
           </div>
@@ -284,17 +295,17 @@ export default function PaymentManagement() {
 
         {/* Success Popup */}
         {!!successPopup && (
-          <div style={{ position: 'fixed', right: 20, bottom: 20 }} className="btn btn-success">
+          <div className="fixed right-5 bottom-5 bg-emerald-600 text-white px-3 py-2 rounded-md shadow-xl">
             {successPopup}
           </div>
         )}
 
         {/* Pagination */}
-        <div className="actions" style={{ marginTop: 10, justifyContent: 'space-between' }}>
+        <div className="mt-2 flex items-center justify-between">
           <div>Page {page} of {Math.max(1, Math.ceil(total / 10))}</div>
-          <div className="actions">
-            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="btn btn-ghost">Prev</button>
-            <button disabled={page >= Math.ceil(total / 10)} onClick={() => setPage((p) => p + 1)} className="btn btn-ghost">Next</button>
+          <div className="flex gap-2">
+            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className={btn('bg-slate-500 hover:bg-slate-600 disabled:opacity-50')}>Prev</button>
+            <button disabled={page >= Math.ceil(total / 10)} onClick={() => setPage((p) => p + 1)} className={btn('bg-slate-500 hover:bg-slate-600 disabled:opacity-50')}>Next</button>
           </div>
         </div>
       </div>

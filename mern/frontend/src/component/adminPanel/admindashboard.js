@@ -8,14 +8,48 @@ import PaymentManagement from "./PaymentManage";
 import BookingManagement from "./bookingManage";
 import DeliveryManagement from "./deliveryManage";
 
-import  Setting from "./adminProfile/adminMenu";
-import  Profile from "./adminProfile/addminProfile";
+import Setting from "./adminProfile/adminMenu";
+import Profile from "./adminProfile/addminProfile";
+
+// Define logos for dark and light theme
+const logoDark = `${process.env.PUBLIC_URL}/logo-evoqrentals-dark.svg`;
+const logoLight = `${process.env.PUBLIC_URL}/logo-evoqrentals.svg`;
+
+// Dashboard content component
+const DashboardContent = ({ themeMode, toggleTheme }) => (
+  <div>
+    <h2>Dashboard Overview</h2>
+    {/* Add your dashboard content here */}
+  </div>
+);
+
+// Reports content component
+const ReportsContent = () => (
+  <div>
+    <h3>Reports</h3>
+    <p>Generate and export revenue, utilization, and inventory reports. (Coming soon)</p>
+  </div>
+);
+
+// Settings content component
+const SettingsContent = ({ themeMode, toggleTheme }) => (
+  <div>
+    <h3>Settings</h3>
+    <div>
+      <span>Appearance:</span>
+      <button onClick={toggleTheme}>
+        Switch to {themeMode === 'dark' ? 'Light' : 'Dark'} Mode
+      </button>
+    </div>
+  </div>
+);
 
 // Main Dashboard Component
 function AdminDashboard() {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('themeMode') || 'dark');
   const navigate = useNavigate();
 
   // Fetch admin profile
@@ -36,6 +70,43 @@ function AdminDashboard() {
 
     fetchProfile();
   }, []);
+
+  // THEME: apply CSS variables for light/dark with dark-brown primary and teal accent
+  useEffect(() => {
+    const root = document.documentElement.style;
+    const isDark = themeMode === 'dark';
+    const vars = isDark
+      ? {
+          '--primary': '#4e342e',
+          '--accent': '#14b8a6',
+          '--bg': '#1b1613',
+          '--surface': '#241c18',
+          '--surface-2': '#2b221d',
+          '--text': '#f3f4f6',
+          '--muted': '#9ca3af',
+          '--border': '#3f3430',
+          '--sidebar-start': '#2b1f1b',
+          '--sidebar-end': '#3e2723',
+          '--shadow': 'rgba(0,0,0,0.35)'
+        }
+      : {
+          '--primary': '#5d4037',
+          '--accent': '#0fb5ae',
+          '--bg': '#f7f7f6',
+          '--surface': '#ffffff',
+          '--surface-2': '#f2f3f5',
+          '--text': '#1f2937',
+          '--muted': '#6b7280',
+          '--border': '#e5e7eb',
+          '--sidebar-start': '#3e2723',
+          '--sidebar-end': '#5d4037',
+          '--shadow': 'rgba(0,0,0,0.08)'
+        };
+    Object.entries(vars).forEach(([k, v]) => root.setProperty(k, v));
+    localStorage.setItem('themeMode', themeMode);
+  }, [themeMode]);
+
+  const toggleTheme = () => setThemeMode((m) => (m === 'dark' ? 'light' : 'dark'));
 
   // Generate avatar based on user's name and role
   const getAvatarUrl = (name, role) => {
@@ -60,31 +131,24 @@ function AdminDashboard() {
     setActiveSection('profile');
   };
 
+  // Define styles
   const containerStyle = {
     display: 'flex',
     minHeight: '100vh',
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    background: '#f8fafc'
+    fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'",
+    background: 'var(--bg)',
+    color: 'var(--text)'
   };
 
   const sidebarStyle = {
     width: sidebarCollapsed ? '70px' : '280px',
-    background: 'linear-gradient(180deg, #1e293b 0%, #334155 100%)',
-    color: 'white',
+    background: 'linear-gradient(180deg, var(--sidebar-start) 0%, var(--sidebar-end) 100%)',
+    color: 'var(--text)',
     transition: 'width 0.3s ease',
     position: 'fixed',
     height: '100vh',
     overflowY: 'auto',
-    boxShadow: '4px 0 12px rgba(0, 0, 0, 0.15)'
-  };
-
-  const mainContentStyle = {
-    flex: 1,
-    marginLeft: sidebarCollapsed ? '70px' : '280px',
-    transition: 'margin-left 0.3s ease',
-    padding: '20px',
-    background: '#f8fafc',
-    minHeight: '100vh'
+    boxShadow: '4px 0 12px var(--shadow)'
   };
 
   const sidebarHeaderStyle = {
@@ -93,13 +157,6 @@ function AdminDashboard() {
     textAlign: 'center'
   };
 
-  const logoStyle = {
-    fontSize: sidebarCollapsed ? '20px' : '24px',
-    fontWeight: '700',
-    color: '#60a5fa'
-  };
-
-  // Profile section styles
   const profileSectionStyle = {
     padding: '20px',
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
@@ -120,7 +177,7 @@ function AdminDashboard() {
   const profileNameStyle = {
     fontSize: '14px',
     fontWeight: '600',
-    color: 'white',
+    color: 'var(--text)',
     marginBottom: '4px',
     opacity: sidebarCollapsed ? 0 : 1,
     transition: 'opacity 0.3s ease'
@@ -128,7 +185,7 @@ function AdminDashboard() {
 
   const profileRoleStyle = {
     fontSize: '12px',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'var(--muted)',
     textTransform: 'capitalize',
     opacity: sidebarCollapsed ? 0 : 1,
     transition: 'opacity 0.3s ease'
@@ -149,16 +206,55 @@ function AdminDashboard() {
     { id: 'users', icon: '👥', label: 'User Manage', color: '#f59e0b' },
     { id: 'bookings', icon: '📋', label: 'Booking Manage', color: '#8b5cf6' },
     { id: 'payments', icon: '💳', label: 'Payment Manage', color: '#06b6d4' },
-    { id: 'delivery', icon: '🚚', label: 'Delivery Manage', color: '#ef4444' }
+    { id: 'delivery', icon: '🚚', label: 'Delivery Manage', color: '#ef4444' },
+    { id: 'reports', icon: '📈', label: 'Reports', color: '#22c55e' },
+    { id: 'settings', icon: '⚙️', label: 'Settings', color: '#14b8a6' }
   ];
+
+  // Main content style
+  const mainContentStyle = {
+    flex: 1,
+    marginLeft: sidebarCollapsed ? '70px' : '280px',
+    transition: 'margin-left 0.3s ease',
+    padding: '20px',
+    background: 'var(--bg)',
+    minHeight: '100vh'
+  };
 
   return (
     <div style={containerStyle}>
       {/* Sidebar */}
       <div style={sidebarStyle}>
         <div style={sidebarHeaderStyle}>
-          <div style={logoStyle}>
-            {sidebarCollapsed ? 'A' : 'Admin Panel'}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              cursor: 'pointer'
+            }}
+            onClick={() => setActiveSection('dashboard')}
+            title="EvoqRentals Admin"
+          >
+            <img
+              src={logoDark}
+              alt="EvoqRentals"
+              onError={(e) => {
+                if (e.currentTarget.src !== logoLight) {
+                  e.currentTarget.src = logoLight;
+                }
+              }}
+              style={{
+                height: sidebarCollapsed ? '28px' : '40px',
+                width: 'auto',
+                filter: 'drop-shadow(0 1px 0 rgba(0,0,0,0.2))'
+              }}
+            />
+            {!sidebarCollapsed && (
+              <span style={{ color: '#93c5fd', fontSize: '18px', marginTop: '8px', fontWeight: 700 }}>
+                Admin Panel
+              </span>
+            )}
           </div>
         </div>
 
@@ -182,11 +278,7 @@ function AdminDashboard() {
             }}
           >
             <img
-              src={
-                profile.profileImage
-                  ? `http://localhost:5000${profile.profileImage}`
-                  : getAvatarUrl(profile.name, profile.role)
-              }
+              src={profile.profileImage ? `http://localhost:5000${profile.profileImage}` : getAvatarUrl(profile.name, profile.role)}
               alt="Profile"
               style={profileImageStyle}
               onMouseOver={(e) => {
@@ -225,16 +317,6 @@ function AdminDashboard() {
                     e.stopPropagation();
                     setActiveSection('editProfile');
                   }}
-                  onMouseOver={(e) => {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-                    e.target.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                    e.target.style.transform = 'translateY(0)';
-                  }}
                 >
                   Profile Setting
                 </button>
@@ -253,16 +335,6 @@ function AdminDashboard() {
                 borderLeftColor: activeSection === item.id ? item.color : 'transparent'
               }}
               onClick={() => setActiveSection(item.id)}
-              onMouseOver={(e) => {
-                if (activeSection !== item.id) {
-                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (activeSection !== item.id) {
-                  e.target.style.backgroundColor = 'transparent';
-                }
-              }}
             >
               <span style={{ fontSize: '18px', marginRight: sidebarCollapsed ? '0' : '12px' }}>
                 {item.icon}
@@ -282,12 +354,6 @@ function AdminDashboard() {
               color: '#ef4444'
             }}
             onClick={handleSignOut}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'transparent';
-            }}
           >
             <span style={{ fontSize: '18px', marginRight: sidebarCollapsed ? '0' : '12px' }}>
               🚪
@@ -318,12 +384,6 @@ function AdminDashboard() {
             transition: 'all 0.3s ease'
           }}
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          onMouseOver={(e) => {
-            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-          }}
         >
           {sidebarCollapsed ? '→' : '←'}
         </div>
@@ -331,7 +391,9 @@ function AdminDashboard() {
 
       {/* Main Content */}
       <div style={mainContentStyle}>
-        {activeSection === 'dashboard' && <DashboardContent />}
+        {activeSection === 'dashboard' && (
+          <DashboardContent themeMode={themeMode} toggleTheme={toggleTheme} />
+        )}
         {activeSection === 'profile' && <Profile profile={profile} />}
         {activeSection === 'editProfile' && <Setting profile={profile} setProfile={setProfile} setActiveSection={setActiveSection} />}
         {activeSection === 'deleteProfile' && <UserManagement />}
@@ -340,85 +402,11 @@ function AdminDashboard() {
         {activeSection === 'bookings' && <BookingManagement />}
         {activeSection === 'payments' && <PaymentManagement />}
         {activeSection === 'delivery' && <DeliveryManagement />}
+        {activeSection === 'reports' && <ReportsContent />}
+        {activeSection === 'settings' && <SettingsContent themeMode={themeMode} toggleTheme={toggleTheme} />}
       </div>
     </div>
   );
 }
-
-
-
-
-// Dashboard Content Component
-function DashboardContent() {
-  const headerStyle = {
-    background: 'white',
-    padding: '30px',
-    borderRadius: '16px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-    marginBottom: '30px'
-  };
-
-  const statsGridStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    gap: '20px',
-    marginBottom: '30px'
-  };
-
-  const statCardStyle = {
-    background: 'white',
-    padding: '25px',
-    borderRadius: '16px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-    border: '2px solid #f1f5f9'
-  };
-
-  const stats = [
-    { title: 'Total Users', value: '1,234', icon: '👥', color: '#3b82f6' },
-    { title: 'Active Orders', value: '56', icon: '📋', color: '#10b981' },
-    { title: 'Revenue', value: '$12,345', icon: '💰', color: '#f59e0b' },
-    { title: 'Products', value: '789', icon: '📦', color: '#8b5cf6' }
-  ];
-
-  return (
-    <div>
-      <div style={headerStyle}>
-        <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#1e293b', margin: '0 0 8px 0' }}>
-          Admin Dashboard
-        </h1>
-        <p style={{ color: '#64748b', margin: '0' }}>
-          Welcome back! Here's what's happening with your platform.
-        </p>
-      </div>
-
-      <div style={statsGridStyle}>
-        {stats.map((stat, index) => (
-          <div key={index} style={statCardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 8px 0' }}>
-                  {stat.title}
-                </p>
-                <p style={{ fontSize: '28px', fontWeight: '700', color: '#1e293b', margin: '0' }}>
-                  {stat.value}
-                </p>
-              </div>
-              <div style={{
-                fontSize: '32px',
-                backgroundColor: `${stat.color}20`,
-                padding: '12px',
-                borderRadius: '12px'
-              }}>
-                {stat.icon}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-
 
 export default AdminDashboard;

@@ -349,3 +349,19 @@ exports.exportPDF = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// DELETE payment (admin/staff)
+exports.remove = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { id } = req.params;
+    const pay = await Payment.findById(id);
+    if (!pay) return res.status(404).json({ message: 'Payment not found' });
+    await PaymentAudit.deleteMany({ paymentId: id });
+    await Payment.deleteOne({ _id: id });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Payments remove error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
