@@ -11,6 +11,18 @@
 				"$eslint-stylish"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Start React frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"start"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
 		}
 	]
 }

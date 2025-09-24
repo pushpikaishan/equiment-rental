@@ -1,0 +1,1 @@
+The SupplierManage admin page was removed on 2025-09-24 by request. If you need to restore it, check git history on branch `binoth-last` for `frontend/src/component/adminPanel/supplierManage.js` and corresponding `admindashboard.js` imports and menu wiring.

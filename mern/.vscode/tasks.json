@@ -1,0 +1,35 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start backend server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"cd backend; $env:NODE_ENV='development'; if (Test-Path package.json) { if (-Not (Test-Path node_modules)) { npm install }; if (Get-Command npm -ErrorAction SilentlyContinue) { npm run start } else { node app.js } } else { node app.js }"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Start backend server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Set-Location -Path 'c:\\Users\\My PC\\Desktop\\ITP\\equiment-rental\\mern\\backend'; if (-Not (Test-Path 'node_modules')) { npm install }; if (Test-Path 'package.json') { npm run start } else { node app.js }"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc",
+				"$eslint-stylish"
+			],
+			"group": "build"
+		}
+	]
+}

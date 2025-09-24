@@ -46,6 +46,8 @@ import SupportPage from "./component/shop/SupportPage";
 import PaymentGateway from "./component/shop/PaymentGateway";
 import NotificationsPage from "./component/userAccount/NotificationsPage";
 import DriverDashboard from "./component/staff/DriverDashboard";
+import SuppliersInventoryList from "./component/shop/SuppliersInventoryList";
+import SupplierDashboard from "./component/supplierPanel/SupplierDashboard";
 
 function App() {
   return (
@@ -83,6 +85,7 @@ function App() {
 
           {/* User-facing shop routes */}
           <Route path="/home" element={<EquipmentList />} />
+          <Route path="/suppliers-inventories" element={<SuppliersInventoryList />} />
           <Route path="/equipment/:id" element={<EquipmentDetail />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/bookings" element={<MyBookings />} />
@@ -90,6 +93,7 @@ function App() {
           <Route path="/payment" element={<PaymentGateway />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/driver" element={<DriverDashboard />} />
+          <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
 
           <Route path="/RegCusOrSupButton" element={<RegCusOrSupButton />} />
          
