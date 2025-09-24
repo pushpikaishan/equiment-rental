@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import UserNavbar from "../shop/UserNavbar";
+import SupplierTopbar from "../supplierPanel/SupplierTopbar";
 import SiteFooter from "../common/SiteFooter";
 
 
@@ -412,7 +413,14 @@ function UserProfile() {
 
   return (
     <div>
-      <UserNavbar />
+      {/* Use supplier-style topbar for suppliers and drivers (staff); otherwise show normal site navbar */}
+  {profile?.role === 'supplier' ? (
+    <SupplierTopbar title="Supplier Profile" hideProfile />
+  ) : profile?.role === 'staff' ? (
+    <SupplierTopbar title="Driver Profile" hideProfile />
+  ) : (
+    <UserNavbar />
+  )}
       <div style={containerStyle}>
       <style>
         {`
@@ -521,6 +529,58 @@ function UserProfile() {
         </div>
 
         <div style={contentStyle}>
+          {profile?.role === 'supplier' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
+              <button
+                onClick={() => navigate('/supplier/dashboard')}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: 'white',
+                  border: '1px solid #cbd5e1',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#1e293b'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                  e.currentTarget.style.borderColor = '#93c5fd';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
+          )}
+          {profile?.role === 'staff' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
+              <button
+                onClick={() => navigate('/driver')}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: 'white',
+                  border: '1px solid #cbd5e1',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#1e293b'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                  e.currentTarget.style.borderColor = '#93c5fd';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
+          )}
           <div style={fieldsGridStyle}>
             {commonFields.concat(extraFields).map((field, index) => (
               <div

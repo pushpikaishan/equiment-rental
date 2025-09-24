@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import SupplierTopbar from './SupplierTopbar';
 
 // Simple top bar with Profile and Logout buttons, no global navbar
 export default function SupplierDashboard() {
@@ -113,20 +114,13 @@ export default function SupplierDashboard() {
 
   // Basic styles
   const shell = { minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' };
-  const topbar = { background: '#111827', color: 'white', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' };
-  const btn = (primary=false) => ({ padding: '8px 12px', borderRadius: 8, border: primary? '1px solid #2563eb' : '1px solid #cbd5e1', background: primary? '#2563eb' : 'white', color: primary? 'white' : '#0f172a', cursor: 'pointer' });
+  // topbar moved to shared SupplierTopbar
   const card = { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 };
   const grid = { display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' };
 
   return (
     <div style={shell}>
-      <div style={topbar}>
-        <div style={{ fontWeight: 700 }}>Supplier Dashboard</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button style={btn(false)} onClick={() => window.location.href = '/userAccount/profile'}>Profile</button>
-          <button style={btn(true)} onClick={onLogout}>Logout</button>
-        </div>
-      </div>
+      <SupplierTopbar title="Supplier Dashboard" />
 
       <div style={{ padding: 16, display: 'grid', gap: 16 }}>
         {error && <div style={{ ...card, borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b' }}>{error}</div>}

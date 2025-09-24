@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import SupplierTopbar from '../supplierPanel/SupplierTopbar';
 
 export default function DriverDashboard() {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
@@ -160,37 +161,17 @@ export default function DriverDashboard() {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('userId');
-    window.location.href = '/';
-  };
+  // Logout handled by shared topbar
 
   const Card = ({ children, style }) => (
     <div style={{ background: 'white', padding: 16, borderRadius: 12, boxShadow: '0 4px 10px rgba(0,0,0,0.05)', ...style }}>{children}</div>
   );
 
   return (
-    <div style={{ maxWidth: 1000, margin: '16px auto', padding: '0 12px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Driver Dashboard</h2>
-        <button onClick={logout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Log out</button>
-      </div>
-
-      <Card style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Profile</h3>
-        {profile ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px,1fr))', gap: 12 }}>
-            <div><strong>Name:</strong> {profile.name}</div>
-            <div><strong>Email:</strong> {profile.email}</div>
-            <div><strong>Phone:</strong> {profile.phoneno || '-'}</div>
-            <div><strong>Role:</strong> {profile.role}</div>
-          </div>
-        ) : (
-          <div>Loading profile…</div>
-        )}
-      </Card>
+    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+      <SupplierTopbar title="Driver Dashboard" />
+      <div style={{ padding: '16px 12px' }}>
+      {/* Profile card removed as per request */}
 
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -387,6 +368,7 @@ export default function DriverDashboard() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
