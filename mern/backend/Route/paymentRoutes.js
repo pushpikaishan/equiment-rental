@@ -14,5 +14,6 @@ router.get('/export/pdf', auth, ctrl.exportPDF);
 router.get('/:id', auth, ctrl.getOne);
 router.put('/:id/mark-received', auth, ctrl.markReceived);
 router.post('/:id/refund', auth, ctrl.refund);
+router.delete('/:id', auth, ctrl.remove);
 
 module.exports = router;
