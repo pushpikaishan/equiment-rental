@@ -6,6 +6,7 @@ const PaymentAudit = require('../Model/paymentAuditModel');
 const PDFDocument = require('pdfkit');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 // Helper to compute totals and deposit (30% deposit by default)
 // Uses number of rental days = max(1, ceil((returnDate - bookingDate)/DAY_MS))
@@ -26,7 +27,13 @@ function computeTotals(items, bookingDate, returnDate, depositRate = 0.3) {
 
 exports.create = async (req, res) => {
   try {
-  const { bookingDate, returnDate, items, customerName, customerEmail, customerPhone, deliveryAddress, notes } = req.body;
+  // Whitelist fields that a user is allowed to update
+  const { bookingDate, returnDate, items, customerName, customerEmail, customerPhone, deliveryAddress, notes, status, cancelledAt, cancelReason } = req.body;
+
+    // Prevent users from directly modifying restricted fields
+    if (typeof status !== 'undefined' || typeof cancelledAt !== 'undefined' || typeof cancelReason !== 'undefined') {
+      return res.status(400).json({ message: 'Attempt to modify restricted fields' });
+    }
     if (!bookingDate || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'bookingDate and items required' });
     }
@@ -95,10 +102,11 @@ exports.update = async (req, res) => {
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
     if (String(booking.userId) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' });
 
-    // 24h rule: allow modifications up to 24 hours before the booking date
-    const cutoff = new Date(booking.bookingDate).getTime() - DAY_MS;
-    if (Date.now() > cutoff) {
-      return res.status(400).json({ message: 'Cannot modify booking within 24 hours of the booking date' });
+    // Allow user edits only within 1 hour after creating the booking
+    const createdAtMs = new Date(booking.createdAt).getTime();
+    const editWindowEnd = createdAtMs + HOUR_MS;
+    if (Date.now() > editWindowEnd) {
+      return res.status(400).json({ message: 'You can edit this booking only within 1 hour after creation' });
     }
 
   const { bookingDate, returnDate, items, customerName, customerEmail, customerPhone, deliveryAddress, notes } = req.body;
@@ -493,9 +501,9 @@ exports.exportPDF = async (req, res) => {
 
     // Table columns (fractions of content width)
     const headers = ['Created At','Booking ID','Customer','Email','Status','Disputed','Total'];
-  const fracs = [0.2, 0.15, 0.18, 0.27, 0.07, 0.06, 0.07];
-  const colWidths = fracs.map(f => Math.floor(f * contentWidth));
-  const rowH = 26; // taller rows to avoid visual overlap
+    const fracs = [0.2, 0.15, 0.18, 0.27, 0.07, 0.06, 0.07];
+    const colWidths = fracs.map(f => Math.floor(f * contentWidth));
+    const rowH = 26; // taller rows to avoid visual overlap
 
     const drawHeader = () => {
       // background bar
