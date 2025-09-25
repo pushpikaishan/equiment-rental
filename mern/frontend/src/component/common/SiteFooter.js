@@ -412,7 +412,7 @@ function SiteFooter() {
       </div>
 
       <div style={styles.bottomBar}>
-        <span>© {currentYear} Event Equipment Rental System. All rights reserved.</span>
+        <span>© {currentYear} Eventrix Equipment Rental System. All rights reserved.</span>
       </div>
     </footer>
   );

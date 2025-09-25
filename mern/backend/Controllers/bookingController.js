@@ -467,24 +467,32 @@ exports.exportCSV = async (req, res) => {
 exports.exportPDF = async (req, res) => {
   try {
     if (!ensureAdmin(req, res)) return;
-    const { status, customer = '', orderId = '', from = '', to = '', disputed = '' } = req.query || {};
+    const { status, orderId = '', from = '', to = '', disputed = '' } = req.query || {};
     const q = {};
+
     if (status) q.status = status;
     if (orderId) q._id = orderId;
-    if (customer) q.$or = [{ customerName: new RegExp(customer, 'i') }, { customerEmail: new RegExp(customer, 'i') }];
     if (disputed === 'true') q.disputed = true;
     if (disputed === 'false') q.disputed = false;
     if (from || to) {
       q.createdAt = {};
       if (from) q.createdAt.$gte = new Date(from);
-      if (to) { const d = new Date(to); d.setHours(23,59,59,999); q.createdAt.$lte = d; }
+      if (to) {
+        const d = new Date(to);
+        d.setHours(23, 59, 59, 999);
+        q.createdAt.$lte = d;
+      }
     }
+
     const rows = await Booking.find(q).sort({ createdAt: -1 });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="bookings-report.pdf"');
-    const doc = new PDFDocument({ margin: 36, size: 'A4', layout: 'landscape' });
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
     doc.pipe(res);
 
+    // --- HEADER ---
     const title = 'Bookings Report';
     const generatedOn = new Date().toLocaleString();
     const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
@@ -492,50 +500,21 @@ exports.exportPDF = async (req, res) => {
     const startY = doc.page.margins.top;
     let y = startY;
 
-    // Header text
-    doc.font('Helvetica-Bold').fontSize(20).text(title, startX, y, { width: contentWidth, align: 'center' });
-    y += 26;
-    doc.font('Helvetica').fontSize(10).fillColor('#555').text(`Generated on: ${generatedOn}`, startX, y, { width: contentWidth, align: 'center' });
-    doc.fillColor('black');
-    y += 16;
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#1e293b')
+      .text(title, startX, y, { width: contentWidth, align: 'center' });
+    y += 30;
+    doc.font('Helvetica').fontSize(11).fillColor('#475569')
+      .text(`Generated on: ${generatedOn}`, startX, y, { width: contentWidth, align: 'center' });
+    y += 25;
 
-    // Table columns (fractions of content width)
-    const headers = ['Created At','Booking ID','Customer','Email','Status','Disputed','Total'];
-    const fracs = [0.2, 0.15, 0.18, 0.27, 0.07, 0.06, 0.07];
-    const colWidths = fracs.map(f => Math.floor(f * contentWidth));
-    const rowH = 26; // taller rows to avoid visual overlap
+    // --- TABLE HEADERS ---
+    const headers = ['Created At', 'Booking ID', 'Email', 'Status', 'Disputed', 'Total (LKR)'];
+    const colWidths = [0.20, 0.25, 0.25, 0.10, 0.08, 0.12].map(f => Math.floor(f * contentWidth));
+    const rowH = 28;
 
-    const drawHeader = () => {
-      // background bar
-      doc.save();
-      doc.rect(startX, y, contentWidth, rowH).fill('#e2e8f0');
-      doc.restore();
-      // header text
-      let x = startX;
-      doc.font('Helvetica-Bold').fontSize(11);
-      headers.forEach((h, i) => {
-        const w = colWidths[i];
-        doc.fillColor('#0f172a').text(h, x + 6, y + 6, { width: w - 12, ellipsis: true, lineBreak: false });
-        x += w;
-      });
-      doc.fillColor('black');
-      // bottom line
-      doc.moveTo(startX, y + rowH).lineTo(startX + contentWidth, y + rowH).strokeColor('#94a3b8').stroke();
-      y += rowH;
-    };
-
-    const ensurePage = () => {
-      if (y + rowH > doc.page.height - doc.page.margins.bottom) {
-        doc.addPage({ layout: 'landscape' });
-        y = startY;
-        drawHeader();
-      }
-    };
-
-    // helper: truncate text to fit width with ellipsis (single-line)
-    const ellipsize = (text, maxWidth, font = 'Helvetica', size = 10) => {
+    const ellipsize = (text, maxWidth) => {
       const t = String(text ?? '');
-      doc.font(font).fontSize(size);
+      doc.font('Helvetica').fontSize(10);
       if (doc.widthOfString(t) <= maxWidth) return t;
       const ell = '…';
       let lo = 0, hi = t.length, best = '';
@@ -547,12 +526,35 @@ exports.exportPDF = async (req, res) => {
       return best || ell;
     };
 
+    const drawHeader = () => {
+      doc.save();
+      doc.rect(startX, y, contentWidth, rowH).fill('#e2e8f0');
+      doc.restore();
+      let x = startX;
+      doc.font('Helvetica-Bold').fontSize(11).fillColor('#0f172a');
+      headers.forEach((h, i) => {
+        doc.text(h, x + 6, y + 8, { width: colWidths[i] - 12, align: 'center', lineBreak: false });
+        x += colWidths[i];
+      });
+      doc.moveTo(startX, y + rowH).lineTo(startX + contentWidth, y + rowH).strokeColor('#94a3b8').stroke();
+      y += rowH;
+    };
+
     drawHeader();
-    let totalSum = 0;
+
+    const ensurePage = () => {
+      if (y + rowH > doc.page.height - doc.page.margins.bottom) {
+        doc.addPage({ layout: 'landscape' });
+        y = startY;
+        drawHeader();
+      }
+    };
+
+    // --- ROWS ---
+    let grandTotal = 0;
     rows.forEach((b, idx) => {
       ensurePage();
       const bg = idx % 2 === 0 ? '#ffffff' : '#f8fafc';
-      // zebra background
       doc.save();
       doc.rect(startX, y, contentWidth, rowH).fill(bg);
       doc.restore();
@@ -560,46 +562,42 @@ exports.exportPDF = async (req, res) => {
       let x = startX;
       const values = [
         new Date(b.createdAt).toLocaleString(),
-        String(b._id),
-        b.customerName || '',
+        b._id,
         b.customerEmail || '',
         b.status || '',
         b.disputed ? 'Yes' : 'No',
-        (Number(b.total) || 0).toFixed(2),
+        (Number(b.total) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
       ];
-      totalSum += Number(b.total) || 0;
+      grandTotal += Number(b.total) || 0;
 
       values.forEach((v, i) => {
-        const w = colWidths[i];
-        const text = ellipsize(v, w - 12, 'Helvetica', 10);
-        const opts = { width: w - 12, lineBreak: false };
-        doc.font('Helvetica').fontSize(10);
-        // right-align for Total column
-        if (i === values.length - 1) {
-          doc.text(text, x + 6, y + 6, { ...opts, align: 'right' });
-        } else if (i === 4 || i === 5) {
-          // status/disputed center
-          doc.text(text, x + 6, y + 6, { ...opts, align: 'center' });
-        } else {
-          doc.text(text, x + 6, y + 6, opts);
-        }
-        x += w;
+        const text = ellipsize(v, colWidths[i] - 12);
+        const opts = { width: colWidths[i] - 12, lineBreak: false };
+        doc.font('Helvetica').fontSize(10).fillColor('#0f172a');
+        if (i === 5) doc.text(text, x + 6, y + 8, { ...opts, align: 'right' });
+        else if (i === 3 || i === 4) doc.text(text, x + 6, y + 8, { ...opts, align: 'center' });
+        else doc.text(text, x + 6, y + 8, opts);
+        x += colWidths[i];
       });
-      // row bottom line
+
       doc.moveTo(startX, y + rowH).lineTo(startX + contentWidth, y + rowH).strokeColor('#e2e8f0').stroke();
       y += rowH;
     });
 
-    // Totals footer
+    // --- GRAND TOTAL ---
     ensurePage();
-    y += 8;
-    doc.font('Helvetica-Bold').fontSize(12).text(`Grand Total: ${totalSum.toFixed(2)}`, startX, y, { width: contentWidth, align: 'right' });
+    y += 10;
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#1e293b')
+      .text(`Grand Total: LKR ${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, startX, y, { width: contentWidth, align: 'right' });
+
     doc.end();
   } catch (e) {
     console.error('Admin bookings PDF export error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
 
 // GET /bookings/admin/upcoming?days=7 - upcoming bookings within next N days with payment method and counts
 exports.adminUpcoming = async (req, res) => {

@@ -87,7 +87,7 @@ export default function BookingManagement() {
     <div>
       <div style={headerCard}>
         <h1 style={headerTitle}>Booking Management</h1>
-        <p style={headerSub}>Monitor system usage, handle disputes/cancellations, and export booking reports.</p>
+        <p style={headerSub}>Monitor system usage, handle disputes,cancellations and export booking reports.</p>
         {summary && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
             <div style={{ ...input }}>Total: {summary.total}</div>
