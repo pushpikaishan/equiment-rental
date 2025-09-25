@@ -339,6 +339,7 @@ function UserProfile() {
   if (!profile) {
     return (
       <>
+        {/* Hide navbar while loading? Keep it visible for consistency */}
         <UserNavbar />
         <div style={styles.profileContainer}>
           <div style={styles.loadingWrapper}>
@@ -398,7 +399,10 @@ function UserProfile() {
 
   return (
     <>
-      <UserNavbar />
+      {/* Hide supplier & staff (driver) navigation bar in profile section */}
+      {!(profile.role === 'supplier' || profile.role === 'staff' || profile.role === 'driver') && (
+        <UserNavbar />
+      )}
       <div style={styles.profileContainer}>
         <style>
           {`
