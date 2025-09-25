@@ -31,6 +31,9 @@ router.get('/driver/my', auth, async (req, res) => {
 
 // Staff can update their own assigned delivery status
 router.put('/driver/:bookingId/status', auth, ctrl.updateByDriver);
+// Staff updates their live location; user polls via booking id
+router.put('/driver/:bookingId/location', auth, ctrl.updateDriverLocation);
+router.get('/:bookingId/location', auth, ctrl.getDriverLocation);
 // Staff recollect task: list and update
 router.get('/driver/recollect/my', auth, ctrl.driverRecollectList);
 router.put('/driver/:bookingId/recollect/status', auth, ctrl.updateRecollectByDriver);

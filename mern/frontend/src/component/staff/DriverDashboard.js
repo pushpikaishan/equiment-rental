@@ -117,6 +117,52 @@ export default function DriverDashboard() {
       alert(e.response?.data?.message || e.message);
     }
   };
+
+  // Live location tracking when driver starts a delivery
+  const trackers = useMemo(() => new Map(), []);
+  useEffect(() => {
+    return () => {
+      // cleanup geolocation watches on unmount
+      trackers.forEach((entry) => {
+        if (entry?.watchId && navigator.geolocation) {
+          navigator.geolocation.clearWatch(entry.watchId);
+        }
+      });
+      trackers.clear();
+    };
+  }, [trackers]);
+
+  const startTracking = (bookingId) => {
+    if (!navigator.geolocation) return;
+    if (trackers.has(bookingId)) return; // already tracking
+    const send = async (pos) => {
+      try {
+        const { latitude, longitude, accuracy } = pos.coords || {};
+        if (typeof latitude === 'number' && typeof longitude === 'number') {
+          await axios.put(
+            `${baseUrl}/deliveries/driver/${bookingId}/location`,
+            { lat: latitude, lng: longitude, accuracy },
+            { headers }
+          );
+        }
+      } catch (_) {}
+    };
+    const watchId = navigator.geolocation.watchPosition(
+      send,
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+    );
+    trackers.set(bookingId, { watchId });
+  };
+
+  const stopTracking = (bookingId) => {
+    const entry = trackers.get(bookingId);
+    if (entry?.watchId && navigator.geolocation) {
+      navigator.geolocation.clearWatch(entry.watchId);
+    }
+    trackers.delete(bookingId);
+  };
+
   const updateRecollectStatus = async (bookingId, status) => {
     try {
       await axios.put(`${baseUrl}/deliveries/driver/${bookingId}/recollect/status`, { status }, { headers });
@@ -130,29 +176,37 @@ export default function DriverDashboard() {
   const openReport = (rec) => {
     setReportFor(rec.bookingId);
     setReportBooking(rec.booking || null);
-    const baseItems = Array.isArray(rec.booking?.items) ? rec.booking.items.map(it => ({
-      equipmentId: it.equipmentId,
-      name: it.name,
-      expectedQty: it.qty,
-      collectedQty: it.qty,
-      condition: 'none',
-      note: ''
-    })) : [];
+    const baseItems = Array.isArray(rec.booking?.items)
+      ? rec.booking.items.map(it => ({
+          equipmentId: it.equipmentId,
+          name: it.name,
+          expectedQty: it.qty,
+          collectedQty: it.qty,
+          condition: 'none',
+          note: ''
+        }))
+      : [];
     setReportItems(baseItems);
     setReportComment('');
     const savedActual = rec.recollectReport?.actualReturnDate ? new Date(rec.recollectReport.actualReturnDate) : null;
     setReportReturnDate((savedActual || new Date()).toISOString().slice(0,10));
     setReportSavedActual(savedActual ? savedActual.toISOString() : null);
   };
+
   const closeReport = () => {
     setReportFor(null);
     setReportBooking(null);
     setReportItems([]);
     setReportComment('');
   };
+
   const submitReport = async () => {
     try {
-      await axios.post(`${baseUrl}/deliveries/driver/${reportFor}/recollect/report`, { items: reportItems, comment: reportComment, actualReturnDate: reportReturnDate }, { headers });
+      await axios.post(
+        `${baseUrl}/deliveries/driver/${reportFor}/recollect/report`,
+        { items: reportItems, comment: reportComment, actualReturnDate: reportReturnDate },
+        { headers }
+      );
       closeReport();
       await fetchDeliveries();
       alert('Report submitted');
@@ -199,8 +253,8 @@ export default function DriverDashboard() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => updateStatus(d.bookingId, 'in-progress')} disabled={d.status !== 'assigned'} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Start</button>
-                  <button onClick={() => updateStatus(d.bookingId, 'delivered')} disabled={!(d.status === 'assigned' || d.status === 'in-progress')} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Completed</button>
+                  <button onClick={() => { updateStatus(d.bookingId, 'in-progress'); startTracking(d.bookingId); }} disabled={d.status !== 'assigned'} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Start</button>
+                  <button onClick={() => { updateStatus(d.bookingId, 'delivered'); stopTracking(d.bookingId); }} disabled={!(d.status === 'assigned' || d.status === 'in-progress')} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Completed</button>
                   <button onClick={() => updateStatus(d.bookingId, 'failed')} disabled={d.status === 'delivered'} style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Reject</button>
                 </div>
               </div>

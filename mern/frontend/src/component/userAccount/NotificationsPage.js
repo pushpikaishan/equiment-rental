@@ -10,6 +10,7 @@ export default function NotificationsPage() {
 	const [loading, setLoading] = useState(true);
 	const [deliveries, setDeliveries] = useState([]);
 	const [payments, setPayments] = useState([]);
+	const [trackingFor, setTrackingFor] = useState(null);
 
 	const load = async () => {
 		setLoading(true);
@@ -57,7 +58,75 @@ export default function NotificationsPage() {
 		failed: '#ef4444',
 	}[(s || '').toLowerCase()] || '#9ca3af');
 
-	const fakeTrack = (id) => alert(`Live tracking (demo): Booking ${id} — driver en route…`);
+	// Live tracking: poll backend for driver coords and show a lightweight map
+	function useDriverLocation(baseUrl, headers, bookingId) {
+		const [loc, setLoc] = useState(null);
+		const [error, setError] = useState('');
+		useEffect(() => {
+			if (!bookingId) return;
+			let alive = true;
+			const fetchLoc = async () => {
+				try {
+					const res = await axios.get(`${baseUrl}/deliveries/${bookingId}/location`, { headers });
+					if (!alive) return;
+					setLoc(res.data?.location || null);
+					setError('');
+				} catch (e) {
+					if (!alive) return;
+					setError('No live location yet');
+				}
+			};
+			fetchLoc();
+			const id = setInterval(fetchLoc, 10000);
+			return () => { alive = false; clearInterval(id); };
+		}, [baseUrl, headers, bookingId]);
+		return { loc, error };
+	}
+
+	function MiniMap({ lat, lng }) {
+		if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+		// Embed Google Maps without an API key using the public embed endpoint
+		const embedSrc = `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+		const openHref = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+		return (
+			<div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', maxWidth: 640 }}>
+				<iframe
+					title={`Driver at ${lat},${lng}`}
+					src={embedSrc}
+					width="100%"
+					height="300"
+					style={{ border: 0, display: 'block' }}
+					loading="lazy"
+					referrerPolicy="no-referrer-when-downgrade"
+				/>
+				<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8 }}>
+					<div style={{ fontSize: 12, color: '#475569' }}>Lat: {lat.toFixed(5)}, Lng: {lng.toFixed(5)}</div>
+					<a
+						href={openHref}
+						target="_blank"
+						rel="noopener noreferrer"
+						style={{ background: '#0ea5e9', color: 'white', textDecoration: 'none', padding: '6px 10px', borderRadius: 6 }}
+					>
+						Open in Google Maps
+					</a>
+				</div>
+			</div>
+		);
+	}
+
+	function TrackingPanel({ bookingId }) {
+		const { loc, error } = useDriverLocation(baseUrl, headers, bookingId);
+		if (!bookingId) return null;
+		return (
+			<div style={{ marginTop: 10 }}>
+				{loc && typeof loc.lat === 'number' && typeof loc.lng === 'number' ? (
+					<MiniMap lat={loc.lat} lng={loc.lng} />
+				) : (
+					<div style={{ color: '#64748b', fontSize: 14 }}>{error || 'Waiting for driver location…'}</div>
+				)}
+			</div>
+		);
+	}
 
 	const download = (blob, filename) => {
 		const url = URL.createObjectURL(blob);
@@ -118,9 +187,14 @@ export default function NotificationsPage() {
 											</div>
 										</div>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-											<button onClick={() => fakeTrack(d.bookingId)} style={btn('#10b981')}>Tracking Live Location</button>
+											<button onClick={() => setTrackingFor(trackingFor === d.bookingId ? null : d.bookingId)} style={btn('#10b981')}>
+												{trackingFor === d.bookingId ? 'Hide Live Location' : 'Tracking Live Location'}
+											</button>
 										</div>
 									</div>
+									{trackingFor === d.bookingId && (
+										<TrackingPanel bookingId={d.bookingId} />
+									)}
 								</div>
 							))}
 						</div>
