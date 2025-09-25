@@ -50,7 +50,7 @@ export default function ForgotPassword() {
       padding: 20, fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
     }}>
       <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 20px 40px rgba(0,0,0,0.1)", width: "100%", maxWidth: 420 }}>
-        <div style={{ padding: 28, background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", color: "#fff" }}>
+        <div style={{ padding: 28, background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)", color: "#fff" }}>
           <h2 style={{ margin: 0 }}>{step === 1 ? "Forgot Password" : "Enter Code & New Password"}</h2>
         </div>
         <div style={{ padding: 28 }}>
@@ -88,7 +88,7 @@ export default function ForgotPassword() {
           <button
             onClick={step === 1 ? requestCode : resetPassword}
             disabled={loading}
-            style={{ width: "100%", padding: 12, background: "#667eea", color: "#fff", border: 0, borderRadius: 8, fontWeight: 600 }}
+            style={{ width: "100%", padding: 12, background: "#1d4ed8", color: "#fff", border: 0, borderRadius: 8, fontWeight: 600 }}
           >
             {loading ? "Please wait..." : step === 1 ? "Send Code" : "Change Password"}
           </button>

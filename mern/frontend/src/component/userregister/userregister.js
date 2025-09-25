@@ -297,7 +297,7 @@ function UserRegister() {
   };
 
   const headerStyle = {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
     padding: '30px',
     textAlign: 'center',
     color: 'white'
@@ -437,7 +437,7 @@ function UserRegister() {
 
   const buttonStyle = {
     width: '100%',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
     color: 'white',
     border: 'none',
     padding: '15px',

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { pageContainer, headerCard, headerTitle, headerSub, tabButton, card as cardBox } from './adminStyles';
 
@@ -16,6 +17,49 @@ import ManageStaffs from "../disalluser/allstaff";
 
 // User Overview Component
 function UserOverview() {
+  const [counts, setCounts] = useState({ admins: 0, staff: 0, suppliers: 0, users: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [adminsRes, staffRes, suppliersRes, usersRes] = await Promise.all([
+          axios.get('http://localhost:5000/admins'),
+          axios.get('http://localhost:5000/staff'),
+          axios.get('http://localhost:5000/suppliers'),
+          axios.get('http://localhost:5000/users'),
+        ]);
+
+        const adminsArr = Array.isArray(adminsRes.data)
+          ? adminsRes.data
+          : (Array.isArray(adminsRes.data.admins) ? adminsRes.data.admins : []);
+        const staffArr = Array.isArray(staffRes.data)
+          ? staffRes.data
+          : (Array.isArray(staffRes.data.staff) ? staffRes.data.staff : []);
+        const suppliersArr = Array.isArray(suppliersRes.data)
+          ? suppliersRes.data
+          : (Array.isArray(suppliersRes.data.suppliers) ? suppliersRes.data.suppliers : []);
+        const usersArr = Array.isArray(usersRes.data)
+          ? usersRes.data
+          : (Array.isArray(usersRes.data.users) ? usersRes.data.users : []);
+
+        setCounts({
+          admins: adminsArr.length,
+          staff: staffArr.length,
+          suppliers: suppliersArr.length,
+          users: usersArr.length,
+        });
+      } catch (e) {
+        console.error('Failed to load overview counts:', e);
+        setError('Failed to load overview');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCounts();
+  }, []);
   const statsStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -31,26 +75,32 @@ function UserOverview() {
   };
 
   const userStats = [
-    { type: 'Admins', count: 5, icon: '👑', color: '#8b5cf6' },
-    { type: 'Staff', count: 25, icon: '👨‍💼', color: '#10b981' },
-    { type: 'Suppliers', count: 150, icon: '🏢', color: '#f59e0b' },
-    { type: 'Users', count: 1054, icon: '👥', color: '#3b82f6' }
+    { type: 'Admins', count: counts.admins, icon: '👑', color: '#8b5cf6' },
+    { type: 'Staff', count: counts.staff, icon: '👨‍💼', color: '#10b981' },
+    { type: 'Suppliers', count: counts.suppliers, icon: '🏢', color: '#f59e0b' },
+    { type: 'Users', count: counts.users, icon: '👥', color: '#3b82f6' }
   ];
 
   return (
     <div>
       <h3 style={{ margin: '0 0 20px 0', color: '#1e293b' }}>User Statistics</h3>
-      <div style={statsStyle}>
-        {userStats.map((stat, index) => (
-          <div key={index} style={statItemStyle}>
-            <div style={{ fontSize: '32px', marginBottom: '10px' }}>{stat.icon}</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: stat.color, marginBottom: '5px' }}>
-              {stat.count}
+      {loading ? (
+        <div style={{ padding: '20px', color: '#64748b' }}>Loading overview...</div>
+      ) : error ? (
+        <div style={{ padding: '20px', color: '#dc2626' }}>{error}</div>
+      ) : (
+        <div style={statsStyle}>
+          {userStats.map((stat, index) => (
+            <div key={index} style={statItemStyle}>
+              <div style={{ fontSize: '32px', marginBottom: '10px' }}>{stat.icon}</div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: stat.color, marginBottom: '5px' }}>
+                {stat.count}
+              </div>
+              <div style={{ fontSize: '14px', color: '#64748b' }}>{stat.type}</div>
             </div>
-            <div style={{ fontSize: '14px', color: '#64748b' }}>{stat.type}</div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

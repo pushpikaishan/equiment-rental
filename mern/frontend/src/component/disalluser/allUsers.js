@@ -293,7 +293,7 @@ function DisplayAllUsers() {
         const titleY = 34; // where title text will be placed
 
         // Header: Logo (left), meta (right)
-        const logoUrl = `${process.env.PUBLIC_URL || ''}/logo512.png`;
+        const logoUrl = `${process.env.PUBLIC_URL || ''}/favicon.ico`;
         const logoDataUrl = await loadImageAsDataURL(logoUrl);
         if (logoDataUrl) {
           // x, y, width, height

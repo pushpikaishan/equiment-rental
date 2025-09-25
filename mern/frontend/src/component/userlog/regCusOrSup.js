@@ -36,7 +36,7 @@ function Register() {
   };
 
   const headerStyle = {
-    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+   background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
     padding: "40px 32px",
     textAlign: "center",
     color: "white",
