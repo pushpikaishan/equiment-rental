@@ -1,6 +1,7 @@
 const Delivery = require('../Model/deliveryModel');
 const Booking = require('../Model/bookingModel');
 const Staff = require('../Model/staffModel');
+const PDFDocument = require('pdfkit');
 
 function ensureAdmin(req, res) {
   const role = req.user?.role;
@@ -409,6 +410,132 @@ exports.adminSummary = async (req, res) => {
     res.json({ totalConfirmed, byStatus });
   } catch (e) {
     console.error('Admin delivery summary error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /deliveries/admin/export/pdf - export delivery report
+exports.exportPDF = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const bookings = await Booking.find({ status: 'confirmed' }).sort({ createdAt: -1 });
+    const ids = bookings.map(b => b._id);
+    const deliveries = ids.length ? await Delivery.find({ bookingId: { $in: ids } }) : [];
+    const dMap = new Map(deliveries.map(d => [String(d.bookingId), d]));
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="deliveries-report.pdf"');
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
+    doc.pipe(res);
+
+    const title = 'Deliveries Report';
+    const generatedOn = new Date().toLocaleString();
+    const contentWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const startX = doc.page.margins.left;
+    const startY = doc.page.margins.top;
+    let y = startY;
+
+    doc.font('Helvetica-Bold').fontSize(18).fillColor('#000000')
+      .text(title, startX, y, { width: contentWidth, align: 'left' });
+    y += 20;
+    doc.font('Helvetica').fontSize(10).fillColor('#000000')
+      .text(`Generated on: ${generatedOn}`, startX, y, { width: contentWidth, align: 'left' });
+    y += 18;
+
+    const headers = ['Created', 'Booking ID', 'Customer Name', 'Customer Email', 'Driver', 'Delivery Status', 'Recollect Status'];
+    const colWidths = [0.16, 0.14, 0.20, 0.20, 0.10, 0.10, 0.10].map(f => Math.floor(f * contentWidth));
+    const rowH = 26;
+
+    const ellipsize = (text, maxWidth) => {
+      const t = String(text ?? '');
+      doc.font('Helvetica').fontSize(9);
+      if (doc.widthOfString(t) <= maxWidth) return t;
+      const ell = '…';
+      let lo = 0, hi = t.length, best = '';
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        const cand = t.slice(0, mid) + ell;
+        if (doc.widthOfString(cand) <= maxWidth) { best = cand; lo = mid + 1; } else { hi = mid; }
+      }
+      return best || ell;
+    };
+
+    const drawHeader = () => {
+      // header background light gray
+      doc.save();
+      doc.rect(startX, y, contentWidth, rowH).fill('#e5e7eb');
+      doc.restore();
+      let x = startX;
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+      headers.forEach((h, i) => {
+        doc.text(h, x + 4, y + 8, { width: colWidths[i] - 8, align: 'left', lineBreak: false });
+        x += colWidths[i];
+      });
+      // bottom border line
+      doc.moveTo(startX, y + rowH).lineTo(startX + contentWidth, y + rowH).strokeColor('#000000').lineWidth(0.5).stroke();
+      y += rowH;
+    };
+
+    drawHeader();
+
+    const ensurePage = () => {
+      if (y + rowH > doc.page.height - doc.page.margins.bottom) {
+        doc.addPage({ layout: 'landscape' });
+        y = startY;
+        drawHeader();
+      }
+    };
+
+    const deliveryStatusCounts = { unassigned: 0, assigned: 0, 'in-progress': 0, delivered: 0, failed: 0 };
+    const recollectStatusCounts = {};
+
+    bookings.forEach((b, idx) => {
+      ensurePage();
+      const d = dMap.get(String(b._id));
+      // plain white rows
+      // no background fill for simplicity
+      const vals = [
+        new Date(b.createdAt).toLocaleString(),
+        String(b._id),
+        b.customerName || '',
+        b.customerEmail || '',
+        d?.driver || '-',
+        (d?.status || 'unassigned'),
+        (d?.recollectStatus || 'none')
+      ];
+      const ds = (d?.status || 'unassigned');
+      if (deliveryStatusCounts[ds] !== undefined) deliveryStatusCounts[ds] += 1; else deliveryStatusCounts[ds] = 1;
+      const rs = (d?.recollectStatus || 'none');
+      recollectStatusCounts[rs] = (recollectStatusCounts[rs] || 0) + 1;
+      let x = startX;
+      vals.forEach((v, i) => {
+        const text = ellipsize(v, colWidths[i] - 12);
+        const opts = { width: colWidths[i] - 12, lineBreak: false };
+        doc.font('Helvetica').fontSize(9).fillColor('#1e293b');
+        if (i >= headers.length - 2) doc.text(text, x + 6, y + 7, { ...opts, align: 'center' }); else doc.text(text, x + 6, y + 7, opts);
+        x += colWidths[i];
+      });
+      doc.moveTo(startX, y + rowH).lineTo(startX + contentWidth, y + rowH).strokeColor('#999').lineWidth(0.5).stroke();
+      y += rowH;
+    });
+
+    ensurePage();
+    y += 12;
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000').text('Summary', startX, y);
+    y += 18;
+    const statusLine = Object.entries(deliveryStatusCounts).map(([k,v]) => `${k}=${v}`).join('  |  ');
+  doc.font('Helvetica').fontSize(9).fillColor('#000000').text(`Delivery Status Counts: ${statusLine}`, startX, y, { width: contentWidth });
+    y += 16;
+    const recollectLine = Object.entries(recollectStatusCounts).map(([k,v]) => `${k}=${v}`).join('  |  ');
+  doc.text(`Recollect Status Counts: ${recollectLine}`, startX, y, { width: contentWidth });
+    y += 20;
+    doc.font('Helvetica-Oblique').fontSize(8).fillColor('#444')
+      .text('Note: UNASSIGNED = no delivery record; NONE = recollect not started.', startX, y, { width: contentWidth });
+
+    doc.end();
+  } catch (e) {
+    console.error('Admin deliveries PDF export error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };

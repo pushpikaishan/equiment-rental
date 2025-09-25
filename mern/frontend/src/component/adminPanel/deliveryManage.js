@@ -83,6 +83,23 @@ export default function DeliveryManagement() {
     fetchData();
   };
 
+  const downloadReport = async () => {
+    try {
+      const res = await axios.get(`${baseUrl}/deliveries/admin/export/pdf`, { headers, responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `deliveries-report-${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Failed to download report');
+    }
+  };
+
   return (
     <div>
       <div style={headerCard}>
@@ -90,6 +107,7 @@ export default function DeliveryManagement() {
         <p style={headerSub}>Manage deliveries for confirmed bookings only. Assign a staff driver and mark as delivered.</p>
         <div>
           <button onClick={purgeAll} style={btn('#dc2626')}>Remove All Deliveries</button>
+          <button onClick={downloadReport} style={btn('#2563eb')}>Download Delivery Report</button>
         </div>
       </div>
 
