@@ -15,7 +15,7 @@ const adminOnly = (req, res, next) => {
 // List all equipment
 router.get("/", EquipmentController.list);
 
-// Create equipment with optional image
+// Create equipment with image
 router.post("/", auth, adminOnly, upload.single("image"), EquipmentController.create);
 
 // Read one
