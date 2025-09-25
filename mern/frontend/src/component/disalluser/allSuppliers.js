@@ -90,18 +90,18 @@ function DisplayAllSuppliers() {
 
   const pdfButtonStyle = {
     ...exportButtonStyle,
-    background: 'linear-gradient(135deg, #e53935, #b71c1c)'
+    background: 'linear-gradient(135deg, #f59e0b, #f3ab2fff)'
   };
 
   const excelButtonStyle = {
     ...exportButtonStyle,
-    background: 'linear-gradient(135deg, #2e7d32, #1b5e20)'
+    background: 'linear-gradient(135deg, #5dae61ff, #2e7d32)'
   };
 
   const titleStyle = {
     fontSize: '36px',
     marginBottom: '10px',
-    color: '#667eea',
+    color: '#3b82f6',
     fontWeight: '700',
     margin: '0 0 10px 0'
   };
@@ -164,7 +164,7 @@ function DisplayAllSuppliers() {
   };
 
   const theadStyle = {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #764ba2 100%)',
     color: 'white'
   };
 
@@ -210,7 +210,7 @@ function DisplayAllSuppliers() {
     transition: 'all 0.3s ease',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+    background: 'linear-gradient(135deg, #16a34a, #16a34a)',
     color: 'white'
   };
 

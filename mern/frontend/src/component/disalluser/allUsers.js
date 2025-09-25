@@ -109,18 +109,18 @@ function DisplayAllUsers() {
 
   const pdfButtonStyle = {
     ...exportButtonStyle,
-    background: 'linear-gradient(135deg, #e53935, #b71c1c)'
+    background: 'linear-gradient(135deg, #f59e0b, #f3ab2fff)'
   };
 
   const excelButtonStyle = {
     ...exportButtonStyle,
-    background: 'linear-gradient(135deg, #2e7d32, #1b5e20)'
+    background: 'linear-gradient(135deg, #5dae61ff, #2e7d32)'
   };
 
   const titleStyle = {
     fontSize: '36px',
     marginBottom: '10px',
-    color: '#667eea',
+    color: '#3b82f6',
     fontWeight: '700',
     margin: '0 0 10px 0'
   };
@@ -164,7 +164,7 @@ function DisplayAllUsers() {
   };
 
   const theadStyle = {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #764ba2 100%)',
     color: 'white'
   };
 
@@ -210,7 +210,7 @@ function DisplayAllUsers() {
     transition: 'all 0.3s ease',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+    background: 'linear-gradient(135deg, #16a34a, #45a049)',
     color: 'white'
   };
 
@@ -450,7 +450,7 @@ function DisplayAllUsers() {
                         onClick={() => handleUpdate(user._id)}
                         style={updateButtonStyle}
                         onMouseOver={(e) => {
-                          e.target.style.background = 'linear-gradient(135deg, #45a049, #3d8b40)';
+                          e.target.style.background = 'linear-gradient(135deg, #16a34a, #16a34a)';
                           e.target.style.transform = 'translateY(-2px)';
                           e.target.style.boxShadow = '0 5px 15px rgba(76, 175, 80, 0.4)';
                         }}
@@ -471,7 +471,7 @@ function DisplayAllUsers() {
                           e.target.style.boxShadow = '0 5px 15px rgba(244, 67, 54, 0.4)';
                         }}
                         onMouseOut={(e) => {
-                          e.target.style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
+                          e.target.style.background = 'linear-gradient(135deg, #f44336ff, #d32f2f)';
                           e.target.style.transform = 'translateY(0)';
                           e.target.style.boxShadow = 'none';
                         }}
