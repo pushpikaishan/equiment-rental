@@ -157,9 +157,26 @@ export default function BookingManagement() {
                     <td style={{ padding: 10 }}>{b.disputed ? 'Yes' : 'No'}</td>
                     <td style={{ padding: 10, textAlign: 'right' }}>{Number(b.total).toFixed(2)}</td>
                     <td style={{ padding: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button onClick={() => toggleDispute(b._id, b.disputed)} style={btn('#8b5cf6')}>{b.disputed ? 'Resolve' : 'Mark Dispute'}</button>
+                      <button
+                        onClick={() => toggleDispute(b._id, b.disputed)}
+                        style={{
+                          // Blue for "Mark Dispute", Grey for "Resolve"
+                          ...btn(b.disputed ? 'var(--muted)' : '#1e40af'),
+                          minWidth: 120,
+                        }}
+                      >
+                        {b.disputed ? 'Resolve' : 'Mark Dispute'}
+                      </button>
                       {b.status !== 'cancelled' && (
-                        <button onClick={() => cancelBooking(b._id)} style={btn('#ef4444')}>Cancel</button>
+                        <button
+                          onClick={() => cancelBooking(b._id)}
+                          style={{
+                            ...btn('var(--danger)'),
+                            minWidth: 120,
+                          }}
+                        >
+                          Cancel
+                        </button>
                       )}
                     </td>
                   </tr>

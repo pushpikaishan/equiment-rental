@@ -59,13 +59,14 @@ export const toolbar = {
   flexWrap: 'wrap',
 };
 
-export const btn = (bg = '#2563eb', color = 'white') => ({
+export const btn = (bg = 'var(--brand)', color = 'white') => ({
   background: bg,
   color,
   border: 'none',
-  padding: '8px 12px',
-  borderRadius: 8,
+  padding: '10px 14px',
+  borderRadius: 10,
   cursor: 'pointer',
+  fontWeight: 700,
 });
 
 export const btnOutlined = (color = '#334155') => ({
