@@ -197,6 +197,43 @@ exports.updateByDriver = async (req, res) => {
   }
 };
 
+// PUT /deliveries/driver/:bookingId/location - staff updates current GPS coords
+exports.updateDriverLocation = async (req, res) => {
+  try {
+    if (req.user?.role !== 'staff') return res.status(403).json({ message: 'Staff only' });
+    const { bookingId } = req.params;
+  const { lat, lng, accuracy } = req.body || {};
+    const latitude = Number(lat);
+    const longitude = Number(lng);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return res.status(400).json({ message: 'lat and lng are required numbers' });
+    }
+    const delivery = await Delivery.findOne({ bookingId, driverId: req.user.id });
+    if (!delivery) return res.status(404).json({ message: 'Delivery not found for this staff' });
+  const acc = Number(accuracy);
+  delivery.driverLocation = { lat: latitude, lng: longitude, accuracy: Number.isFinite(acc) ? acc : undefined, updatedAt: new Date() };
+    await delivery.save();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Update driver location error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /deliveries/:bookingId/location - user polls driver location for a booking
+exports.getDriverLocation = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const delivery = await Delivery.findOne({ bookingId });
+    if (!delivery) return res.status(404).json({ message: 'Delivery not found' });
+    const loc = delivery.driverLocation || null;
+    res.json({ location: loc });
+  } catch (e) {
+    console.error('Get driver location error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // GET /deliveries/driver/recollect/my - list recollect tasks for logged-in staff
 exports.driverRecollectList = async (req, res) => {
   try {

@@ -37,6 +37,13 @@ const deliverySchema = new mongoose.Schema({
     createdAt: { type: Date },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff' },
   },
+  // Live driver location for tracking
+  driverLocation: {
+    lat: { type: Number },
+    lng: { type: Number },
+    accuracy: { type: Number },
+    updatedAt: { type: Date }
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Delivery', deliverySchema);
