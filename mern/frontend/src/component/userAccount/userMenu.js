@@ -114,13 +114,13 @@ function UserMenu() {
         description: "List a new item for sale",
         category: "commerce",
       },
-      {
-        id: "deactivateAccount",
-        icon: "⏸️",
-        title: "Deactivate Account",
-        description: "Temporarily disable your account",
-        category: "account",
-      },
+      // {
+      //   id: "deactivateAccount",
+      //   icon: "⏸️",
+      //   title: "Deactivate Account",
+      //   description: "Temporarily disable your account",
+      //   category: "account",
+      // },
       {
         id: "deleteAccount",
         icon: "🗑️",
@@ -158,13 +158,13 @@ function UserMenu() {
         description: "View and manage your cart",
         category: "commerce",
       },
-      {
-        id: "deactivateAccount",
-        icon: "⏸️",
-        title: "Deactivate Account",
-        description: "Temporarily disable your account",
-        category: "account",
-      },
+      // {
+      //   id: "deactivateAccount",
+      //   icon: "⏸️",
+      //   title: "Deactivate Account",
+      //   description: "Temporarily disable your account",
+      //   category: "account",
+      // },
       {
         id: "deleteAccount",
         icon: "🗑️",
@@ -195,13 +195,13 @@ function UserMenu() {
         description: "Add extra security to your account",
         category: "security",
       },
-      {
-        id: "deactivateAccount",
-        icon: "⏸️",
-        title: "Deactivate Account",
-        description: "Temporarily disable your account",
-        category: "account",
-      },
+      // {
+      //   id: "deactivateAccount",
+      //   icon: "⏸️",
+      //   title: "Deactivate Account",
+      //   description: "Temporarily disable your account",
+      //   category: "account",
+      // },
       {
         id: "deleteAccount",
         icon: "🗑️",
@@ -232,13 +232,13 @@ function UserMenu() {
         description: "Add extra security to your account",
         category: "security",
       },
-      {
-        id: "deactivateAccount",
-        icon: "⏸️",
-        title: "Deactivate Account",
-        description: "Temporarily disable your account",
-        category: "account",
-      },
+      // {
+      //   id: "deactivateAccount",
+      //   icon: "⏸️",
+      //   title: "Deactivate Account",
+      //   description: "Temporarily disable your account",
+      //   category: "account",
+      // },
       {
         id: "deleteAccount",
         icon: "🗑️",
@@ -280,9 +280,10 @@ function UserMenu() {
   };
 
   const iconStyle = {
-    fontSize: "32px",
+    fontSize: "24px",
     marginBottom: "12px",
     display: "block",
+   
   };
   const menuTitleStyle = {
     fontSize: "18px",
@@ -293,7 +294,7 @@ function UserMenu() {
   const menuDescStyle = {
     fontSize: "14px",
     color: "#6b7280",
-    lineHeight: "1.4",
+    lineHeight: "0.5",
   };
 
   return (
@@ -309,7 +310,7 @@ function UserMenu() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "20px",
+              gap: "10px",
             }}
           >
             {menuItems.map((item, index) => (
@@ -337,7 +338,7 @@ function UserMenu() {
             <div style={{ textAlign: "center", marginTop: "30px" }}>
               <button
                 style={{
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  background: "linear-gradient(135deg, rgba(13, 35, 131, 1) 0%, #1d4ed8 100%)",
                   color: "white",
                   border: "none",
                   padding: "12px 30px",

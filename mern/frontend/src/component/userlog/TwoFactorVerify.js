@@ -53,7 +53,12 @@ export default function TwoFactorVerify() {
           @keyframes spinSmallLoader { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
         `}
       </style>
-      <div style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #e2e8f0', width: 360 }}>
+  <div style={{ background: 'white', padding: 24, borderRadius: 12, border: '1px solid #1d4ed8', width: 360 }}>
+        <img
+          src="/favicon.ico"
+          alt="Logo"
+          style={{ display: 'block', margin: '0 auto 12px', width: 64, height: 64 }}
+        />
         <h3 style={{ marginTop: 0 }}>Two-Factor Verification</h3>
         <p>We sent a 6-digit code to {pending.email || 'your email'}.</p>
         <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Enter 6-digit code" style={{ width: '100%', padding: 12, border: '1px solid #e2e8f0', borderRadius: 8 }} />
