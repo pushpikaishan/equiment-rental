@@ -116,6 +116,18 @@ exports.getProfile = async (req, res) => {
   }
 };
 
+// Get current 2FA status for logged-in user
+exports.getTwoFactorStatus = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ msg: 'Unauthorized' });
+    const doc = await TwoFactorSettings.findOne({ userId: req.user.id, role: req.user.role }).select('enabled');
+    return res.json({ enabled: !!(doc && doc.enabled) });
+  } catch (err) {
+    console.error('getTwoFactorStatus error:', err);
+    return res.status(500).json({ msg: 'Server error' });
+  }
+};
+
 // Request password reset code
 exports.requestPasswordReset = async (req, res) => {
   try {

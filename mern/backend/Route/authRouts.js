@@ -1,5 +1,5 @@
 const express = require("express");
-const { login, getProfile, requestPasswordReset, resetPasswordWithCode, testEmail, checkEmailExists, setTwoFactor, resendTwoFactor, verifyTwoFactor } = require("../Controllers/authController");
+const { login, getProfile, requestPasswordReset, resetPasswordWithCode, testEmail, checkEmailExists, setTwoFactor, resendTwoFactor, verifyTwoFactor, getTwoFactorStatus } = require("../Controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.post("/forgot-password", requestPasswordReset);
 router.post("/reset-password", resetPasswordWithCode);
 router.post("/check-email", checkEmailExists);
 router.post("/2fa/set", authMiddleware, setTwoFactor);
+router.get("/2fa/status", authMiddleware, getTwoFactorStatus);
 router.post("/2fa/resend", resendTwoFactor);
 router.post("/2fa/verify", verifyTwoFactor);
 

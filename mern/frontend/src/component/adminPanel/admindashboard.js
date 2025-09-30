@@ -10,7 +10,7 @@ import BookingManagement from "./bookingManage";
 import DeliveryManagement from "./deliveryManage";
 // Removed SupplierManage page per request
 
-import  Setting from "./adminProfile/adminMenu";
+import  Setting from "../userAccount/userMenu";
 import  Profile from "./adminProfile/addminProfile";
 
 // Main Dashboard Component

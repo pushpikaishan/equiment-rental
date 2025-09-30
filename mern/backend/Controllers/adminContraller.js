@@ -1,4 +1,5 @@
 const Admin = require("../Model/adminModel");
+const bcrypt = require("bcryptjs");
 
 // Get all admins
 const getAllAdmins = async (req, res) => {
@@ -18,7 +19,15 @@ const getAllAdmins = async (req, res) => {
 const addAdmin = async (req, res) => {
   const { name, email, password } = req.body;
   try {
-    const admin = new Admin({ name, email, password });
+    // ===== PASSWORD HASHING (bcrypt) =====
+    let hashedPassword = password;
+    if (typeof password === 'string' && password.length > 0) {
+      const looksHashed = /^\$2[aby]\$/.test(password);
+      if (!looksHashed) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+    }
+    const admin = new Admin({ name, email, password: hashedPassword });
     await admin.save();
     return res.status(200).json({ admin });
   } catch (err) {
@@ -44,10 +53,16 @@ const getAdminById = async (req, res) => {
 const updateAdmin = async (req, res) => {
   const { name, email, password } = req.body;
   try {
+    const update = { name, email };
+    if (typeof password === 'string' && password.length > 0) {
+      // ===== PASSWORD HASHING (bcrypt) on update =====
+      const looksHashed = /^\$2[aby]\$/.test(password);
+      update.password = looksHashed ? password : await bcrypt.hash(password, 10);
+    }
     let admin = await Admin.findByIdAndUpdate(
       req.params.id,
-      { name, email, password },
-      { new: true } // returns the updated document
+      update,
+      { new: true }
     );
     return res.status(200).json({ admin });
   } catch (err) {

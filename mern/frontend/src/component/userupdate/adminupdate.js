@@ -56,7 +56,7 @@ function AdminUpdate() {
     alignItems: "center",
     justifyContent: "center",
     padding: "20px",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    //background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     position: "relative"
   };
@@ -73,7 +73,7 @@ function AdminUpdate() {
   };
 
   const headerStyle = {
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
     padding: "30px",
     textAlign: "center",
     color: "white",
