@@ -1,4 +1,5 @@
 const Supplier = require("../Model/supplierModel");
+const bcrypt = require("bcryptjs");
 
 // Get all suppliers
 const getAllSuppliers = async (req, res) => {
@@ -18,13 +19,23 @@ const getAllSuppliers = async (req, res) => {
 const addSupplier = async (req, res) => {
   const { companyName, name, email, phone, district, password } = req.body;
   try {
+    // ===== PASSWORD HASHING (bcrypt) =====
+    // Hash plain-text password before saving supplier
+    let hashedPassword = password;
+    if (typeof password === 'string' && password.length > 0) {
+      const looksHashed = /^\$2[aby]\$/.test(password);
+      if (!looksHashed) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+    }
+
     const supplier = new Supplier({
       companyName,
       name,
       email,
       phone,
       district,
-      password,
+      password: hashedPassword,
     });
     await supplier.save();
     return res.status(200).json({ supplier });
@@ -50,12 +61,18 @@ const getSupplierById = async (req, res) => {
 
 // Update supplier
 const updateSupplier = async (req, res) => {
-  const { companyName, name, phone, district, email } = req.body;
+  const { companyName, name, phone, district, email, password } = req.body;
   try {
+    const update = { companyName, name, phone, district, email };
+    if (typeof password === 'string' && password.length > 0) {
+      // ===== PASSWORD HASHING (bcrypt) on update =====
+      const looksHashed = /^\$2[aby]\$/.test(password);
+      update.password = looksHashed ? password : await bcrypt.hash(password, 10);
+    }
     const supplier = await Supplier.findByIdAndUpdate(
       req.params.id,
-      { companyName, name, phone, district, email },
-      { new: true } // returns updated document
+      update,
+      { new: true }
     );
     return res.status(200).json({ supplier });
   } catch (err) {

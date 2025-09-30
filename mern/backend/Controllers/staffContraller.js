@@ -1,4 +1,5 @@
 const Staff = require("../Model/staffModel");
+const bcrypt = require("bcryptjs");
 
 // Get all staff
 const getAllStaff = async (req, res) => {
@@ -18,7 +19,15 @@ const getAllStaff = async (req, res) => {
 const addStaff = async (req, res) => {
   const { name, phoneno, nicNo, email, password } = req.body;
   try {
-    const staff = new Staff({ name, phoneno, nicNo, email, password });
+    // ===== PASSWORD HASHING (bcrypt) =====
+    let hashedPassword = password;
+    if (typeof password === 'string' && password.length > 0) {
+      const looksHashed = /^\$2[aby]\$/.test(password);
+      if (!looksHashed) {
+        hashedPassword = await bcrypt.hash(password, 10);
+      }
+    }
+    const staff = new Staff({ name, phoneno, nicNo, email, password: hashedPassword });
     await staff.save();
     return res.status(200).json({ staff });
   } catch (err) {
@@ -44,9 +53,15 @@ const getStaffById = async (req, res) => {
 const updateStaff = async (req, res) => {
   const { name, phoneno, nicNo, email, password } = req.body;
   try {
+    const update = { name, phoneno, nicNo, email };
+    if (typeof password === 'string' && password.length > 0) {
+      // ===== PASSWORD HASHING (bcrypt) on update =====
+      const looksHashed = /^\$2[aby]\$/.test(password);
+      update.password = looksHashed ? password : await bcrypt.hash(password, 10);
+    }
     const staff = await Staff.findByIdAndUpdate(
       req.params.id,
-      { name, phoneno, nicNo, email, password },
+      update,
       { new: true }
     );
     if (!staff) {

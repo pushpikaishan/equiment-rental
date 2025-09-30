@@ -332,24 +332,26 @@ function UserMenu() {
             ))}
           </div>
 
-          {/* Back Button */}
-          <div style={{ textAlign: "center", marginTop: "30px" }}>
-            <button
-              style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                color: "white",
-                border: "none",
-                padding: "12px 30px",
-                borderRadius: "25px",
-                fontSize: "14px",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-              onClick={() => navigate("/userAccount/profile")}
-            >
-              ← Back to Profile
-            </button>
-          </div>
+          {/* Back Button (hidden for admins) */}
+          {role !== "admin" && (
+            <div style={{ textAlign: "center", marginTop: "30px" }}>
+              <button
+                style={{
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  color: "white",
+                  border: "none",
+                  padding: "12px 30px",
+                  borderRadius: "25px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+                onClick={() => navigate("/userAccount/profile")}
+              >
+                ← Back to Profile
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
