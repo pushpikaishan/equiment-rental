@@ -5,8 +5,10 @@ const Supplier = require("../Model/supplierModel");
 const Admin = require("../Model/adminModel");
 const Staff = require("../Model/staffModel");
 const PasswordReset = require("../Model/passwordResetModel");
-const { sendPasswordCode, sendMail } = require("../helpers/emailHelper");
+const { sendPasswordCode, sendMail, sendTwoFactorCode } = require("../helpers/emailHelper");
 const crypto = require("crypto");
+const TwoFactorSettings = require('../Model/twoFactorSettingsModel');
+const TwoFactorCode = require('../Model/twoFactorCodeModel');
 
 // Generate JWT
 const generateToken = (user) => {
@@ -60,18 +62,24 @@ exports.login = async (req, res) => {
       return res.status(401).json({ msg: "Invalid credentials" });
     }
 
-    const token = generateToken(account);
-
-    res.json({
-      token,
-      role: account.role,
-      user: {
-        id: account._id,
-        name: account.name,
-        email: account.email,
+    // If 2FA is enabled for this account, create a pending session and send code
+    const tfa = await TwoFactorSettings.findOne({ userId: account._id, role: account.role, enabled: true });
+    if (tfa) {
+      const code = (Math.floor(100000 + Math.random() * 900000)).toString();
+      const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await TwoFactorCode.updateMany({ userId: account._id, role: account.role, used: false }, { used: true });
+      await TwoFactorCode.create({ userId: account._id, role: account.role, codeHash, expiresAt });
+      await sendTwoFactorCode(account.email, code);
+      return res.json({
+        tfaRequired: true,
         role: account.role,
-      },
-    });
+        user: { id: account._id, email: account.email, name: account.name, role: account.role }
+      });
+    }
+
+    const token = generateToken(account);
+    res.json({ token, role: account.role, user: { id: account._id, name: account.name, email: account.email, role: account.role } });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).send("Server error");
@@ -240,5 +248,89 @@ exports.testEmail = async (req, res) => {
   } catch (err) {
     console.error('testEmail error:', err);
     return res.status(500).json({ msg: 'Failed to send test email', error: String(err && err.message || err) });
+  }
+};
+
+// Enable or disable 2FA for the logged-in user (email-based)
+exports.setTwoFactor = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ msg: 'Unauthorized' });
+    const { enabled } = req.body || {};
+    if (typeof enabled !== 'boolean') return res.status(400).json({ msg: 'enabled boolean required' });
+    const email = req.user.email || (await (async () => {
+      const collections = [User, Supplier, Admin, Staff];
+      for (const M of collections) {
+        const doc = await M.findById(req.user.id).select('email');
+        if (doc) return doc.email;
+      }
+      return null;
+    })());
+    if (!email) return res.status(400).json({ msg: 'Email not found for account' });
+    const doc = await TwoFactorSettings.findOneAndUpdate(
+      { userId: req.user.id, role: req.user.role },
+      { userId: req.user.id, role: req.user.role, email, enabled },
+      { new: true, upsert: true }
+    );
+    res.json({ ok: true, settings: doc });
+  } catch (err) {
+    console.error('setTwoFactor error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Resend a 2FA code for a pending session (after login indicated tfaRequired)
+exports.resendTwoFactor = async (req, res) => {
+  try {
+    const { userId, role } = req.body || {};
+    if (!userId || !role) return res.status(400).json({ msg: 'userId and role required' });
+    const account = await (async () => {
+      const map = { user: User, supplier: Supplier, admin: Admin, staff: Staff };
+      const Model = map[role];
+      return Model ? Model.findById(userId) : null;
+    })();
+    if (!account) return res.status(404).json({ msg: 'Account not found' });
+    const tfa = await TwoFactorSettings.findOne({ userId, role, enabled: true });
+    if (!tfa) return res.status(400).json({ msg: '2FA not enabled' });
+    const code = (Math.floor(100000 + Math.random() * 900000)).toString();
+    const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await TwoFactorCode.updateMany({ userId, role, used: false }, { used: true });
+    await TwoFactorCode.create({ userId, role, codeHash, expiresAt });
+    await sendTwoFactorCode(account.email, code);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('resendTwoFactor error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Verify 2FA code and return a JWT
+exports.verifyTwoFactor = async (req, res) => {
+  try {
+    const { userId, role, code } = req.body || {};
+    if (!userId || !role || !code) return res.status(400).json({ msg: 'userId, role, and code are required' });
+    const rec = await TwoFactorCode.findOne({ userId, role, used: false }).sort({ createdAt: -1 });
+    if (!rec) return res.status(400).json({ msg: 'Invalid or expired code' });
+    if (rec.expiresAt < new Date()) { rec.used = true; await rec.save(); return res.status(400).json({ msg: 'Code expired' }); }
+    const codeHash = crypto.createHash('sha256').update(String(code)).digest('hex');
+    if (codeHash !== rec.codeHash) {
+      rec.attempts = (rec.attempts || 0) + 1;
+      if (rec.attempts >= 5) rec.used = true;
+      await rec.save();
+      return res.status(400).json({ msg: 'Invalid code' });
+    }
+    rec.used = true; await rec.save();
+    // load account and issue token
+    const account = await (async () => {
+      const map = { user: User, supplier: Supplier, admin: Admin, staff: Staff };
+      const Model = map[role];
+      return Model ? Model.findById(userId) : null;
+    })();
+    if (!account) return res.status(404).json({ msg: 'Account not found' });
+    const token = generateToken(account);
+    res.json({ token, role: account.role, user: { id: account._id, name: account.name, email: account.email, role: account.role } });
+  } catch (err) {
+    console.error('verifyTwoFactor error:', err);
+    res.status(500).json({ msg: 'Server error' });
   }
 };

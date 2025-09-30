@@ -48,3 +48,15 @@ async function sendPasswordCode(to, code) {
 }
 
 module.exports = { sendMail, sendPasswordCode };
+// 2FA code sender (email-based)
+async function sendTwoFactorCode(to, code) {
+  const subject = 'Your 2FA verification code';
+  const text = `Your 2FA verification code is: ${code}. It expires in 10 minutes.`;
+  const html = `<p>Your 2FA verification code is:</p><p style="font-size:20px;font-weight:bold">${code}</p><p>This code expires in 10 minutes.</p>`;
+  await sendMail({ to, subject, text, html });
+  if (!process.env.SMTP_HOST) {
+    console.log(`[DEV] 2FA code for ${to}: ${code}`);
+  }
+}
+
+module.exports.sendTwoFactorCode = sendTwoFactorCode;

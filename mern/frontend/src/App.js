@@ -48,6 +48,8 @@ import NotificationsPage from "./component/userAccount/NotificationsPage";
 import DriverDashboard from "./component/staff/DriverDashboard";
 import SuppliersInventoryList from "./component/shop/SuppliersInventoryList";
 import SupplierDashboard from "./component/supplierPanel/SupplierDashboard";
+import TwoFactorSetup from "./component/userAccount/TwoFactorSetup";
+import TwoFactorVerify from "./component/userlog/TwoFactorVerify";
 
 function App() {
   return (
@@ -94,6 +96,8 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/driver" element={<DriverDashboard />} />
           <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
+          <Route path="/two-factor-auth" element={<TwoFactorSetup />} />
+          <Route path="/two-factor-verify" element={<TwoFactorVerify />} />
 
           <Route path="/RegCusOrSupButton" element={<RegCusOrSupButton />} />
          
