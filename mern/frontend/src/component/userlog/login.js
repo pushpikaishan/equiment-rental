@@ -5,14 +5,22 @@ import { useNavigate } from "react-router-dom";
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async () => {
     try {
+      setLoading(true);
       const res = await axios.post("http://localhost:5000/auth/login", {
         email,
         password,
       });
+
+      if (res.data && res.data.tfaRequired) {
+        // route to 2FA screen with minimal pending info
+        navigate('/two-factor-verify', { state: { pending: { id: res.data.user.id, role: res.data.role, email: res.data.user.email, name: res.data.user.name } } });
+        return;
+      }
 
       // Save token , role & userId to localStorage
       localStorage.setItem("token", res.data.token);
@@ -38,6 +46,8 @@ function Login() {
       }
     } catch (err) {
       alert(err.response?.data?.msg || "Invalid credentials");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -156,6 +166,10 @@ function Login() {
               transform: translateY(0);
             }
           }
+          @keyframes spinSmallLoader {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
         `}
       </style>
 
@@ -211,24 +225,55 @@ function Login() {
           </div>
 
           <button
-            style={buttonStyle}
+            style={{
+              ...buttonStyle,
+              opacity: loading ? 0.8 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
             onClick={handleLogin}
             onMouseOver={(e) => {
-              e.target.style.transform = "translateY(-3px)";
-              e.target.style.boxShadow = "0 15px 35px rgba(102, 126, 234, 0.4)";
+              if (!loading) {
+                e.target.style.transform = "translateY(-3px)";
+                e.target.style.boxShadow = "0 15px 35px rgba(102, 126, 234, 0.4)";
+              }
             }}
             onMouseOut={(e) => {
-              e.target.style.transform = "translateY(0)";
-              e.target.style.boxShadow = "none";
+              if (!loading) {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "none";
+              }
             }}
             onMouseDown={(e) => {
-              e.target.style.transform = "translateY(-1px)";
+              if (!loading) {
+                e.target.style.transform = "translateY(-1px)";
+              }
             }}
             onMouseUp={(e) => {
-              e.target.style.transform = "translateY(-3px)";
+              if (!loading) {
+                e.target.style.transform = "translateY(-3px)";
+              }
             }}
+            disabled={loading}
           >
-            Login
+            {loading ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    width: 16,
+                    height: 16,
+                    border: "2px solid rgba(255,255,255,0.6)",
+                    borderTopColor: "white",
+                    borderRadius: "50%",
+                    display: "inline-block",
+                    animation: "spinSmallLoader 0.9s linear infinite",
+                  }}
+                />
+                Signing in...
+              </span>
+            ) : (
+              "Login"
+            )}
           </button>
 
           <div style={linkContainerStyle}>
