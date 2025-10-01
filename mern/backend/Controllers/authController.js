@@ -9,6 +9,7 @@ const { sendPasswordCode, sendMail, sendTwoFactorCode } = require("../helpers/em
 const crypto = require("crypto");
 const TwoFactorSettings = require('../Model/twoFactorSettingsModel');
 const TwoFactorCode = require('../Model/twoFactorCodeModel');
+const ActivityLog = require('../Model/activityLogModel');
 
 // Generate JWT
 const generateToken = (user) => {
@@ -41,6 +42,8 @@ exports.login = async (req, res) => {
 
     // Validate account existence and password (support bcrypt hash or plain text)
     if (!account) {
+      // log failed login (unknown email)
+      try { await ActivityLog.create({ email: trimmedEmail, action: 'login', status: 'failed', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
       return res.status(401).json({ msg: "Invalid credentials" });
     }
 
@@ -59,6 +62,8 @@ exports.login = async (req, res) => {
     }
 
     if (!isValid) {
+      // log failed login (bad password)
+      try { await ActivityLog.create({ userId: account._id, role: account.role, email: account.email, action: 'login', status: 'failed', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
       return res.status(401).json({ msg: "Invalid credentials" });
     }
 
@@ -71,6 +76,7 @@ exports.login = async (req, res) => {
       await TwoFactorCode.updateMany({ userId: account._id, role: account.role, used: false }, { used: true });
       await TwoFactorCode.create({ userId: account._id, role: account.role, codeHash, expiresAt });
       await sendTwoFactorCode(account.email, code);
+      try { await ActivityLog.create({ userId: account._id, role: account.role, email: account.email, action: '2fa_challenge', status: 'success', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
       return res.json({
         tfaRequired: true,
         role: account.role,
@@ -79,6 +85,7 @@ exports.login = async (req, res) => {
     }
 
     const token = generateToken(account);
+    try { await ActivityLog.create({ userId: account._id, role: account.role, email: account.email, action: 'login', status: 'success', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
     res.json({ token, role: account.role, user: { id: account._id, name: account.name, email: account.email, role: account.role } });
   } catch (err) {
     console.error("Login error:", err);
@@ -157,7 +164,8 @@ exports.requestPasswordReset = async (req, res) => {
     // Send email with code
     await sendPasswordCode(trimmedEmail, code);
 
-    return res.json({ msg: "Reset code sent to email" });
+  try { await ActivityLog.create({ userId: account._id, role: account.role, email: account.email, action: 'password_reset_request', status: 'success', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
+  return res.json({ msg: "Reset code sent to email" });
   } catch (err) {
     console.error("requestPasswordReset error:", err);
     return res.status(500).json({ msg: "Server error" });
@@ -176,10 +184,14 @@ exports.resetPasswordWithCode = async (req, res) => {
     // Find latest reset record
     const record = await PasswordReset.findOne({ email: trimmedEmail, used: false })
       .sort({ createdAt: -1 });
-    if (!record) return res.status(400).json({ msg: "Invalid or expired code" });
+    if (!record) {
+      try { await ActivityLog.create({ email: trimmedEmail, action: 'password_reset', status: 'failed', meta: { reason: 'no_record' }, ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
+      return res.status(400).json({ msg: "Invalid or expired code" });
+    }
     if (record.expiresAt < new Date()) {
       record.used = true;
       await record.save();
+      try { await ActivityLog.create({ email: trimmedEmail, action: 'password_reset', status: 'failed', meta: { reason: 'expired' }, ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
       return res.status(400).json({ msg: "Code expired" });
     }
 
@@ -189,6 +201,7 @@ exports.resetPasswordWithCode = async (req, res) => {
       record.attempts = (record.attempts || 0) + 1;
       if (record.attempts >= 5) record.used = true; // lock after too many attempts
       await record.save();
+      try { await ActivityLog.create({ email: trimmedEmail, action: 'password_reset', status: 'failed', meta: { reason: 'bad_code' }, ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
       return res.status(400).json({ msg: "Invalid code" });
     }
 
@@ -210,7 +223,8 @@ exports.resetPasswordWithCode = async (req, res) => {
     record.used = true;
     await record.save();
 
-    return res.json({ msg: "Password updated successfully" });
+  try { await ActivityLog.create({ userId: account.doc._id, role: account.doc.role, email: trimmedEmail, action: 'password_reset', status: 'success', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
+  return res.json({ msg: "Password updated successfully" });
   } catch (err) {
     console.error("resetPasswordWithCode error:", err);
     return res.status(500).json({ msg: "Server error" });
@@ -283,7 +297,8 @@ exports.setTwoFactor = async (req, res) => {
       { userId: req.user.id, role: req.user.role, email, enabled },
       { new: true, upsert: true }
     );
-    res.json({ ok: true, settings: doc });
+  try { await ActivityLog.create({ userId: req.user.id, role: req.user.role, email, action: enabled ? '2fa_enable' : '2fa_disable', status: 'success', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
+  res.json({ ok: true, settings: doc });
   } catch (err) {
     console.error('setTwoFactor error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -309,7 +324,8 @@ exports.resendTwoFactor = async (req, res) => {
     await TwoFactorCode.updateMany({ userId, role, used: false }, { used: true });
     await TwoFactorCode.create({ userId, role, codeHash, expiresAt });
     await sendTwoFactorCode(account.email, code);
-    res.json({ ok: true });
+  try { await ActivityLog.create({ userId, role, email: account.email, action: '2fa_resend', status: 'success', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
+  res.json({ ok: true });
   } catch (err) {
     console.error('resendTwoFactor error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -322,14 +338,15 @@ exports.verifyTwoFactor = async (req, res) => {
     const { userId, role, code } = req.body || {};
     if (!userId || !role || !code) return res.status(400).json({ msg: 'userId, role, and code are required' });
     const rec = await TwoFactorCode.findOne({ userId, role, used: false }).sort({ createdAt: -1 });
-    if (!rec) return res.status(400).json({ msg: 'Invalid or expired code' });
+  if (!rec) { try { await ActivityLog.create({ userId, role, action: '2fa_verify', status: 'failed', meta: { reason: 'no_record' }, ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}; return res.status(400).json({ msg: 'Invalid or expired code' }); }
     if (rec.expiresAt < new Date()) { rec.used = true; await rec.save(); return res.status(400).json({ msg: 'Code expired' }); }
     const codeHash = crypto.createHash('sha256').update(String(code)).digest('hex');
     if (codeHash !== rec.codeHash) {
       rec.attempts = (rec.attempts || 0) + 1;
       if (rec.attempts >= 5) rec.used = true;
       await rec.save();
-      return res.status(400).json({ msg: 'Invalid code' });
+  try { await ActivityLog.create({ userId, role, action: '2fa_verify', status: 'failed', meta: { reason: 'bad_code' }, ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
+  return res.status(400).json({ msg: 'Invalid code' });
     }
     rec.used = true; await rec.save();
     // load account and issue token
@@ -340,7 +357,8 @@ exports.verifyTwoFactor = async (req, res) => {
     })();
     if (!account) return res.status(404).json({ msg: 'Account not found' });
     const token = generateToken(account);
-    res.json({ token, role: account.role, user: { id: account._id, name: account.name, email: account.email, role: account.role } });
+  try { await ActivityLog.create({ userId, role, email: account.email, action: '2fa_verify', status: 'success', ip: req.ip, userAgent: req.headers['user-agent'] || '' }); } catch {}
+  res.json({ token, role: account.role, user: { id: account._id, name: account.name, email: account.email, role: account.role } });
   } catch (err) {
     console.error('verifyTwoFactor error:', err);
     res.status(500).json({ msg: 'Server error' });
