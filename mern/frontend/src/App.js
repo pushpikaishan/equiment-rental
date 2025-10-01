@@ -50,6 +50,7 @@ import SuppliersInventoryList from "./component/shop/SuppliersInventoryList";
 import SupplierDashboard from "./component/supplierPanel/SupplierDashboard";
 import TwoFactorSetup from "./component/userAccount/TwoFactorSetup";
 import TwoFactorVerify from "./component/userlog/TwoFactorVerify";
+import UserActivity from "./component/adminPanel/UserActivity";
 
 function App() {
   return (
@@ -98,6 +99,7 @@ function App() {
           <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
           <Route path="/two-factor-auth" element={<TwoFactorSetup />} />
           <Route path="/two-factor-verify" element={<TwoFactorVerify />} />
+          <Route path="/admin/user-activity" element={<UserActivity />} />
 
           <Route path="/RegCusOrSupButton" element={<RegCusOrSupButton />} />
          

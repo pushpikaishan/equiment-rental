@@ -17,6 +17,7 @@ import ManageStaffs from "../disalluser/allstaff";
 
 // User Overview Component
 function UserOverview() {
+  const navigate = useNavigate();
   const [counts, setCounts] = useState({ admins: 0, staff: 0, suppliers: 0, users: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -84,6 +85,25 @@ function UserOverview() {
   return (
     <div>
       <h3 style={{ margin: '0 0 20px 0', color: '#1e293b' }}>User Statistics</h3>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button
+          onClick={() => navigate('/admin/user-activity')}
+          style={{
+            background: '#1d4ed8',
+            color: '#fff',
+            border: 'none',
+            padding: '10px 14px',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontWeight: 600,
+            boxShadow: '0 1px 2px rgba(0,0,0,0.06)'
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.background = '#1e40af')}
+          onMouseOut={(e) => (e.currentTarget.style.background = '#1d4ed8')}
+        >
+          View User Activity
+        </button>
+      </div>
       {loading ? (
         <div style={{ padding: '20px', color: '#64748b' }}>Loading overview...</div>
       ) : error ? (
