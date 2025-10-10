@@ -11,10 +11,40 @@ function AdminRegister() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ level: 0, label: 'Too weak' });
 
   const navigate = useNavigate();
 
-  // simple validation
+  // Password strength checker
+  const checkPasswordStrength = (password) => {
+    let strength = 0;
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[^A-Za-z0-9]/.test(password)
+    };
+
+    strength = Object.values(checks).filter(Boolean).length;
+
+    let strengthData = { level: 0, label: 'Too weak' };
+    
+    if (strength < 3) {
+      strengthData = { level: 1, label: 'Weak' };
+    } else if (strength < 5) {
+      strengthData = { level: 2, label: 'Medium' };
+    } else {
+      strengthData = { level: 3, label: 'Strong' };
+    }
+
+    setPasswordStrength(strengthData);
+    return strength >= 3;
+  };
+
+  // Enhanced validation
   const validateForm = () => {
     let newErrors = {};
     let isValid = true;
@@ -22,7 +52,11 @@ function AdminRegister() {
     if (!inputs.name.trim()) {
       newErrors.name = "Name is required";
       isValid = false;
+    } else if (inputs.name.trim().length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
+      isValid = false;
     }
+
     if (!inputs.email.trim()) {
       newErrors.email = "Email is required";
       isValid = false;
@@ -30,11 +64,22 @@ function AdminRegister() {
       newErrors.email = "Invalid email format";
       isValid = false;
     }
+
     if (!inputs.password) {
       newErrors.password = "Password is required";
       isValid = false;
+    } else if (inputs.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+      isValid = false;
+    } else if (!checkPasswordStrength(inputs.password)) {
+      newErrors.password = "Password must include uppercase, lowercase, and number";
+      isValid = false;
     }
-    if (inputs.password !== confirmPassword) {
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password";
+      isValid = false;
+    } else if (inputs.password !== confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
       isValid = false;
     }
@@ -46,6 +91,24 @@ function AdminRegister() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setInputs((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+
+    // Check password strength on password change
+    if (name === 'password') {
+      checkPasswordStrength(value);
+    }
+  };
+
+  const handleConfirmPasswordChange = (e) => {
+    setConfirmPassword(e.target.value);
+    // Clear error when user starts typing
+    if (errors.confirmPassword) {
+      setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -54,12 +117,20 @@ function AdminRegister() {
 
     setIsLoading(true);
     try {
+      // pre-check email existence across all roles
+      const chk = await axios.post("http://localhost:5000/auth/check-email", { email: inputs.email });
+      if (chk.data?.exists) {
+        setErrors((prev) => ({ ...prev, email: `This email is already registered as ${chk.data.role}.` }));
+        setIsLoading(false);
+        return;
+      }
       await axios.post("http://localhost:5000/admins", inputs);
       setIsLoading(false);
       navigate("/DisAllAdmins");
     } catch (err) {
       setIsLoading(false);
-      alert("Registration failed");
+      const msg = err?.response?.data?.message || err?.response?.data?.msg || "Registration failed";
+      setErrors((prev)=> ({ ...prev, email: msg }));
     }
   };
 
@@ -122,9 +193,14 @@ function AdminRegister() {
     fontSize: '14px'
   };
 
+  const inputWrapperStyle = {
+    position: 'relative'
+  };
+
   const inputStyle = (hasError) => ({
     width: '100%',
     padding: '12px 15px',
+    paddingRight: '45px',
     border: hasError ? '2px solid #e74c3c' : '2px solid #e1e5e9',
     borderRadius: '8px',
     fontSize: '15px',
@@ -132,6 +208,63 @@ function AdminRegister() {
     background: hasError ? '#fef5f5' : '#f8f9fa',
     boxSizing: 'border-box'
   });
+
+  const passwordToggleStyle = {
+    position: 'absolute',
+    right: '15px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    color: '#999',
+    cursor: 'pointer',
+    fontSize: '16px',
+    padding: '5px',
+    transition: 'color 0.3s ease'
+  };
+
+  const passwordStrengthStyle = {
+    marginTop: '8px',
+    fontSize: '12px'
+  };
+
+  const strengthBarStyle = {
+    height: '4px',
+    background: '#e1e5e9',
+    borderRadius: '2px',
+    margin: '5px 0',
+    overflow: 'hidden'
+  };
+
+  const getStrengthFillStyle = () => {
+    let width = '0%';
+    let background = '#e1e5e9';
+
+    switch (passwordStrength.level) {
+      case 1:
+        width = '33%';
+        background = '#e74c3c';
+        break;
+      case 2:
+        width = '66%';
+        background = '#f39c12';
+        break;
+      case 3:
+        width = '100%';
+        background = '#27ae60';
+        break;
+      default:
+        width = '0%';
+    }
+
+    return {
+      height: '100%',
+      width: width,
+      background: background,
+      transition: 'all 0.3s ease',
+      borderRadius: '2px'
+    };
+  };
 
   const buttonStyle = {
     width: '100%',
@@ -160,16 +293,24 @@ function AdminRegister() {
     marginLeft: '2px'
   };
 
+  const successStyle = {
+    color: '#27ae60',
+    fontSize: '12px',
+    marginTop: '5px',
+    display: 'block'
+  };
+
   return (
     <div style={containerStyle}>
       <div style={registerContainerStyle}>
         <div style={headerStyle}>
           <div style={iconStyle}>👨‍💼</div>
-          <h1 style={{ fontSize: '24px', marginBottom: '8px', fontWeight: '600' }}>Create Admin Account</h1>
+          <h1 style={{ fontSize: '24px', marginBottom: '8px', fontWeight: '600', margin: '0' }}>Create Admin Account</h1>
+          <p style={{ margin: '8px 0 0', fontSize: '14px', opacity: '0.9' }}>Register a new administrator</p>
         </div>
 
         <div style={formStyle}>
-          <div onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             <div style={formGroupStyle(errors.name)}>
               <label style={labelStyle} htmlFor="name">
                 Name <span style={requiredStyle}>*</span>
@@ -182,9 +323,9 @@ function AdminRegister() {
                 onChange={handleChange}
                 placeholder="Enter your name"
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
+                  e.target.style.borderColor = '#3b82f6';
                   e.target.style.background = 'white';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
                 }}
                 onBlur={(e) => {
                   if (!errors.name) {
@@ -195,6 +336,9 @@ function AdminRegister() {
                 }}
               />
               {errors.name && <div style={errorStyle}>{errors.name}</div>}
+              {inputs.name && !errors.name && inputs.name.length >= 2 && (
+                <div style={successStyle}>✓ Valid name</div>
+              )}
             </div>
 
             <div style={formGroupStyle(errors.email)}>
@@ -209,9 +353,9 @@ function AdminRegister() {
                 onChange={handleChange}
                 placeholder="Enter your email"
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
+                  e.target.style.borderColor = '#3b82f6';
                   e.target.style.background = 'white';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
                 }}
                 onBlur={(e) => {
                   if (!errors.email) {
@@ -222,59 +366,95 @@ function AdminRegister() {
                 }}
               />
               {errors.email && <div style={errorStyle}>{errors.email}</div>}
+              {inputs.email && !errors.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.email) && (
+                <div style={successStyle}>✓ Valid email format</div>
+              )}
             </div>
 
             <div style={formGroupStyle(errors.password)}>
               <label style={labelStyle} htmlFor="password">
                 Password <span style={requiredStyle}>*</span>
               </label>
-              <input
-                style={inputStyle(errors.password)}
-                type="password"
-                name="password"
-                value={inputs.password}
-                onChange={handleChange}
-                placeholder="Enter password"
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
-                  e.target.style.background = 'white';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-                }}
-                onBlur={(e) => {
-                  if (!errors.password) {
-                    e.target.style.borderColor = '#e1e5e9';
-                    e.target.style.background = '#f8f9fa';
-                    e.target.style.boxShadow = 'none';
-                  }
-                }}
-              />
+              <div style={inputWrapperStyle}>
+                <input
+                  style={inputStyle(errors.password)}
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={inputs.password}
+                  onChange={handleChange}
+                  placeholder="Enter password"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.password) {
+                      e.target.style.borderColor = '#e1e5e9';
+                      e.target.style.background = '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  style={passwordToggleStyle}
+                  onClick={() => setShowPassword(!showPassword)}
+                  onMouseOver={(e) => e.target.style.color = '#3b82f6'}
+                  onMouseOut={(e) => e.target.style.color = '#999'}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
+              {inputs.password && (
+                <div style={passwordStrengthStyle}>
+                  <div style={strengthBarStyle}>
+                    <div style={getStrengthFillStyle()}></div>
+                  </div>
+                  <span>Password strength: <span>{passwordStrength.label}</span></span>
+                </div>
+              )}
               {errors.password && <div style={errorStyle}>{errors.password}</div>}
             </div>
 
             <div style={formGroupStyle(errors.confirmPassword)}>
-              <label style={labelStyle} htmlFor="password">
+              <label style={labelStyle} htmlFor="confirmPassword">
                 Confirm Password <span style={requiredStyle}>*</span>
               </label>
-              <input
-                style={inputStyle(errors.confirmPassword)}
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm password"
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea';
-                  e.target.style.background = 'white';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
-                }}
-                onBlur={(e) => {
-                  if (!errors.confirmPassword) {
-                    e.target.style.borderColor = '#e1e5e9';
-                    e.target.style.background = '#f8f9fa';
-                    e.target.style.boxShadow = 'none';
-                  }
-                }}
-              />
+              <div style={inputWrapperStyle}>
+                <input
+                  style={inputStyle(errors.confirmPassword)}
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  placeholder="Confirm password"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.background = 'white';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    if (!errors.confirmPassword) {
+                      e.target.style.borderColor = '#e1e5e9';
+                      e.target.style.background = '#f8f9fa';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  style={passwordToggleStyle}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onMouseOver={(e) => e.target.style.color = '#3b82f6'}
+                  onMouseOut={(e) => e.target.style.color = '#999'}
+                >
+                  {showConfirmPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
               {errors.confirmPassword && <div style={errorStyle}>{errors.confirmPassword}</div>}
+              {confirmPassword && inputs.password === confirmPassword && !errors.confirmPassword && (
+                <div style={successStyle}>✓ Passwords match</div>
+              )}
             </div>
 
             <button 
@@ -285,11 +465,10 @@ function AdminRegister() {
                 pointerEvents: isLoading ? 'none' : 'auto',
                 opacity: isLoading ? '0.8' : '1'
               }}
-              onClick={handleSubmit}
               onMouseOver={(e) => {
                 if (!isLoading) {
                   e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.3)';
+                  e.target.style.boxShadow = '0 10px 25px rgba(59, 130, 246, 0.3)';
                 }
               }}
               onMouseOut={(e) => {
@@ -299,7 +478,7 @@ function AdminRegister() {
             >
               {isLoading ? "Creating Account..." : "Register Admin"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </div>

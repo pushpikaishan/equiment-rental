@@ -229,15 +229,24 @@ function UserRegister() {
 
     console.log(inputs);
     setIsLoading(true);
-
-    sendRequest().then(() => {
-      setIsLoading(false);
-      navigate("/userlog"); // navigate to profile page
-    }).catch((error) => {
-      setIsLoading(false);
-      console.error('Registration error:', error);
-      alert('Registration failed. Please try again.');
-    });
+    axios.post("http://localhost:5000/auth/check-email", { email: inputs.email })
+      .then(res => {
+        if (res.data?.exists) {
+          setErrors(prev => ({ ...prev, email: `This email is already registered as ${res.data.role}.` }));
+          setIsLoading(false);
+          throw new Error('email-exists');
+        }
+        return sendRequest();
+      })
+      .then(() => {
+        setIsLoading(false);
+        navigate("/userlog"); // navigate to profile page
+      }).catch((error) => {
+        setIsLoading(false);
+        if (String(error?.message) === 'email-exists') return;
+        console.error('Registration error:', error);
+        setErrors(prev => ({ ...prev, email: error?.response?.data?.message || error?.response?.data?.msg || 'Registration failed' }));
+      });
   };
 
   const sendRequest = async () => {

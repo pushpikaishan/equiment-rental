@@ -13,8 +13,44 @@ function StaffRegister() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ level: 0, label: 'Too weak' });
 
   const navigate = useNavigate();
+
+  // NIC validation (match userregister.js)
+  const validateNIC = (nic) => {
+    const oldNICRegex = /^[0-9]{9}[vVxX]$/;
+    const newNICRegex = /^[0-9]{12}$/;
+    return oldNICRegex.test(nic) || newNICRegex.test(nic);
+  };
+
+  // Password strength checker (same logic as admin)
+  const checkPasswordStrength = (password) => {
+    let strength = 0;
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[^A-Za-z0-9]/.test(password)
+    };
+
+    strength = Object.values(checks).filter(Boolean).length;
+
+    let strengthData = { level: 0, label: 'Too weak' };
+    if (strength < 3) {
+      strengthData = { level: 1, label: 'Weak' };
+    } else if (strength < 5) {
+      strengthData = { level: 2, label: 'Medium' };
+    } else {
+      strengthData = { level: 3, label: 'Strong' };
+    }
+
+    setPasswordStrength(strengthData);
+    return strength >= 3;
+  };
 
   // validation
   const validateForm = () => {
@@ -32,6 +68,9 @@ function StaffRegister() {
     if (!inputs.nicNo.trim()) {
       newErrors.nicNo = "NIC No is required";
       isValid = false;
+    } else if (!validateNIC(inputs.nicNo.trim())) {
+      newErrors.nicNo = "Please enter a valid NIC number";
+      isValid = false;
     }
     if (!inputs.email.trim()) {
       newErrors.email = "Email is required";
@@ -42,6 +81,9 @@ function StaffRegister() {
     }
     if (!inputs.password) {
       newErrors.password = "Password is required";
+      isValid = false;
+    } else if (!checkPasswordStrength(inputs.password)) {
+      newErrors.password = "Password must be at least 8 characters and include uppercase, lowercase, and a number";
       isValid = false;
     }
     if (inputs.password !== confirmPassword) {
@@ -56,6 +98,9 @@ function StaffRegister() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setInputs((prev) => ({ ...prev, [name]: value }));
+    if (name === 'password') {
+      checkPasswordStrength(value);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -64,12 +109,20 @@ function StaffRegister() {
 
     setIsLoading(true);
     try {
+      // pre-check email existence across all roles
+      const chk = await axios.post("http://localhost:5000/auth/check-email", { email: inputs.email });
+      if (chk.data?.exists) {
+        setErrors((prev) => ({ ...prev, email: `This email is already registered as ${chk.data.role}.` }));
+        setIsLoading(false);
+        return;
+      }
       await axios.post("http://localhost:5000/staff", inputs);
       setIsLoading(false);
       navigate("/adminDashbooard");
     } catch (err) {
       setIsLoading(false);
-      alert("Registration failed");
+      const msg = err?.response?.data?.message || err?.response?.data?.msg || "Registration failed";
+      setErrors((prev)=> ({ ...prev, email: msg }));
     }
   };
 
@@ -157,6 +210,63 @@ function StaffRegister() {
     pointerEvents: 'none'
   };
 
+  const passwordToggleStyle = {
+    position: 'absolute',
+    right: '15px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    color: '#999',
+    cursor: 'pointer',
+    fontSize: '16px',
+    padding: '5px',
+    transition: 'color 0.3s ease'
+  };
+
+  const passwordStrengthStyle = {
+    marginTop: '8px',
+    fontSize: '12px'
+  };
+
+  const strengthBarStyle = {
+    height: '4px',
+    background: '#e1e5e9',
+    borderRadius: '2px',
+    margin: '5px 0',
+    overflow: 'hidden'
+  };
+
+  const getStrengthFillStyle = () => {
+    let width = '0%';
+    let background = '#e1e5e9';
+
+    switch (passwordStrength.level) {
+      case 1:
+        width = '33%';
+        background = '#e74c3c';
+        break;
+      case 2:
+        width = '66%';
+        background = '#f39c12';
+        break;
+      case 3:
+        width = '100%';
+        background = '#27ae60';
+        break;
+      default:
+        width = '0%';
+    }
+
+    return {
+      height: '100%',
+      width: width,
+      background: background,
+      transition: 'all 0.3s ease',
+      borderRadius: '2px'
+    };
+  };
+
   const buttonStyle = {
     width: '100%',
     background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
@@ -182,6 +292,13 @@ function StaffRegister() {
   const requiredStyle = {
     color: '#e74c3c',
     marginLeft: '2px'
+  };
+
+  const successStyle = {
+    color: '#27ae60',
+    fontSize: '12px',
+    marginTop: '5px',
+    display: 'block'
   };
 
   return (
@@ -266,7 +383,7 @@ function StaffRegister() {
                   name="nicNo"
                   value={inputs.nicNo}
                   onChange={handleChange}
-                  placeholder="Enter NIC number"
+                  placeholder="Enter your NIC (9 digits + V or 12 digits)"
                   onFocus={(e) => {
                     e.target.style.borderColor = '#667eea';
                     e.target.style.background = 'white';
@@ -274,14 +391,22 @@ function StaffRegister() {
                   }}
                   onBlur={(e) => {
                     if (!errors.nicNo) {
-                      e.target.style.borderColor = '#e1e5e9';
-                      e.target.style.background = '#f8f9fa';
+                      if (validateNIC(inputs.nicNo)) {
+                        e.target.style.borderColor = '#27ae60';
+                        e.target.style.background = '#f0fff4';
+                      } else {
+                        e.target.style.borderColor = '#e1e5e9';
+                        e.target.style.background = '#f8f9fa';
+                      }
                       e.target.style.boxShadow = 'none';
                     }
                   }}
                 />
               </div>
               {errors.nicNo && <div style={errorStyle}>{errors.nicNo}</div>}
+              {!errors.nicNo && inputs.nicNo && validateNIC(inputs.nicNo) && (
+                <div style={successStyle}>NIC format is valid</div>
+              )}
             </div>
 
             <div style={formGroupStyle}>
@@ -322,7 +447,7 @@ function StaffRegister() {
                 <span style={iconInInputStyle}>🔒</span>
                 <input
                   style={inputStyle(errors.password)}
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={inputs.password}
                   onChange={handleChange}
@@ -340,7 +465,24 @@ function StaffRegister() {
                     }
                   }}
                 />
+                <button
+                  type="button"
+                  style={passwordToggleStyle}
+                  onClick={() => setShowPassword(!showPassword)}
+                  onMouseOver={(e) => e.target.style.color = '#667eea'}
+                  onMouseOut={(e) => e.target.style.color = '#999'}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
               </div>
+              {inputs.password && (
+                <div style={passwordStrengthStyle}>
+                  <div style={strengthBarStyle}>
+                    <div style={getStrengthFillStyle()}></div>
+                  </div>
+                  <span>Password strength: <span>{passwordStrength.label}</span></span>
+                </div>
+              )}
               {errors.password && <div style={errorStyle}>{errors.password}</div>}
             </div>
 
@@ -352,7 +494,7 @@ function StaffRegister() {
                 <span style={iconInInputStyle}>🔒</span>
                 <input
                   style={inputStyle(errors.confirmPassword)}
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm password"
@@ -369,6 +511,15 @@ function StaffRegister() {
                     }
                   }}
                 />
+                <button
+                  type="button"
+                  style={passwordToggleStyle}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  onMouseOver={(e) => e.target.style.color = '#667eea'}
+                  onMouseOut={(e) => e.target.style.color = '#999'}
+                >
+                  {showConfirmPassword ? '🙈' : '👁️'}
+                </button>
               </div>
               {errors.confirmPassword && <div style={errorStyle}>{errors.confirmPassword}</div>}
             </div>
