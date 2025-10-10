@@ -218,15 +218,25 @@ function SupplierRegister() {
     console.log(inputs);
     setIsLoading(true);
 
-    sendRequest()
+    // pre-check email existence across all roles
+    axios.post("http://localhost:5000/auth/check-email", { email: inputs.email })
+      .then(res => {
+        if (res.data?.exists) {
+          setErrors(prev => ({ ...prev, email: `This email is already registered as ${res.data.role}.` }));
+          setIsLoading(false);
+          throw new Error('email-exists');
+        }
+        return sendRequest();
+      })
       .then(() => {
         setIsLoading(false);
         navigate("/userlog"); // navigate to profile page
       })
       .catch((error) => {
         setIsLoading(false);
+        if (String(error?.message) === 'email-exists') return;
         console.error("Registration error:", error);
-        alert("Registration failed. Please try again.");
+        setErrors(prev => ({ ...prev, email: error?.response?.data?.message || error?.response?.data?.msg || 'Registration failed' }));
       });
   };
 

@@ -425,18 +425,7 @@ function DisplayAllSuppliers() {
                 <tr
                   key={supplier._id}
                   style={trStyle}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background =
-                      "linear-gradient(90deg, #f8f9ff 0%, #f0f2ff 100%)";
-                    e.currentTarget.style.transform = "scale(1.01)";
-                    e.currentTarget.style.boxShadow =
-                      "0 5px 15px rgba(0, 0, 0, 0.08)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.transform = "scale(1)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
+                 
                 >
                   <td style={firstTdStyle}>{supplier._id}</td>
                   <td style={tdStyle}>{supplier.role}</td>
