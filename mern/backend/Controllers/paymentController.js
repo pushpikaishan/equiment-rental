@@ -3,6 +3,7 @@ const PaymentAudit = require('../Model/paymentAuditModel');
 const Booking = require('../Model/bookingModel');
 const Delivery = require('../Model/deliveryModel');
 const PDFDocument = require('pdfkit');
+const SupplierInventory = require('../Model/supplierInventoryModel');
 
 // Admin guard helper
 function ensureAdmin(req, res) {
@@ -346,6 +347,53 @@ exports.exportPDF = async (req, res) => {
     doc.end();
   } catch (e) {
     console.error('Payments exportPDF error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// POST /payments/supplier-ad
+// Record supplier ad listing payment and activate/extend the ad by 1 month
+exports.supplierAdPay = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+    if (req.user.role !== 'supplier') return res.status(403).json({ message: 'Supplier only' });
+    const { inventoryId, amount, method = 'card' } = req.body || {};
+    const it = await SupplierInventory.findById(inventoryId);
+    if (!it) return res.status(404).json({ message: 'Inventory not found' });
+    if (String(it.supplierId) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' });
+
+    const AD_FEE = 1000;
+    if (Number(amount) < AD_FEE) return res.status(400).json({ message: 'Insufficient amount' });
+
+    // Create payment record
+    const pay = await Payment.create({
+      userId: req.user.id,
+      customerName: req.user.name || '',
+      customerEmail: req.user.email || '',
+      method,
+      status: 'paid',
+      currency: 'LKR',
+      amount: Number(amount),
+      meta: { type: 'supplier_ad', inventoryId: String(it._id) },
+    });
+
+    // Activate or extend ad by 1 month
+    const now = new Date();
+    let start = now;
+    if (it.adActive && it.adExpiresAt && new Date(it.adExpiresAt).getTime() > now.getTime()) {
+      start = new Date(it.adExpiresAt);
+    }
+    const expires = new Date(start);
+    expires.setMonth(expires.getMonth() + 1);
+    it.adActive = true;
+    it.adPaidAt = now;
+    it.adExpiresAt = expires;
+    it.adRenewals = (Number(it.adRenewals || 0) + 1);
+    await it.save();
+
+    res.status(201).json({ payment: pay, inventory: it });
+  } catch (e) {
+    console.error('Supplier ad payment error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };

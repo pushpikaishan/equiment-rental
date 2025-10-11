@@ -35,7 +35,14 @@ exports.create = async (req, res) => {
       image,
       specs,
     });
-    res.status(201).json({ item });
+    // New listings require ad fee before becoming publicly visible
+    const AD_FEE = 1000;
+    res.status(201).json({
+      item,
+      requiresAdFee: true,
+      adFeeAmount: AD_FEE,
+      currency: 'LKR'
+    });
   } catch (e) {
     console.error('SupplierInventory create error:', e);
     res.status(500).json({ message: 'Server error' });
@@ -89,6 +96,10 @@ exports.update = async (req, res) => {
       item.image = req.body.image; // allow clearing or external path
     }
 
+    // Auto-deactivate ad if expired
+    if (item.adActive && item.adExpiresAt && new Date(item.adExpiresAt).getTime() < Date.now()) {
+      item.adActive = false;
+    }
     await item.save();
     res.json({ item });
   } catch (e) {
@@ -119,6 +130,7 @@ exports.publicList = async (req, res) => {
     const { q = '', category = '', district = '', available = 'true' } = req.query || {};
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
     const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || '12', 10)));
+    const now = new Date();
     const filter = {};
     if (available === 'true') filter.available = true;
     if (category) filter.category = category;
@@ -130,14 +142,47 @@ exports.publicList = async (req, res) => {
         { category: new RegExp(q, 'i') },
       ];
     }
+    // Only show ad-active and non-expired items publicly
+    filter.adActive = true;
+    filter.adExpiresAt = { $gt: now };
     const total = await SupplierInventory.countDocuments(filter);
     const items = await SupplierInventory.find(filter)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(limit);
-    res.json({ items, total, page, limit });
+      .limit(limit)
+      .lean();
+    // Attach remainingDays
+    const decorated = items.map(it => {
+      const rem = it.adExpiresAt ? Math.ceil((new Date(it.adExpiresAt).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      return Object.assign(it, { remainingDays: Math.max(0, rem) });
+    });
+    res.json({ items: decorated, total, page, limit });
   } catch (e) {
     console.error('SupplierInventory publicList error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /supplier-inventories/:id/renew
+exports.renewInfo = async (req, res) => {
+  try {
+    if (!ensureSupplier(req, res)) return;
+    const { id } = req.params;
+    const it = await SupplierInventory.findById(id);
+    if (!it) return res.status(404).json({ message: 'Item not found' });
+    if (String(it.supplierId) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' });
+    const now = Date.now();
+    const remaining = it.adExpiresAt ? Math.max(0, Math.ceil((new Date(it.adExpiresAt).getTime() - now) / (1000 * 60 * 60 * 24))) : 0;
+    res.json({
+      adActive: !!it.adActive,
+      adExpiresAt: it.adExpiresAt,
+      remainingDays: remaining,
+      requiresAdFee: !it.adActive || remaining === 0,
+      adFeeAmount: 1000,
+      currency: 'LKR'
+    });
+  } catch (e) {
+    console.error('SupplierInventory renewInfo error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -11,6 +11,8 @@ router.get('/', auth, ctrl.list);
 router.get('/summary', auth, ctrl.summary);
 router.get('/export/csv', auth, ctrl.exportCSV);
 router.get('/export/pdf', auth, ctrl.exportPDF);
+// Supplier ad payments
+router.post('/supplier-ad', auth, ctrl.supplierAdPay);
 // Documents
 router.get('/:id/invoice', auth, ctrl.invoice);
 router.get('/:id/receipt', auth, ctrl.receipt);

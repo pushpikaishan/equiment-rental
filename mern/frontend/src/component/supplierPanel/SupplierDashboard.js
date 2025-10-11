@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import SupplierTopbar from './SupplierTopbar';
+import { useNavigate } from 'react-router-dom';
 
 // Simple top bar with Profile and Logout buttons, no global navbar
 export default function SupplierDashboard() {
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const token = localStorage.getItem('token') || '';
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const navigate = useNavigate();
 
   const [me, setMe] = useState(null);
   const [items, setItems] = useState([]);
@@ -80,7 +82,14 @@ export default function SupplierDashboard() {
       if (editing) {
         await axios.put(`${baseUrl}/supplier-inventories/${editing._id}`, fd, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } });
       } else {
-        await axios.post(`${baseUrl}/supplier-inventories`, fd, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } });
+        const res = await axios.post(`${baseUrl}/supplier-inventories`, fd, { headers: { ...headers, 'Content-Type': 'multipart/form-data' } });
+        const created = res.data?.item;
+        const requiresAdFee = !!res.data?.requiresAdFee;
+        const adFeeAmount = Number(res.data?.adFeeAmount || 1000);
+        if (created && requiresAdFee) {
+          // Redirect to payment gateway to pay listing fee
+          navigate('/payment', { state: { mode: 'supplier_ad', inventoryId: created._id, amount: adFeeAmount, currency: res.data?.currency || 'LKR' } });
+        }
       }
       setForm(emptyForm); setImage(null); setEditing(null);
       await loadItems();
@@ -271,6 +280,9 @@ export default function SupplierDashboard() {
                         <div style={{ fontWeight: 600 }}>{it.name}</div>
                         <div style={{ fontSize: 12, color: '#64748b' }}>{it.category} • {it.district} • Qty {it.quantity} • LKR {Number(it.rentalPrice || 0).toFixed(2)}/day</div>
                         <div style={{ fontSize: 12, color: it.available !== false ? '#16a34a' : '#b91c1c' }}>{it.available !== false ? 'Available' : 'Unavailable'}</div>
+                        <AdStatusRow baseUrl={baseUrl} headers={headers} item={it} onRenew={(id, fee, currency='LKR') => {
+                          navigate('/payment', { state: { mode: 'supplier_ad', inventoryId: id, amount: fee, currency } });
+                        }} />
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => startEdit(it)} style={{ padding: '6px 10px', borderRadius: 8, background: 'white', border: '1px solid #cbd5e1' }}>Edit</button>
@@ -284,6 +296,54 @@ export default function SupplierDashboard() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdStatusRow({ baseUrl, headers, item, onRenew }) {
+  const [info, setInfo] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  React.useEffect(() => {
+    let cancel = false;
+    const run = async () => {
+      setLoading(true);
+      setErr('');
+      try {
+        const res = await axios.get(`${baseUrl}/supplier-inventories/${item._id}/renew`, { headers });
+        if (!cancel) setInfo(res.data);
+      } catch (e) {
+        if (!cancel) setErr(e.response?.data?.message || e.message);
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    };
+    run();
+    return () => { cancel = true; };
+  }, [baseUrl, headers, item._id]);
+
+  if (loading) return <div style={{ fontSize: 12, color: '#64748b' }}>Checking ad status…</div>;
+  if (err) return <div style={{ fontSize: 12, color: '#b91c1c' }}>{err}</div>;
+  if (!info) return null;
+
+  const { adActive, remainingDays, adFeeAmount, currency } = info;
+  if (!adActive) {
+    return (
+      <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ padding: '2px 8px', borderRadius: 9999, background: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 600 }}>Inactive</span>
+        <button onClick={() => onRenew(item._id, adFeeAmount, currency)} style={{ padding: '4px 8px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}>Activate for {currency} {Number(adFeeAmount||0).toFixed(2)}</button>
+      </div>
+    );
+  }
+  const expired = Number(remainingDays || 0) <= 0;
+  return (
+    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <span style={{ padding: '2px 8px', borderRadius: 9999, background: expired ? '#fee2e2' : '#dcfce7', color: '#0f172a', fontSize: 12, fontWeight: 600 }}>
+        {expired ? 'Expired' : `Active • ${remainingDays} day${remainingDays === 1 ? '' : 's'} left`}
+      </span>
+      {expired && (
+        <button onClick={() => onRenew(item._id, adFeeAmount, currency)} style={{ padding: '4px 8px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}>Renew for {currency} {Number(adFeeAmount||0).toFixed(2)}</button>
+      )}
     </div>
   );
 }
