@@ -108,13 +108,29 @@ function AdminDashboard() {
   const sidebarHeaderStyle = {
     padding: '20px',
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-    textAlign: 'center'
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   };
 
   const logoStyle = {
     fontSize: sidebarCollapsed ? '20px' : '24px',
     fontWeight: '700',
     color: '#60a5fa'
+  };
+
+  const collapseBtnStyle = {
+    background: 'rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    color: 'white',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.3s ease'
   };
 
   // Profile section styles
@@ -183,8 +199,19 @@ function AdminDashboard() {
       <div style={sidebarStyle}>
         <div style={sidebarHeaderStyle}>
           <div style={logoStyle}>
-            {sidebarCollapsed ? 'A' : 'Admin Panel'}
+            <button
+            style={collapseBtnStyle}
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand' : 'Collapse'}
+          >
+            {sidebarCollapsed ? '→' : '←'}
+          </button>
+            {sidebarCollapsed ? '' : 'Admin Panel'}
           </div>
+          
         </div>
 
         {/* Profile Section */}
@@ -354,33 +381,7 @@ function AdminDashboard() {
           </div>
         </nav>
 
-        {/* Collapse Toggle */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(255, 255, 255, 0.1)',
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease'
-          }}
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          onMouseOver={(e) => {
-            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
-          }}
-        >
-          {sidebarCollapsed ? '→' : '←'}
-        </div>
+        {/* Collapse Toggle moved into header */}
       </div>
 
       {/* Main Content */}
