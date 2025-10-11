@@ -17,7 +17,8 @@ function ensureAdmin(req, res) {
 exports.my = async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const q = { userId: req.user.id, status: { $in: ['paid', 'partial_refunded', 'refunded'] } };
+    // Include pending so users can see bank deposits awaiting approval
+    const q = { userId: req.user.id, status: { $in: ['pending', 'paid', 'partial_refunded', 'refunded'] } };
     const items = await Payment.find(q).sort({ createdAt: -1 });
     res.json({ items });
   } catch (e) {
@@ -136,13 +137,26 @@ exports.markReceived = async (req, res) => {
   try {
     if (!ensureAdmin(req, res)) return;
     const { id } = req.params;
-    const { method = 'cash', note } = req.body || {};
+    const { method, note } = req.body || {};
     const pay = await Payment.findById(id);
     if (!pay) return res.status(404).json({ message: 'Payment not found' });
     pay.status = 'paid';
-    pay.method = method;
+    // Preserve original method (e.g., bank_transfer). Only set if empty.
+    if (!pay.method) pay.method = method || 'bank_transfer';
     await pay.save();
     await PaymentAudit.create({ paymentId: pay._id, action: 'marked_paid', actorId: req.user.id, actorRole: req.user.role, note });
+    // Also confirm the associated booking if linked
+    if (pay.bookingId) {
+      try {
+        const b = await Booking.findById(pay.bookingId);
+        if (b && b.status !== 'cancelled') {
+          b.status = 'confirmed';
+          await b.save();
+        }
+      } catch (e) {
+        console.error('Mark received: update booking failed', e);
+      }
+    }
     res.json({ payment: pay });
   } catch (e) {
     console.error('Payments markReceived error:', e);
@@ -476,5 +490,59 @@ exports.remove = async (req, res) => {
   } catch (e) {
     console.error('Payments remove error:', e);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// POST /payments/bank-deposit - user uploads bank deposit slip for a booking
+exports.bankDeposit = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+    const { bookingId, amount, depositorName, referenceNo, note } = req.body || {};
+    if (!bookingId) return res.status(400).json({ message: 'bookingId is required' });
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (String(booking.userId) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' });
+
+    // Attach uploaded file path if provided
+    const slipPath = req.file ? `/uploads/${req.file.filename}` : '';
+
+  // Create or update a pending bank transfer payment record
+    let payment = await Payment.findOne({ bookingId: booking._id, method: 'bank_transfer' });
+    const payAmount = Number(amount || booking.total || 0);
+    if (!payment) {
+      payment = await Payment.create({
+        bookingId: booking._id,
+        orderId: String(booking._id),
+        userId: booking.userId,
+        customerName: booking.customerName,
+        customerEmail: booking.customerEmail,
+        method: 'bank_transfer',
+        status: 'pending',
+        currency: 'LKR',
+        amount: payAmount,
+        subtotal: Number(booking.subtotal) || 0,
+        deposit: Number(booking.securityDeposit) || 0,
+        gateway: 'manual_bank',
+        meta: { depositorName, referenceNo, note: note || '', slipPath },
+      });
+      await PaymentAudit.create({ paymentId: payment._id, action: 'created', actorId: req.user.id, actorRole: req.user.role, note: 'Bank deposit submitted', amount: payAmount });
+    } else {
+      payment.amount = payAmount || payment.amount;
+      payment.meta = Object.assign({}, payment.meta || {}, { depositorName, referenceNo, note: note || '', slipPath: slipPath || payment.meta?.slipPath });
+      payment.status = 'pending';
+      await payment.save();
+      await PaymentAudit.create({ paymentId: payment._id, action: 'updated', actorId: req.user.id, actorRole: req.user.role, note: 'Bank deposit updated', amount: payment.amount });
+    }
+
+    // Ensure booking stays in pending state while awaiting verification
+    if (booking.status !== 'cancelled') {
+      booking.status = 'pending';
+      await booking.save();
+    }
+    // Admin/staff will verify and then call markReceived
+    return res.json({ message: 'Deposit received. We will verify and confirm your booking shortly.', payment, booking });
+  } catch (e) {
+    console.error('Bank deposit upload error:', e);
+    return res.status(500).json({ message: 'Server error' });
   }
 };

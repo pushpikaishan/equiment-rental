@@ -44,6 +44,7 @@ import CartPage from "./component/shop/CartPage";
 import MyBookings from "./component/shop/MyBookings";
 import SupportPage from "./component/shop/SupportPage";
 import PaymentGateway from "./component/shop/PaymentGateway";
+import PaymentPage from "./component/shop/PaymentPage";
 import NotificationsPage from "./component/userAccount/NotificationsPage";
 import DriverDashboard from "./component/staff/DriverDashboard";
 import SuppliersInventoryList from "./component/shop/SuppliersInventoryList";
@@ -93,7 +94,8 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/bookings" element={<MyBookings />} />
           <Route path="/support" element={<SupportPage />} />
-          <Route path="/payment" element={<PaymentGateway />} />
+          <Route path="/payment" element={<PaymentPage />} />
+          <Route path="/payment/gateway" element={<PaymentGateway />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/driver" element={<DriverDashboard />} />
           <Route path="/supplier/dashboard" element={<SupplierDashboard />} />
