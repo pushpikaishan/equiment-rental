@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-<<<<<<< Updated upstream
-import jsPDF from 'jspdf';
 import { headerCard, headerTitle, headerSub, card as cardBox, btn as btnFilled, input as inputBox, select as selectBox } from './adminStyles';
-=======
->>>>>>> Stashed changes
 
 function InventoryManagement() {
   const [form, setForm] = useState({
@@ -350,8 +346,7 @@ function InventoryManagement() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <h3 style={{ margin: 0 }}>Equipment List</h3>
           <div style={{ display: 'flex', gap: 8 }}>
-<<<<<<< Updated upstream
-            <button onClick={exportPDF} style={btnFilled('#f59e0b')}>Export PDF</button>
+            <button onClick={() => exportToPDF()} style={btnFilled('#f59e0b')}>Export PDF</button>
             <button onClick={exportCSV} style={btnFilled('#16a34a')}>Export CSV</button>
             <button
               onClick={() => { setShowRestock(true); setRestockSelection({}); setRestockWholesaler(''); }}
@@ -361,10 +356,6 @@ function InventoryManagement() {
             >
               Restock
             </button>
-=======
-            <button onClick={() => exportToPDF()} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export PDF</button>
-            <button onClick={exportCSV} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export CSV</button>
->>>>>>> Stashed changes
           </div>
         </div>
         {loading ? (
