@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+<<<<<<< Updated upstream
 import jsPDF from 'jspdf';
 import { headerCard, headerTitle, headerSub, card as cardBox, btn as btnFilled, input as inputBox, select as selectBox } from './adminStyles';
+=======
+>>>>>>> Stashed changes
 
 function InventoryManagement() {
   const [form, setForm] = useState({
@@ -148,85 +151,40 @@ function InventoryManagement() {
   const cleanCSV = (val) => (val == null ? '' : String(val).replace(/\r|\n/g, ' ').trim());
 
   // Export PDF: include photo thumbnails and key fields
-  const exportPDF = async () => {
-    if (!items || items.length === 0) {
-      alert('No equipment to export');
-      return;
-    }
+  const exportToPDF = async (filename = "inventory-report.pdf") => {
+    try {
+      // dynamic import prevents webpack from requiring 'jspdf' at build-time
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
 
-    const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 36; // 0.5 inch
-    let y = margin;
-
-    doc.setFontSize(16);
-    doc.text('Inventory', pageWidth / 2, y, { align: 'center' });
-    y += 18;
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 12;
-
-    const lineHeight = 16;
-    const imgWidth = 120;
-    const imgHeight = 80;
-    const gap = 12;
-
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i];
-
-      // Add new page if needed
-      const blockHeight = imgHeight + gap + lineHeight * 5 + gap; // image + fields + spacing
-      if (y + blockHeight > doc.internal.pageSize.getHeight() - margin) {
-        doc.addPage();
-        y = margin;
-      }
-
-      // Image (if available)
-      if (it.image) {
-        try {
-          const dataUrl = await toDataURL(`${baseUrl}${it.image}`);
-          doc.addImage(dataUrl, 'JPEG', margin, y, imgWidth, imgHeight, undefined, 'FAST');
-        } catch (e) {
-          // Draw a placeholder rectangle if image fails
-          doc.setDrawColor(200);
-          doc.rect(margin, y, imgWidth, imgHeight);
-          doc.setTextColor(150);
-          doc.setFontSize(10);
-          doc.text('Image unavailable', margin + 8, y + 20);
-          doc.setTextColor(0);
-          doc.setFontSize(12);
-        }
+      // Try to serialize a table with id="inventory-table" if present, otherwise produce a simple report
+      const tableEl = document.getElementById("inventory-table");
+      if (tableEl) {
+        const rows = Array.from(tableEl.querySelectorAll("tr")).map((tr) =>
+          Array.from(tr.querySelectorAll("th,td"))
+            .map((td) => td.innerText.trim())
+            .join(" | ")
+        );
+        doc.setFontSize(10);
+        rows.forEach((r, i) => doc.text(r || " ", 10, 10 + i * 6));
       } else {
-        doc.setDrawColor(230);
-        doc.rect(margin, y, imgWidth, imgHeight);
+        // fallback content: basic header + timestamp
+        doc.setFontSize(14);
+        doc.text("Inventory Report", 10, 20);
+        doc.setFontSize(10);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 10, 30);
+        // optionally include a short summary if you have a JS variable with items
+        // doc.text(`Total items: ${items.length}`, 10, 40);
       }
 
-      // Details next to image
-      let x = margin + imgWidth + 16;
-      doc.setFontSize(12);
-      doc.setTextColor(0);
-      const details = [
-        `Name: ${it.name || ''}`,
-        `Category: ${it.category || ''}`,
-        `Description: ${truncate(it.description || '', 120)}`,
-        `Price (per day): ${it.rentalPrice ?? ''}`,
-        `Quantity: ${it.quantity ?? ''} | Available: ${it.available ? 'Yes' : 'No'}`,
-      ];
-      details.forEach((line) => {
-        doc.text(line, x, y + 14);
-        y += lineHeight;
-      });
-
-      // Move y past image if image block is taller
-      if (y < margin + imgHeight + 14) y = margin + imgHeight + 14;
-      y += gap;
-      // Divider between items
-      doc.setDrawColor(230);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += gap;
+      doc.save(filename);
+    } catch (err) {
+      console.error("PDF export failed. Ensure 'jspdf' is installed:", err);
+      // User-friendly guidance
+      alert(
+        "PDF export failed. Install jspdf in the frontend: open a terminal in frontend folder and run:\n\nnpm install jspdf\n\nThen rebuild the app."
+      );
     }
-
-    doc.save('inventory.pdf');
   };
 
   const truncate = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
@@ -392,6 +350,7 @@ function InventoryManagement() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <h3 style={{ margin: 0 }}>Equipment List</h3>
           <div style={{ display: 'flex', gap: 8 }}>
+<<<<<<< Updated upstream
             <button onClick={exportPDF} style={btnFilled('#f59e0b')}>Export PDF</button>
             <button onClick={exportCSV} style={btnFilled('#16a34a')}>Export CSV</button>
             <button
@@ -402,13 +361,17 @@ function InventoryManagement() {
             >
               Restock
             </button>
+=======
+            <button onClick={() => exportToPDF()} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export PDF</button>
+            <button onClick={exportCSV} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#f1f5f9' }}>Export CSV</button>
+>>>>>>> Stashed changes
           </div>
         </div>
         {loading ? (
           <div>Loading...</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table id="inventory-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f1f5f9' }}>
                   <th style={{ textAlign: 'left', padding: 8 }}>Image</th>
