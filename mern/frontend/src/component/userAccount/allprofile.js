@@ -7,6 +7,7 @@ import SiteFooter from "../common/SiteFooter";
 function UserProfile() {
   const [profile, setProfile] = useState(null);
   const navigate = useNavigate();
+  const storedRole = (localStorage.getItem('role') || '').toLowerCase();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -339,7 +340,7 @@ function UserProfile() {
   if (!profile) {
     return (
       <>
-        <UserNavbar />
+        {!(storedRole === 'supplier' || storedRole === 'staff') && <UserNavbar />}
         <div style={styles.profileContainer}>
           <div style={styles.loadingWrapper}>
             <div style={styles.loadingSpinner}></div>
@@ -398,7 +399,7 @@ function UserProfile() {
 
   return (
     <>
-      <UserNavbar />
+      {!(profile.role === 'supplier' || profile.role === 'staff') && <UserNavbar />}
       <div style={styles.profileContainer}>
         <style>
           {`
@@ -565,6 +566,24 @@ function UserProfile() {
 
           {/* Content Section */}
           <div style={styles.profileContent}>
+            {(profile.role === 'supplier' || profile.role === 'staff') && (
+              <div style={{ marginBottom: '1rem' }}>
+                <button
+                  onClick={() => navigate(profile.role === 'supplier' ? '/supplier/dashboard' : '/driver')}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 8,
+                    border: '1px solid #93c5fd',
+                    background: '#dbeafe',
+                    color: '#1d4ed8',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to {profile.role === 'supplier' ? 'Supplier' : 'Driver'} Dashboard
+                </button>
+              </div>
+            )}
             <div style={styles.fieldsGrid}>
               {commonFields.concat(extraFields).map((field, index) => (
                 <div 

@@ -25,6 +25,46 @@ function computeTotals(items, bookingDate, returnDate, depositRate = 0.3) {
   return { subtotal, securityDeposit, total: subtotal + securityDeposit, days };
 }
 
+// Atomically decrement equipment quantities for a set of items.
+// If any decrement fails (insufficient stock), revert prior decrements and throw.
+async function reserveInventory(items) {
+  const decremented = [];
+  try {
+    for (const it of items) {
+      const qty = Number(it.qty || 0);
+      if (!it.equipmentId || qty <= 0) continue;
+      const updated = await Equipment.findOneAndUpdate(
+        { _id: it.equipmentId, quantity: { $gte: qty }, available: { $ne: false } },
+        { $inc: { quantity: -qty } },
+        { new: true }
+      );
+      if (!updated) {
+        throw new Error('Insufficient stock for one or more items');
+      }
+      // If stock hits 0, mark unavailable
+      if (Number(updated.quantity) === 0 && updated.available !== false) {
+        try { await Equipment.findByIdAndUpdate(updated._id, { $set: { available: false } }, { new: false }); } catch {}
+      }
+      decremented.push({ equipmentId: it.equipmentId, qty });
+    }
+  } catch (e) {
+    // rollback
+    for (const d of decremented) {
+      try { await Equipment.findByIdAndUpdate(d.equipmentId, { $inc: { quantity: d.qty } }, { new: false }); } catch {}
+    }
+    throw e;
+  }
+}
+
+// Increment equipment quantities back for a set of items (used on cancellation)
+async function restoreInventory(items) {
+  for (const it of items || []) {
+    const qty = Number(it.qty || 0);
+    if (!it.equipmentId || qty <= 0) continue;
+    try { await Equipment.findByIdAndUpdate(it.equipmentId, { $inc: { quantity: qty } }, { new: false }); } catch {}
+  }
+}
+
 exports.create = async (req, res) => {
   try {
   // Whitelist fields that a user is allowed to update
@@ -62,21 +102,30 @@ exports.create = async (req, res) => {
     }
 
     const sums = computeTotals(snapItems, date, retDate);
-    const booking = await Booking.create({
-      userId: req.user.id,
-      userRole: req.user.role,
-      bookingDate: date,
-      items: snapItems,
-      customerName,
-      customerEmail,
-      customerPhone,
-  deliveryAddress,
-      notes: notes || '',
-      returnDate: retDate,
-      subtotal: sums.subtotal,
-      securityDeposit: sums.securityDeposit,
-      total: sums.total,
-    });
+    // Reserve inventory (decrement quantities) before creating booking
+    await reserveInventory(snapItems);
+    let booking;
+    try {
+      booking = await Booking.create({
+        userId: req.user.id,
+        userRole: req.user.role,
+        bookingDate: date,
+        items: snapItems,
+        customerName,
+        customerEmail,
+        customerPhone,
+        deliveryAddress,
+        notes: notes || '',
+        returnDate: retDate,
+        subtotal: sums.subtotal,
+        securityDeposit: sums.securityDeposit,
+        total: sums.total,
+      });
+    } catch (err) {
+      // Rollback inventory if booking creation fails
+      try { await restoreInventory(snapItems); } catch {}
+      throw err;
+    }
 
     return res.status(201).json({ booking });
   } catch (e) {
@@ -205,6 +254,8 @@ exports.userCancel = async (req, res) => {
     booking.cancelReason = req.body?.reason || '';
     booking.cancelledByRole = req.user.role;
     booking.cancelledById = req.user.id;
+    // Restore inventory back to stock on cancellation
+    try { await restoreInventory(booking.items || []); } catch (e) { console.error('Restore inventory on user cancel failed:', e); }
     await booking.save();
 
     // Create a refund record for admin processing
@@ -372,11 +423,16 @@ exports.adminCancel = async (req, res) => {
     const { reason = '' } = req.body || {};
     const booking = await Booking.findById(id);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    const wasCancelled = booking.status === 'cancelled';
     booking.status = 'cancelled';
     booking.cancelledAt = new Date();
     booking.cancelReason = reason;
     booking.cancelledByRole = req.user.role;
     booking.cancelledById = req.user.id;
+    // Only restore once if not already cancelled before
+    if (!wasCancelled) {
+      try { await restoreInventory(booking.items || []); } catch (e) { console.error('Restore inventory on admin cancel failed:', e); }
+    }
     await booking.save();
     res.json({ booking });
   } catch (e) {

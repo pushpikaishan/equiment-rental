@@ -19,6 +19,11 @@ function InventoryManagement() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null); // item being edited
   const [editImage, setEditImage] = useState(null);
+  // Restock modal state
+  const [showRestock, setShowRestock] = useState(false);
+  const [restockSelection, setRestockSelection] = useState({}); // { [equipmentId]: qtyToAdd }
+  const [restockWholesaler, setRestockWholesaler] = useState('');
+  const [restocking, setRestocking] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -85,6 +90,7 @@ function InventoryManagement() {
   };
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  const token = localStorage.getItem('token');
 
   const fetchItems = async () => {
     setLoading(true);
@@ -314,6 +320,21 @@ function InventoryManagement() {
     'Climate Control'
   ];
 
+  // Low stock helpers
+  const LOW_STOCK_QTY = 5; // threshold for low stock items
+  // Exclude certain categories from the restock flow
+  const EXCLUDED_RESTOCK_CATEGORIES = ['Tents & Shelters', 'Stage & Platform Equipment'];
+  const lowItems = (items || []).filter(it =>
+    Number(it.quantity || 0) <= LOW_STOCK_QTY && !EXCLUDED_RESTOCK_CATEGORIES.includes(String(it.category))
+  );
+  const WHOLESALERS = [
+    { id: 'wh1', name: 'Ceylon Equip Wholesale' },
+    { id: 'wh2', name: 'Lanka Gear Traders' },
+    { id: 'wh3', name: 'Island Supply Co.' },
+    { id: 'wh4', name: 'Colombo Bulk Rentals' },
+    { id: 'wh5', name: 'Kandy Wholesale Hub' },
+  ];
+
   return (
     <div>
       <div style={headerCard}>
@@ -373,6 +394,14 @@ function InventoryManagement() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={exportPDF} style={btnFilled('#f59e0b')}>Export PDF</button>
             <button onClick={exportCSV} style={btnFilled('#16a34a')}>Export CSV</button>
+            <button
+              onClick={() => { setShowRestock(true); setRestockSelection({}); setRestockWholesaler(''); }}
+              disabled={lowItems.length === 0}
+              title={lowItems.length === 0 ? 'No low stock items' : 'Restock low items'}
+              style={btnFilled(lowItems.length ? '#1d4ed8' : '#94a3b8')}
+            >
+              Restock
+            </button>
           </div>
         </div>
         {loading ? (
@@ -404,7 +433,9 @@ function InventoryManagement() {
                     <td style={{ padding: 8 }}>{it.name}</td>
                     <td style={{ padding: 8 }}>{it.category}</td>
                     <td style={{ padding: 8 }}>{it.rentalPrice}</td>
-                    <td style={{ padding: 8 }}>{it.quantity}</td>
+                    <td style={{ padding: 8 }}>
+                      <span style={{ fontWeight: 600, color: Number(it.quantity||0) <= LOW_STOCK_QTY ? '#b91c1c' : '#0f172a' }}>{it.quantity}</span>
+                    </td>
                     <td style={{ padding: 8 }}>{it.available ? 'Yes' : 'No'}</td>
                     <td style={{ padding: 8, display: 'flex', gap: 8 }}>
                       <button onClick={() => startEdit(it)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: 'white' }}>Edit</button>
@@ -528,6 +559,96 @@ function InventoryManagement() {
               <button onClick={cancelEdit} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: 'white' }}>Cancel</button>
               <button onClick={saveEdit} style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #93c5fd', background: '#dbeafe', color: '#1d4ed8' }}>Save</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restock Modal */}
+      {showRestock && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 50 }}>
+          <div style={{ width: '100%', maxWidth: 800, background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontWeight: 700 }}>Restock Low Items</div>
+              <button onClick={() => setShowRestock(false)} style={{ padding: '6px 10px', borderRadius: 8, background: 'white', border: '1px solid #cbd5e1' }}>Close</button>
+            </div>
+            {lowItems.length === 0 ? (
+              <div>No low stock items.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div style={{ fontSize: 12, color: '#64748b' }}>Select items and quantities to add, then choose a wholesaler.</div>
+                <div style={{ maxHeight: 420, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Select</th>
+                        <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Item</th>
+                        <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Current Qty</th>
+                        <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Add Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lowItems.map(it => {
+                        const selQty = Number(restockSelection[it._id] || 0);
+                        const checked = selQty > 0;
+                        return (
+                          <tr key={it._id}>
+                            <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                              <input type="checkbox" checked={checked} onChange={(e) => {
+                                setRestockSelection(prev => ({ ...prev, [it._id]: e.target.checked ? (prev[it._id] || 10) : 0 }));
+                              }} />
+                            </td>
+                            <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                              <div style={{ fontWeight: 600 }}>{it.name}</div>
+                              <div style={{ fontSize: 12, color: '#64748b' }}>{it.category}</div>
+                            </td>
+                            <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{it.quantity}</td>
+                            <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                              <input type="number" min={1} value={selQty || ''} placeholder="0" onChange={(e) => {
+                                const val = Math.max(0, Number(e.target.value));
+                                setRestockSelection(prev => ({ ...prev, [it._id]: val }));
+                              }} style={{ width: 120, padding: 6, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 4 }}>Select wholesaler</label>
+                  <select value={restockWholesaler} onChange={(e) => setRestockWholesaler(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', minWidth: 280 }}>
+                    <option value="">Choose wholesaler…</option>
+                    {WHOLESALERS.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button onClick={() => setShowRestock(false)} style={{ padding: '8px 12px', borderRadius: 8, background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>
+                  <button onClick={async () => {
+                    const entries = Object.entries(restockSelection).filter(([,q]) => Number(q) > 0);
+                    if (entries.length === 0) { setMessage('Select at least one item with a quantity'); return; }
+                    if (!restockWholesaler) { setMessage('Please select a wholesaler'); return; }
+                    setRestocking(true);
+                    try {
+                      const payload = {
+                        items: entries.map(([id, qty]) => ({ id, qty: Number(qty) })),
+                        wholesaler: { id: restockWholesaler, name: (WHOLESALERS.find(w=>w.id===restockWholesaler)||{}).name }
+                      };
+                      await axios.post(`${baseUrl}/equipment/restock`, payload, { headers: { Authorization: `Bearer ${token}` } });
+                      setShowRestock(false);
+                      setRestockSelection({});
+                      setRestockWholesaler('');
+                      await fetchItems();
+                    } catch (e) {
+                      setMessage(e.response?.data?.message || e.message);
+                    } finally {
+                      setRestocking(false);
+                    }
+                  }} disabled={restocking} style={btnFilled('#16a34a')}>{restocking ? 'Processing…' : 'Process'}</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

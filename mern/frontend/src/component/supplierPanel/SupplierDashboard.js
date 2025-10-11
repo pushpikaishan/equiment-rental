@@ -9,14 +9,15 @@ export default function SupplierDashboard() {
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const [me, setMe] = useState(null);
-  const [orders, setOrders] = useState([]);
   const [items, setItems] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
   const [error, setError] = useState('');
+  const [progressChoice, setProgressChoice] = useState({}); // { [requestId]: 'ready'|'shipped'|'returned'|'completed' }
 
   // Inventory form state
-  const emptyForm = { name: '', description: '', category: '', district: '', location: '', rentalPrice: '', quantity: '', available: true, specs: '' };
+  const emptyForm = { name: '', description: '', category: '', district: '', rentalPrice: '', quantity: '', available: true, specs: '' };
   const [form, setForm] = useState(emptyForm);
   const [image, setImage] = useState(null);
   const [editing, setEditing] = useState(null); // editing item object
@@ -25,17 +26,10 @@ export default function SupplierDashboard() {
     try {
       const res = await axios.get(`${baseUrl}/auth/profile`, { headers });
       setMe(res.data || null);
+      if (res.data && res.data.role === 'supplier' && res.data.district) {
+        setForm(prev => ({ ...prev, district: res.data.district }));
+      }
     } catch (_) {}
-  };
-  const loadOrders = async () => {
-    setLoadingOrders(true);
-    try {
-      // Using user bookings as stand-in for supplier orders until a supplier-specific orders endpoint exists
-      const res = await axios.get(`${baseUrl}/bookings/my`, { headers });
-      setOrders(Array.isArray(res.data?.bookings) ? res.data.bookings : []);
-    } catch (e) {
-      setError(e.response?.data?.message || e.message);
-    } finally { setLoadingOrders(false); }
   };
   const loadItems = async () => {
     setLoadingItems(true);
@@ -46,8 +40,17 @@ export default function SupplierDashboard() {
       setError(e.response?.data?.message || e.message);
     } finally { setLoadingItems(false); }
   };
+  const loadRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const res = await axios.get(`${baseUrl}/supplier-requests/mine`, { headers });
+      setRequests(Array.isArray(res.data?.items) ? res.data.items : []);
+    } catch (e) {
+      setError(e.response?.data?.message || e.message);
+    } finally { setLoadingRequests(false); }
+  };
 
-  useEffect(() => { loadProfile(); loadOrders(); loadItems(); // eslint-disable-next-line
+  useEffect(() => { loadProfile(); loadItems(); loadRequests(); // eslint-disable-next-line
   }, []);
 
   const onLogout = () => {
@@ -61,7 +64,7 @@ export default function SupplierDashboard() {
     setError('');
     try {
       const fd = new FormData();
-      const fields = ['name','description','category','district','location','rentalPrice','quantity','available','specs'];
+  const fields = ['name','description','category','district','rentalPrice','quantity','available','specs'];
       for (const k of fields) {
         const v = form[k];
         if (typeof v !== 'undefined' && v !== null && v !== '') fd.append(k, v);
@@ -92,8 +95,7 @@ export default function SupplierDashboard() {
       name: it.name || '',
       description: it.description || '',
       category: it.category || '',
-      district: it.district || '',
-      location: it.location || '',
+  district: it.district || '',
       rentalPrice: it.rentalPrice ?? '',
       quantity: it.quantity ?? '',
       available: it.available !== false,
@@ -125,28 +127,85 @@ export default function SupplierDashboard() {
       <div style={{ padding: 16, display: 'grid', gap: 16 }}>
         {error && <div style={{ ...card, borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b' }}>{error}</div>}
 
-        {/* Orders */}
+        {/* Orders section removed per request */}
+
+        {/* Incoming Requests */}
         <div style={card}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Recent Orders</div>
-          {loadingOrders ? 'Loading…' : (
-            orders.length === 0 ? <div>No orders found.</div> : (
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>Incoming Booking Requests</div>
+          {loadingRequests ? 'Loading…' : (
+            requests.length === 0 ? <div>No incoming requests.</div> : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Created</th>
+                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Requested</th>
                       <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Customer</th>
+                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Items</th>
                       <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Status</th>
-                      <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Total</th>
+                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Progress</th>
+                      <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.slice(0, 10).map((b) => (
-                      <tr key={b._id}>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{new Date(b.createdAt).toLocaleString()}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{b.customerName}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{b.status}{b.disputed ? ' (disputed)' : ''}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>{Number(b.total || 0).toFixed(2)}</td>
+                    {requests.map(r => (
+                      <tr key={r._id}>
+                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{new Date(r.createdAt).toLocaleString()}</td>
+                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                          <div style={{ fontWeight: 600 }}>{r.customerName}</div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>{r.customerEmail} • {r.customerPhone}</div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>{r.deliveryAddress}</div>
+                        </td>
+                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                          {(r.items||[]).map((it, idx) => (
+                            <div key={idx} style={{ fontSize: 12 }}>
+                              {it.name} × {it.qty} @ LKR {Number(it.pricePerDay||0).toFixed(2)} /d
+                            </div>
+                          ))}
+                        </td>
+                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{r.status}</td>
+                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 9999,
+                            background: r.fulfillmentStatus === 'completed' ? '#dcfce7' : r.fulfillmentStatus === 'shipped' ? '#e0e7ff' : r.fulfillmentStatus === 'ready' ? '#fef3c7' : r.fulfillmentStatus === 'returned' ? '#fde68a' : '#e2e8f0',
+                            color: '#0f172a', fontSize: 12, fontWeight: 600
+                          }}>{r.fulfillmentStatus || 'new'}</span>
+                        </td>
+                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
+                          <button disabled={r.status !== 'pending'} onClick={async () => { try { await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'accepted' }, { headers }); await loadRequests(); } catch (e) { setError(e.response?.data?.message || e.message); } }} style={{ padding: '6px 10px', borderRadius: 8, background: '#16a34a', color: 'white', border: '1px solid #15803d', marginRight: 6 }}>Accept</button>
+                          <button disabled={r.status !== 'pending'} onClick={async () => { try { await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'rejected' }, { headers }); await loadRequests(); } catch (e) { setError(e.response?.data?.message || e.message); } }} style={{ padding: '6px 10px', borderRadius: 8, background: '#ef4444', color: 'white', border: '1px solid #dc2626', marginRight: 8 }}>Reject</button>
+                          {/* Progress dropdown */}
+                          <span>
+                            <select
+                              disabled={r.status !== 'accepted'}
+                              value={progressChoice[r._id] || ''}
+                              onChange={(e) => setProgressChoice(prev => ({ ...prev, [r._id]: e.target.value }))}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #cbd5e1', marginRight: 6 }}
+                            >
+                              <option value="">Select status…</option>
+                              <option value="ready" disabled={['ready','shipped','returned','completed'].includes(r.fulfillmentStatus)}>Ready</option>
+                              <option value="shipped" disabled={!['ready'].includes(r.fulfillmentStatus)}>Shipped</option>
+                              <option value="returned" disabled={!['shipped'].includes(r.fulfillmentStatus)}>Returned</option>
+                              <option value="completed" disabled={!['returned'].includes(r.fulfillmentStatus)}>Completed</option>
+                            </select>
+                            <button
+                              disabled={r.status !== 'accepted' || !progressChoice[r._id]}
+                              onClick={async () => {
+                                const sel = progressChoice[r._id];
+                                if (!sel) return;
+                                try {
+                                  await axios.put(`${baseUrl}/supplier-requests/${r._id}/progress`, { status: sel }, { headers });
+                                  setProgressChoice(prev => ({ ...prev, [r._id]: '' }));
+                                  await loadRequests();
+                                } catch (e) {
+                                  setError(e.response?.data?.message || e.message);
+                                }
+                              }}
+                              style={{ padding: '6px 10px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}
+                            >
+                              Update
+                            </button>
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -163,10 +222,20 @@ export default function SupplierDashboard() {
             <div style={{ display: 'grid', gap: 8 }}>
               <input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} required />
               <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} rows={3} />
-              <input placeholder="Category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <input placeholder="District" value={form.district} onChange={e => setForm({ ...form, district: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} />
-                <input placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} />
+              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }}>
+                <option value="">Select Category</option>
+                {['Lighting','Audio','Camera','Tents & Shelters','Visual & AV Equipment','Stage & Platform Equipment','Furniture','Catering & Dining Equipment','Power & Electrical','Climate Control'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+                <input
+                  placeholder="District"
+                  value={form.district}
+                  onChange={() => { /* disabled - district is managed by profile */ }}
+                  disabled
+                  style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8, background: '#f8fafc', color: '#64748b' }}
+                />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <input type="number" min="0.01" step="0.01" placeholder="Rental Price (per day)" value={form.rentalPrice} onChange={e => setForm({ ...form, rentalPrice: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} required />

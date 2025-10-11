@@ -26,4 +26,12 @@ const equipmentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Auto-toggle availability off when quantity is 0 or less
+equipmentSchema.pre('save', function(next) {
+  if (typeof this.quantity === 'number' && this.quantity <= 0) {
+    this.available = false;
+  }
+  next();
+});
+
 module.exports = mongoose.model("Equipment", equipmentSchema);

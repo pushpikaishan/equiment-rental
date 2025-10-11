@@ -54,11 +54,23 @@ export default function PaymentManagement() {
     setRefundAmount('');
     setRefundType('custom');
   };
+  const openCancelFullRefund = (payment) => {
+    // Full refund due to cancellation
+    setRefundModal(payment);
+    const amt = Number(payment?.amount || 0);
+    setRefundAmount(amt > 0 ? amt.toFixed(2) : '');
+    setRefundType('cancel');
+  };
   const openDepositRefund = (payment) => {
     setRefundModal(payment);
     const rec = computeRecollect(payment);
     const amt = Number(rec?.suggestedRefund || 0);
-    setRefundAmount(amt > 0 ? amt.toFixed(2) : '');
+    if (amt <= 0) {
+      alert('No refundable deposit based on the driver report');
+      setRefundModal(null);
+      return;
+    }
+    setRefundAmount(amt.toFixed(2));
     setRefundType('deposit');
   };
   const closeRefundModal = () => {
@@ -70,6 +82,7 @@ export default function PaymentManagement() {
     const body = {};
     if (refundAmount) body.amount = Number(refundAmount);
     if (refundType === 'deposit') body.note = 'Security deposit refund after recollect report';
+    if (refundType === 'cancel') body.note = 'Full refund due to cancellation';
     await axios.post(`${baseUrl}/payments/${refundModal._id}/refund`, body, { headers });
     closeRefundModal();
     await fetchData();
@@ -129,7 +142,8 @@ export default function PaymentManagement() {
     const r = it?.recollect || {};
     const deposit = Number(r.deposit || 0);
     const estimateTotal = Number(r.estimateTotal || 0);
-    const hasReport = Boolean(r.hasReport || (deposit > 0 || estimateTotal > 0));
+    // Only consider the driver report submitted when backend explicitly sets hasReport === true
+    const hasReport = r.hasReport === true;
     const suggestedRefund = Math.max(0, deposit - estimateTotal);
     return { deposit, estimateTotal, hasReport, suggestedRefund };
   };
@@ -231,13 +245,9 @@ export default function PaymentManagement() {
                                 {!(it.status === 'paid') && (
                                   <button onClick={() => markReceived(it._id)} className="pm-btn pm-btn--success">Mark Received</button>
                                 )}
-                                {/* Prefer staff-report-based refund if available; else allow cancel-based refund */}
-                                {(rec.suggestedRefund > 0) ? (
-                                  <button onClick={() => openDepositRefund(it)} className="pm-btn pm-btn--info">Refund</button>
-                                ) : (
-                                  (it.booking?.status === 'cancelled') && (
-                                    <button onClick={() => openRefundModal(it)} className="pm-btn pm-btn--refund">Refund</button>
-                                  )
+                                {/* Show full refund button for cancelled bookings (paid/partial_refunded) */}
+                                {(it.booking?.status === 'cancelled' && (it.status === 'paid' || it.status === 'partial_refunded')) && (
+                                  <button onClick={() => openCancelFullRefund(it)} className="pm-btn pm-btn--refund">Refund</button>
                                 )}
                                 <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
                               </>
@@ -257,9 +267,17 @@ export default function PaymentManagement() {
         {refundModal && (
           <div className="pm-modal">
             <div className="pm-modal__content">
-              <h3 className="pm-modal__title">{refundType === 'deposit' ? 'Refund Security Deposit' : 'Process Refund'}</h3>
+              <h3 className="pm-modal__title">{
+                refundType === 'deposit' ? 'Refund Security Deposit' :
+                refundType === 'cancel' ? 'Refund Payment (Cancellation)' :
+                'Process Refund'
+              }</h3>
               <div className="pm-modal__hint">
-                {refundType === 'deposit' ? 'Security deposit minus estimate total calculated from recollect report.' : 'Confirm customer and amount below.'}
+                {refundType === 'deposit'
+                  ? 'Security deposit minus estimate total calculated from recollect report.'
+                  : refundType === 'cancel'
+                    ? 'Full refund due to booking cancellation.'
+                    : 'Confirm customer and amount below.'}
               </div>
               <div className="pm-modal__grid">
                 <div>
@@ -295,16 +313,24 @@ export default function PaymentManagement() {
               </div>
               <div style={{ marginTop: 10 }}>
                 <label style={{ display: 'block', color: '#0f172a', fontSize: 12, marginBottom: 6 }}>
-                  {refundType === 'deposit' ? 'Refund Amount (calculated)' : 'Refund Amount (leave blank for full)'}
+                  {refundType === 'deposit'
+                    ? 'Refund Amount (calculated)'
+                    : refundType === 'cancel'
+                      ? 'Full Refund Amount'
+                      : 'Refund Amount (leave blank for full)'}
                 </label>
                 <input type="number" value={refundAmount}
-                  onChange={(e) => refundType === 'deposit' ? null : setRefundAmount(e.target.value)}
+                  onChange={(e) => (refundType !== 'custom') ? null : setRefundAmount(e.target.value)}
                   min="0" step="0.01" className="pm-input" style={{ width: '100%' }}
-                  readOnly={refundType === 'deposit'} />
+                  readOnly={refundType !== 'custom'} />
               </div>
               <div className="pm-modal__footer">
                 <button onClick={closeRefundModal} className="pm-btn pm-btn--secondary">Cancel</button>
-                <button onClick={refund} className="pm-btn pm-btn--refund">{refundType === 'deposit' ? 'Refund Deposit' : 'Proceed'}</button>
+                <button onClick={refund} className="pm-btn pm-btn--refund">{
+                  refundType === 'deposit' ? 'Refund Deposit' :
+                  refundType === 'cancel' ? 'Refund Payment' :
+                  'Proceed'
+                }</button>
               </div>
             </div>
           </div>

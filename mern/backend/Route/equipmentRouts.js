@@ -27,4 +27,7 @@ router.put("/:id", auth, adminOnly, upload.single("image"), EquipmentController.
 // Delete
 router.delete("/:id", auth, adminOnly, EquipmentController.remove);
 
+// Restock multiple items (admin only)
+router.post("/restock", auth, adminOnly, EquipmentController.restock);
+
 module.exports = router;

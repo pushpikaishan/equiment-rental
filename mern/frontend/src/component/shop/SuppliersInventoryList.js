@@ -24,6 +24,17 @@ export default function SuppliersInventoryList() {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('All');
   const [district, setDistrict] = useState('');
+  const [showReq, setShowReq] = useState(false);
+  const [reqItem, setReqItem] = useState(null);
+  const [reqQty, setReqQty] = useState(1);
+  const [reqDate, setReqDate] = useState('');
+  const [reqReturn, setReqReturn] = useState('');
+  const [reqName, setReqName] = useState('');
+  const [reqEmail, setReqEmail] = useState('');
+  const [reqPhone, setReqPhone] = useState('');
+  const [reqAddress, setReqAddress] = useState('');
+  const [reqNotes, setReqNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
@@ -321,23 +332,22 @@ export default function SuppliersInventoryList() {
               </div>
               <div style={{ padding: 18, display: 'flex', gap: 12 }}>
                 <button
-                  disabled
-                  title="Booking via suppliers is coming soon"
+                  onClick={() => { setReqItem(it); setReqQty(1); setShowReq(true); }}
                   style={{ 
                     flex: 1, 
-                    background: '#e2e8f0', 
-                    color: '#94a3b8', 
+                    background: '#2563eb', 
+                    color: 'white', 
                     border: 'none', 
                     padding: '12px 16px', 
                     borderRadius: 12, 
                     fontWeight: 600,
                     fontSize: 14,
-                    cursor: 'not-allowed',
+                    cursor: 'pointer',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                   }}
                 >
-                  Add to Cart (Soon)
+                  Request from Supplier
                 </button>
               </div>
             </div>
@@ -364,6 +374,88 @@ export default function SuppliersInventoryList() {
       </div>
       <FeedbackSection />
       <SiteFooter />
+      {showReq && reqItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 520, background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontWeight: 700 }}>Request: {reqItem.name}</div>
+              <button onClick={() => setShowReq(false)} style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '6px 10px' }}>Close</button>
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#64748b' }}>Booking date</label>
+                  <input type="date" value={reqDate} min={new Date().toISOString().slice(0,10)} onChange={e => setReqDate(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
+                  <input type="date" value={reqReturn} min={reqDate || undefined} onChange={e => setReqReturn(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#64748b' }}>Quantity</label>
+                <input type="number" min={1} max={Number(reqItem.quantity)||undefined} value={reqQty} onChange={e => setReqQty(Math.max(1, Number(e.target.value)))} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#64748b' }}>Your name</label>
+                  <input value={reqName} onChange={e => setReqName(e.target.value)} placeholder="Full name" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: '#64748b' }}>Email</label>
+                  <input type="email" value={reqEmail} onChange={e => setReqEmail(e.target.value)} placeholder="you@example.com" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#64748b' }}>Phone</label>
+                  <input value={reqPhone} onChange={e => setReqPhone(e.target.value)} placeholder="07X-XXXXXXX" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: '#64748b' }}>Delivery address</label>
+                  <input value={reqAddress} onChange={e => setReqAddress(e.target.value)} placeholder="Street, city" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#64748b' }}>Notes (optional)</label>
+                <textarea rows={3} value={reqNotes} onChange={e => setReqNotes(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                <div style={{ fontWeight: 600 }}>Price/day: LKR {Number(reqItem.rentalPrice||0).toFixed(2)}</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setShowReq(false)} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 8 }}>Cancel</button>
+                  <button onClick={async () => {
+                    const token = localStorage.getItem('token');
+                    if (!token) { alert('Please login first'); return; }
+                    if (!reqDate) { alert('Select a booking date'); return; }
+                    if (!reqName || !reqEmail || !reqPhone || !reqAddress) { alert('Fill contact details'); return; }
+                    setSubmitting(true);
+                    try {
+                      const payload = {
+                        bookingDate: reqDate,
+                        returnDate: reqReturn || undefined,
+                        items: [{ inventoryId: reqItem._id, qty: reqQty }],
+                        customerName: reqName,
+                        customerEmail: reqEmail,
+                        customerPhone: reqPhone,
+                        deliveryAddress: reqAddress,
+                        notes: reqNotes,
+                      };
+                      await axios.post(`${baseUrl}/supplier-requests`, payload, { headers: { Authorization: `Bearer ${token}` } });
+                      alert('Request sent to supplier');
+                      setShowReq(false);
+                    } catch (e) {
+                      alert(e.response?.data?.message || e.message);
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }} disabled={submitting} style={{ background: '#2563eb', color: 'white', border: '1px solid #1d4ed8', padding: '8px 12px', borderRadius: 8 }}>{submitting ? 'Sending…' : 'Send Request'}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -18,4 +18,20 @@ const SupplierInventorySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Ensure availability reflects stock: if quantity <= 0, mark unavailable automatically
+SupplierInventorySchema.pre('save', function(next) {
+  if (typeof this.quantity === 'number') {
+    if (this.quantity <= 0) {
+      this.available = false;
+    } else if (this.available === false) {
+      // keep explicit unavailable if owner turned it off
+      // do nothing
+    } else {
+      // default to available when stock comes back
+      this.available = true;
+    }
+  }
+  next();
+});
+
 module.exports = mongoose.model('SupplierInventory', SupplierInventorySchema);
