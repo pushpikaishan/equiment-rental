@@ -22,9 +22,9 @@ function createTransporter() {
 
 const transporter = createTransporter();
 
-async function sendMail({ to, subject, text, html, from }) {
+async function sendMail({ to, subject, text, html, from, attachments }) {
   const mailFrom = from || process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@equiprent.local';
-  const info = await transporter.sendMail({ from: mailFrom, to, subject, text, html });
+  const info = await transporter.sendMail({ from: mailFrom, to, subject, text, html, attachments });
   if (info && info.message) {
     try { console.log('[DEV MAIL]', JSON.parse(info.message)); } catch { console.log('[DEV MAIL]', info); }
   }

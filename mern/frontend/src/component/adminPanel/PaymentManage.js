@@ -18,6 +18,8 @@ export default function PaymentManagement() {
   const [refundAmount, setRefundAmount] = useState('');
   const [refundType, setRefundType] = useState('custom'); // 'custom' | 'deposit'
   const [successPopup, setSuccessPopup] = useState('');
+  const [depositModal, setDepositModal] = useState(null); // holds selected bank deposit payment
+  const [depositBusy, setDepositBusy] = useState(false);
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -29,7 +31,7 @@ export default function PaymentManagement() {
       setItems(res.data.items || []);
       setTotal(res.data.total || 0);
     } catch (e) {
-      // handle silently for now
+      console.warn('Payments fetch failed:', e?.response?.data || e?.message || e);
     } finally {
       setLoading(false);
     }
@@ -39,16 +41,21 @@ export default function PaymentManagement() {
     try {
       const res = await axios.get(`${baseUrl}/payments/summary`, { headers });
       setSummary(res.data);
-    } catch {}
+    } catch (e) {
+      console.warn('Payments summary failed:', e?.response?.data || e?.message || e);
+      setSummary(null);
+    }
   };
 
   useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [page]);
   useEffect(() => { fetchSummary(); /* eslint-disable-next-line */ }, []);
 
-  const markReceived = async (id) => {
-    await axios.put(`${baseUrl}/payments/${id}/mark-received`, { method: 'cash' }, { headers });
-    fetchData();
+  const markReceived = async (id, method) => {
+    await axios.put(`${baseUrl}/payments/${id}/mark-received`, method ? { method } : {}, { headers });
+    await fetchData();
   };
+  const openDepositModal = (payment) => setDepositModal(payment);
+  const closeDepositModal = () => setDepositModal(null);
   const openRefundModal = (payment) => {
     setRefundModal(payment);
     setRefundAmount('');
@@ -242,8 +249,14 @@ export default function PaymentManagement() {
                             const rec = computeRecollect(it);
                             return (
                               <>
-                                {!(it.status === 'paid') && (
-                                  <button onClick={() => markReceived(it._id)} className="pm-btn pm-btn--success">Mark Received</button>
+                                {/* Pending bank transfer: view deposit details (with slip) then mark received */}
+                                {(it.method === 'bank_transfer' && it.status === 'pending') ? (
+                                  <button onClick={() => openDepositModal(it)} className="pm-btn pm-btn--success">View Deposit</button>
+                                ) : (
+                                  // Fallback mark received for other pending types
+                                  (it.status !== 'paid' && (
+                                    <button onClick={() => markReceived(it._id)} className="pm-btn pm-btn--success">Mark Received</button>
+                                  ))
                                 )}
                                 {/* Show full refund button for cancelled bookings (paid/partial_refunded) */}
                                 {(it.booking?.status === 'cancelled' && (it.status === 'paid' || it.status === 'partial_refunded')) && (
@@ -336,8 +349,91 @@ export default function PaymentManagement() {
           </div>
         )}
 
+        {/* Deposit Details Modal */}
+        {depositModal && (
+          <div className="pm-modal">
+            <div className="pm-modal__content">
+              <h3 className="pm-modal__title">Bank Deposit Details</h3>
+              <div className="pm-modal__hint">Verify the depositor information and slip. Mark received to confirm the booking.</div>
+              <div className="pm-modal__grid" style={{ marginBottom: 8 }}>
+                <div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Order</div>
+                  <div><code>{depositModal.orderId || depositModal.bookingId || depositModal._id}</code></div>
+                </div>
+                <div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Created</div>
+                  <div>{new Date(depositModal.createdAt).toLocaleString()}</div>
+                </div>
+                <div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Customer</div>
+                  <div>{depositModal.customerName || depositModal.booking?.customerName || '-'}</div>
+                </div>
+                <div>
+                  <div className="pm-subtitle" style={{ margin: 0 }}>Amount</div>
+                  <div>{depositModal.currency} {Number(depositModal.amount || 0).toFixed(2)}</div>
+                </div>
+              </div>
+              <div className="pm-card" style={{ padding: 12, marginBottom: 10 }}>
+                <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))' }}>
+                  <div>
+                    <div className="pm-subtitle" style={{ margin: 0 }}>Depositor Name</div>
+                    <div>{depositModal.meta?.depositorName || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="pm-subtitle" style={{ margin: 0 }}>Reference No</div>
+                    <div>{depositModal.meta?.referenceNo || '-'}</div>
+                  </div>
+                  <div>
+                    <div className="pm-subtitle" style={{ margin: 0 }}>Note</div>
+                    <div>{depositModal.meta?.note || '-'}</div>
+                  </div>
+                </div>
+                {depositModal.meta?.slipPath ? (
+                  <div style={{ marginTop: 10 }}>
+                    <div className="pm-subtitle" style={{ margin: '0 0 6px 0' }}>Deposit Slip</div>
+                    <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 6 }}>
+                      <img
+                        src={`${baseUrl}${depositModal.meta.slipPath}`}
+                        alt="Deposit slip"
+                        style={{ display: 'block', width: '100%', maxHeight: 240, objectFit: 'contain', borderRadius: 6 }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <a href={`${baseUrl}${depositModal.meta.slipPath}`} target="_blank" rel="noreferrer">Open full size</a>
+                        <span style={{ fontSize: 12, color: '#64748b' }}>Preview scaled for compact view</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 10, color: '#64748b' }}>No slip provided.</div>
+                )}
+              </div>
+              <div className="pm-modal__footer">
+                <button onClick={closeDepositModal} className="pm-btn pm-btn--secondary">Close</button>
+                <button
+                  onClick={async () => {
+                    try {
+                      setDepositBusy(true);
+                      await markReceived(depositModal._id, 'bank_transfer');
+                      setSuccessPopup('Marked received and booking confirmed');
+                      setTimeout(() => setSuccessPopup(''), 1500);
+                    } catch (e) {
+                      alert(e.response?.data?.message || 'Failed to mark received');
+                    } finally {
+                      setDepositBusy(false);
+                      closeDepositModal();
+                    }
+                  }}
+                  className="pm-btn pm-btn--success"
+                  disabled={depositBusy}
+                >{depositBusy ? 'Processing…' : 'Mark Received & Confirm'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Success Popup */}
-        {!!successPopup && (
+        {successPopup && (
           <div className="pm-toast">{successPopup}</div>
         )}
 

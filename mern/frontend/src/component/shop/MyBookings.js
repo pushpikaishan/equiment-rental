@@ -8,6 +8,7 @@ export default function MyBookings() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null); // booking object being edited
+  const [payments, setPayments] = useState([]); // user's payments
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const navigate = useNavigate();
 
@@ -36,7 +37,24 @@ export default function MyBookings() {
     }
   };
 
-  useEffect(() => { fetchBookings(); }, []);
+  const fetchPayments = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) { setPayments([]); return; }
+    try {
+      const res = await axios.get(`${baseUrl}/payments/my`, { headers: { Authorization: `Bearer ${token}` } });
+      const items = Array.isArray(res.data?.items) ? res.data.items : (Array.isArray(res.data) ? res.data : []);
+      setPayments(items);
+    } catch (_) {
+      setPayments([]);
+    }
+  };
+
+  useEffect(() => { fetchBookings(); fetchPayments(); }, []);
+
+  const hasPendingBankDeposit = (bookingId) => {
+    const id = String(bookingId);
+    return payments.some(p => String(p.bookingId) === id && String(p.method).toLowerCase() === 'bank_transfer' && String(p.status).toLowerCase() === 'pending');
+  };
 
   // Edit allowed only within 1 hour after creation (matches backend rule)
   const canEdit = (b) => {
@@ -162,7 +180,7 @@ export default function MyBookings() {
                     {!canDelete(b) && <span>Delete locked (after 24h from creation)</span>}
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {String(b.status).toLowerCase() === 'pending' && (
+                    {String(b.status).toLowerCase() === 'pending' && hasPendingBankDeposit(b._id) && (
                       <button disabled style={{ background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa', padding: '8px 12px', borderRadius: 6 }}>
                         Pending Verification
                       </button>
@@ -172,7 +190,7 @@ export default function MyBookings() {
                         Confirmed
                       </span>
                     )}
-                    {String(b.status).toLowerCase() === 'pending' && (
+                    {String(b.status).toLowerCase() === 'pending' && !hasPendingBankDeposit(b._id) && (
                       <button
                         onClick={() => navigate('/payment', { state: { booking: b, amount: b.securityDeposit, currency: 'LKR' } })}
                         style={{ background: '#059669', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}

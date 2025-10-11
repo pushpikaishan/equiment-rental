@@ -153,6 +153,22 @@ exports.markReceived = async (req, res) => {
         if (b && b.status !== 'cancelled') {
           b.status = 'confirmed';
           await b.save();
+          // Generate invoice if not already present and email to customer
+          try {
+            const { generateInvoicePDF } = require('./invoiceHelper');
+            const invoicePath = await generateInvoicePDF(b);
+            pay.invoicePath = invoicePath;
+            await pay.save();
+            const { sendMail } = require('../helpers/emailHelper');
+            const subject = 'Payment Successful - Invoice Attached';
+            const text = `Hello ${b.customerName},\n\nWe have received your payment for order ${b._id}. Your invoice is attached.\n\nThank you!`;
+            const html = `<p>Hello ${b.customerName},</p><p>We have received your payment for order <strong>${b._id}</strong>. Your invoice is attached.</p><p>Thank you!</p>`;
+            const path = require('path');
+            const absPath = path.join(process.cwd(), invoicePath.replace(/^\//, ''));
+            await sendMail({ to: b.customerEmail, subject, text, html, attachments: [{ filename: `invoice-${b._id}.pdf`, path: absPath }] });
+          } catch (emailErr) {
+            console.error('Invoice email after markReceived failed:', emailErr);
+          }
         }
       } catch (e) {
         console.error('Mark received: update booking failed', e);

@@ -296,8 +296,8 @@ exports.confirm = async (req, res) => {
     booking.status = 'confirmed';
     await booking.save();
 
-    // Generate invoice PDF (still created on server, but no notification is sent)
-    const invoicePath = await generateInvoicePDF(booking);
+  // Generate invoice PDF and email to customer
+  const invoicePath = await generateInvoicePDF(booking);
 
     // Create or update a Payment record for admin management
     let payment = await Payment.findOne({ bookingId: booking._id });
@@ -331,6 +331,20 @@ exports.confirm = async (req, res) => {
       payment.gateway = payment.gateway || 'dummy';
       await payment.save();
       await PaymentAudit.create({ paymentId: payment._id, action: 'updated', actorId: booking.userId, actorRole: booking.userRole, note: 'Payment updated on confirm', amount: payment.amount });
+    }
+
+    // Email invoice to customer
+    try {
+      const { sendMail } = require('../helpers/emailHelper');
+      const subject = 'Payment Successful - Invoice Attached';
+      const text = `Hello ${booking.customerName},\n\nWe have received your payment for order ${booking._id}. Your invoice is attached.\n\nThank you!`;
+      const html = `<p>Hello ${booking.customerName},</p><p>We have received your payment for order <strong>${booking._id}</strong>. Your invoice is attached.</p><p>Thank you!</p>`;
+      // Attach the generated invoice file from disk
+      const path = require('path');
+      const absPath = path.join(process.cwd(), invoicePath.replace(/^\//, ''));
+      await sendMail({ to: booking.customerEmail, subject, text, html, attachments: [{ filename: `invoice-${booking._id}.pdf`, path: absPath }] });
+    } catch (mailErr) {
+      console.error('Send invoice email failed:', mailErr);
     }
 
     return res.json({ booking, invoicePath, payment });
