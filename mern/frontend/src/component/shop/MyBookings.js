@@ -8,7 +8,6 @@ export default function MyBookings() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null); // booking object being edited
-  const [payments, setPayments] = useState([]); // user's payments (incl. pending)
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const navigate = useNavigate();
 
@@ -37,20 +36,7 @@ export default function MyBookings() {
     }
   };
 
-  const fetchPayments = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      const res = await axios.get(`${baseUrl}/payments/my`, { headers: { Authorization: `Bearer ${token}` } });
-      const items = Array.isArray(res.data?.items) ? res.data.items : [];
-      setPayments(items);
-    } catch (e) {
-      console.warn('Fetch payments failed:', e.response?.data || e.message);
-      setPayments([]);
-    }
-  };
-
-  useEffect(() => { fetchBookings(); fetchPayments(); }, []);
+  useEffect(() => { fetchBookings(); }, []);
 
   // Edit allowed only within 1 hour after creation (matches backend rule)
   const canEdit = (b) => {
@@ -67,11 +53,6 @@ export default function MyBookings() {
   };
   const isCancelled = (b) => String(b.status).toLowerCase() === 'cancelled';
   const isPending = (b) => String(b.status).toLowerCase() === 'pending';
-
-  const hasPendingBankDeposit = (bookingId) => {
-    const id = String(bookingId);
-    return payments.some(p => String(p.bookingId) === id && String(p.method).toLowerCase() === 'bank_transfer' && String(p.status).toLowerCase() === 'pending');
-  };
 
   const saveEdit = async () => {
     if (!editing) return;
@@ -191,7 +172,7 @@ export default function MyBookings() {
                         Confirmed
                       </span>
                     )}
-                    {String(b.status).toLowerCase() === 'pending' && !hasPendingBankDeposit(b._id) && (
+                    {String(b.status).toLowerCase() === 'pending' && (
                       <button
                         onClick={() => navigate('/payment', { state: { booking: b, amount: b.securityDeposit, currency: 'LKR' } })}
                         style={{ background: '#059669', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}
@@ -278,25 +259,25 @@ export default function MyBookings() {
                     )}
                     <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 8 }}>
                       <div>
-                        <label>Name</label>
-                        <input type="text" value={editing.customerName} onChange={(e) => setEditing({ ...editing, customerName: e.target.value })} style={{ width: '100%' }} />
+                        <label htmlFor={`editName-${b._id}`}>Name</label>
+                        <input id={`editName-${b._id}`} type="text" value={editing.customerName} onChange={(e) => setEditing({ ...editing, customerName: e.target.value })} style={{ width: '100%' }} />
                       </div>
                       <div>
-                        <label>Email</label>
-                        <input type="email" value={editing.customerEmail} onChange={(e) => setEditing({ ...editing, customerEmail: e.target.value })} style={{ width: '100%' }} />
+                        <label htmlFor={`editEmail-${b._id}`}>Email</label>
+                        <input id={`editEmail-${b._id}`} type="email" value={editing.customerEmail} onChange={(e) => setEditing({ ...editing, customerEmail: e.target.value })} style={{ width: '100%' }} />
                       </div>
                       <div>
-                        <label>Phone</label>
-                        <input type="text" value={editing.customerPhone} onChange={(e) => setEditing({ ...editing, customerPhone: e.target.value })} style={{ width: '100%' }} />
+                        <label htmlFor={`editPhone-${b._id}`}>Phone</label>
+                        <input id={`editPhone-${b._id}`} type="text" value={editing.customerPhone} onChange={(e) => setEditing({ ...editing, customerPhone: e.target.value })} style={{ width: '100%' }} />
                       </div>
                     </div>
                     <div style={{ marginBottom: 8 }}>
-                      <label>Delivery Address</label>
-                      <input type="text" value={editing.deliveryAddress} onChange={(e) => setEditing({ ...editing, deliveryAddress: e.target.value })} style={{ width: '100%' }} />
+                      <label htmlFor={`editAddress-${b._id}`}>Delivery Address</label>
+                      <input id={`editAddress-${b._id}`} type="text" value={editing.deliveryAddress} onChange={(e) => setEditing({ ...editing, deliveryAddress: e.target.value })} style={{ width: '100%' }} />
                     </div>
                     <div>
-                      <label>Notes</label>
-                      <textarea value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} style={{ width: '100%' }} rows={3} />
+                      <label htmlFor={`editNotes-${b._id}`}>Notes</label>
+                      <textarea id={`editNotes-${b._id}`} value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} style={{ width: '100%' }} rows={3} />
                     </div>
                     <div>
                       <p style={{ color: '#64748b' }}>To change items/quantities, re-create the booking from cart or use the quantity inputs above.</p>
