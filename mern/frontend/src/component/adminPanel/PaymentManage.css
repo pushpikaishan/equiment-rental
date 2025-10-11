@@ -84,6 +84,7 @@
 .pm-chip--failed { background: #fee2e2; color: #b91c1c; }
 .pm-chip--refunded { background: #d1fae5; color: #065f46; }
 .pm-chip--partial { background: #fef3c7; color: #92400e; }
+.pm-chip--ad { background: #e0e7ff; color: #1e40af; }
 
 /* Modal */
 .pm-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }

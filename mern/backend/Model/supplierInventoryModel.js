@@ -14,6 +14,17 @@ const SupplierInventorySchema = new mongoose.Schema(
     available: { type: Boolean, default: true },
     // Optional metadata
     specs: { type: mongoose.Schema.Types.Mixed },
+    // Ad/payment fields
+    adActive: { type: Boolean, default: false, index: true },
+    adPaidAt: { type: Date },
+    adExpiresAt: { type: Date, index: true },
+    adRenewals: { type: Number, default: 0 },
+    // Admin moderation
+    adminRemoved: { type: Boolean, default: false, index: true },
+    adminRemovedReason: { type: String, default: '' },
+    adminRemovedAt: { type: Date },
+    adminRemovedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    adminNote: { type: String, default: '' },
   },
   { timestamps: true }
 );

@@ -210,6 +210,7 @@ export default function PaymentManagement() {
                 <th>Booking Date</th>
                 <th>Booking Status</th>
                 <th>Method</th>
+                <th>Type</th>
                 <th>Payment Status</th>
                 <th className="text-right">Amount</th>
                 <th>Actions</th>
@@ -217,9 +218,9 @@ export default function PaymentManagement() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="10">Loading…</td></tr>
+                <tr><td colSpan="11">Loading…</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan="10">No payments found.</td></tr>
+                <tr><td colSpan="11">No payments found.</td></tr>
               ) : (
                 items.map((it) => (
                   <tr key={it._id}>
@@ -230,6 +231,18 @@ export default function PaymentManagement() {
                     <td>{it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-'}</td>
                     <td>{bookingChip(it.booking?.status)}</td>
                     <td>{it.method || it.gateway || '-'}</td>
+                    <td>
+                      {it?.meta?.type === 'supplier_ad' ? (
+                        <>
+                          <span className="pm-chip pm-chip--ad">Supplier Ad</span>
+                          {it.status === 'paid' && (
+                            <span style={{ marginLeft: 6 }} className="pm-chip pm-chip--paid">Success</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="pm-chip pm-chip--pending">Booking</span>
+                      )}
+                    </td>
                     <td>{statusChip(it.status)}</td>
                     <td style={{ textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
                     <td>

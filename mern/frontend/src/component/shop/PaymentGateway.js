@@ -9,7 +9,7 @@ export default function PaymentGateway() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state || {};
-  const { booking, amount, currency = 'LKR' } = state;
+  const { booking, amount, currency = 'LKR', mode, inventoryId } = state;
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
   // Dummy card form state
@@ -84,7 +84,10 @@ export default function PaymentGateway() {
   };
 
   const handleSuccess = async () => {
-    if (!isFormValid || !acceptedTerms || !booking || chargeAmount <= 0) {
+    const token = localStorage.getItem('token');
+    const isSupplierAd = mode === 'supplier_ad';
+    const payAmount = isSupplierAd ? Number(amount || 0) : chargeAmount;
+    if (!isFormValid || !acceptedTerms || (!booking && !isSupplierAd) || payAmount <= 0) {
       setTouchedName(true);
       setTouchedNumber(true);
       setTouchedMonth(true);
@@ -95,18 +98,29 @@ export default function PaymentGateway() {
     }
     setProcessing(true);
     try {
-      // Simulate a successful payment; then inform backend to mark booking as confirmed
-      const token = localStorage.getItem('token');
-      if (token) {
-        await axios.post(`${baseUrl}/bookings/${booking._id}/confirm`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      if (isSupplierAd) {
+        // Record supplier ad payment
+        await axios.post(`${baseUrl}/payments/supplier-ad`, { inventoryId, amount: payAmount, method: 'card' }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        alert('Payment successful! Your listing fee has been recorded.');
+        navigate('/supplier/dashboard');
+      } else {
+        // Simulate a successful payment; then inform backend to mark booking as confirmed
+        if (token) {
+          await axios.post(`${baseUrl}/bookings/${booking._id}/confirm`, {}, { headers: { Authorization: `Bearer ${token}` } });
+        }
+        alert('Payment successful! Invoice generated for your booking.');
+        clearCart();
+        navigate('/bookings');
       }
-      alert('Payment successful! Invoice generated for your booking.');
-      clearCart();
-      navigate('/bookings');
     } catch (e) {
       console.warn('Confirm payment failed, continuing:', e.response?.data || e.message);
-      alert('Payment processed, but failed to finalize on server. Your booking may still be pending.');
-      navigate('/bookings');
+      if (isSupplierAd) {
+        alert('Payment processed, but failed to record on server. Please contact support with your listing details.');
+        navigate('/supplier/dashboard');
+      } else {
+        alert('Payment processed, but failed to finalize on server. Your booking may still be pending.');
+        navigate('/bookings');
+      }
     } finally {
       setProcessing(false);
     }
@@ -118,10 +132,11 @@ export default function PaymentGateway() {
   };
 
   const chargeAmount = useMemo(() => {
+    if (mode === 'supplier_ad') return Number(amount || 0);
     const deposit = Number(amount ?? booking?.securityDeposit ?? 0);
     const perDay = Number(booking?.subtotal ?? 0);
     return deposit + perDay;
-  }, [amount, booking]);
+  }, [amount, booking, mode]);
 
   // Card brand detection helper
   function detectBrand(digits) {
@@ -146,7 +161,12 @@ export default function PaymentGateway() {
           {/* Left: Order Summary */}
           <div style={{ padding: 16, border: '1px solid #e2e8f0', borderRadius: 8, background: 'white', margin: 8 }}>
             <h3 style={{ marginTop: 0 }}>Order summary</h3>
-            {booking ? (
+            {mode === 'supplier_ad' ? (
+              <div>
+                <div style={{ marginBottom: 8 }}>Listing Fee for New Equipment</div>
+                <div style={{ marginTop: 12, fontWeight: 600 }}>Ad handling fee: {currency} {Number(chargeAmount).toFixed(2)}</div>
+              </div>
+            ) : booking ? (
               <div>
                 <div style={{ marginBottom: 8 }}>Booking ID: <code>{booking._id}</code></div>
                 <div style={{ marginBottom: 8 }}>Booking date: {new Date(booking.bookingDate).toLocaleDateString()}</div>
@@ -238,7 +258,7 @@ export default function PaymentGateway() {
                 </label>
 
                 <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={handleSuccess} disabled={!isFormValid || !acceptedTerms || processing || !booking || chargeAmount <= 0} style={{ background: '#22c55e', color: 'white', border: 'none', padding: '12px 18px', borderRadius: 6, fontWeight: 700, cursor: (!isFormValid || !acceptedTerms || processing || !booking || chargeAmount <= 0) ? 'not-allowed' : 'pointer', opacity: (!isFormValid || !acceptedTerms || processing || !booking || chargeAmount <= 0) ? 0.6 : 1, margin: '8px 4px 8px 4px' }}>
+                  <button onClick={handleSuccess} disabled={!isFormValid || !acceptedTerms || processing || (mode !== 'supplier_ad' && !booking) || chargeAmount <= 0} style={{ background: '#22c55e', color: 'white', border: 'none', padding: '12px 18px', borderRadius: 6, fontWeight: 700, cursor: (!isFormValid || !acceptedTerms || processing || (mode !== 'supplier_ad' && !booking) || chargeAmount <= 0) ? 'not-allowed' : 'pointer', opacity: (!isFormValid || !acceptedTerms || processing || (mode !== 'supplier_ad' && !booking) || chargeAmount <= 0) ? 0.6 : 1, margin: '8px 4px 8px 4px' }}>
                     {processing ? 'Processing…' : 'Pay Now »'}
                   </button>
                 </div>

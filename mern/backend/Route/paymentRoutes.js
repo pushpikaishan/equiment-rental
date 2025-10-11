@@ -6,6 +6,9 @@ const ctrl = require('../Controllers/paymentController');
 // User route: my payments (success/partial)
 router.get('/my', auth, ctrl.my);
 
+// Supplier ad payment (per listing)
+router.post('/supplier-ad', auth, ctrl.supplierAdPay);
+
 // Admin/staff routes
 router.get('/', auth, ctrl.list);
 router.get('/summary', auth, ctrl.summary);

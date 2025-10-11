@@ -2,6 +2,8 @@ const Payment = require('../Model/paymentModel');
 const PaymentAudit = require('../Model/paymentAuditModel');
 const Booking = require('../Model/bookingModel');
 const Delivery = require('../Model/deliveryModel');
+const Supplier = require('../Model/supplierModel');
+const SupplierInventory = require('../Model/supplierInventoryModel');
 const PDFDocument = require('pdfkit');
 
 // Admin guard helper
@@ -347,6 +349,58 @@ exports.exportPDF = async (req, res) => {
   } catch (e) {
     console.error('Payments exportPDF error:', e);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Supplier ad listing payment (flat fee per listing)
+// POST /payments/supplier-ad
+exports.supplierAdPay = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
+    if (req.user.role !== 'supplier') return res.status(403).json({ message: 'Supplier only' });
+    const { inventoryId, amount, method = 'card' } = req.body || {};
+    if (!inventoryId) return res.status(400).json({ message: 'inventoryId is required' });
+
+    const inv = await SupplierInventory.findById(inventoryId);
+    if (!inv) return res.status(404).json({ message: 'Inventory item not found' });
+    if (String(inv.supplierId) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' });
+
+    const supplier = await Supplier.findById(req.user.id).select('name email');
+    const amt = Number(amount || 1000);
+    if (!(amt > 0)) return res.status(400).json({ message: 'Invalid amount' });
+
+    const pay = await Payment.create({
+      orderId: `AD-${Date.now()}`,
+      userId: req.user.id,
+      customerName: supplier?.name || '',
+      customerEmail: supplier?.email || '',
+      method,
+      status: 'paid',
+      currency: 'LKR',
+      amount: amt,
+      subtotal: amt,
+      gateway: 'internal',
+      meta: { type: 'supplier_ad', inventoryId: inv._id, supplierId: req.user.id },
+    });
+
+    try { await PaymentAudit.create({ paymentId: pay._id, action: 'created', amount: amt, actorId: req.user.id, actorRole: 'supplier', note: 'Supplier ad listing fee', meta: { inventoryId: String(inv._id) } }); } catch {}
+
+    // Activate or renew ad: 30 days from now (approx 1 month)
+    const now = new Date();
+    const currentExpiry = inv.adExpiresAt ? new Date(inv.adExpiresAt) : null;
+    const base = currentExpiry && currentExpiry > now ? currentExpiry : now;
+    const newExpiry = new Date(base.getTime());
+    newExpiry.setMonth(newExpiry.getMonth() + 1); // add 1 month
+    inv.adActive = true;
+    inv.adPaidAt = now;
+    inv.adExpiresAt = newExpiry;
+    inv.adRenewals = (inv.adRenewals || 0) + 1;
+    await inv.save();
+
+    return res.status(201).json({ payment: pay, inventory: inv });
+  } catch (e) {
+    console.error('supplierAdPay error:', e);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 
