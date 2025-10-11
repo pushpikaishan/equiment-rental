@@ -771,25 +771,35 @@ function DashboardContent() {
             <div>All inventory levels are healthy.</div>
           ) : (
             <div style={{ maxHeight: 260, overflowY: 'auto', paddingRight: 6 }}>
-              {stats.lowStock.slice(0, 5).map((it) => {
-                const qty = Number(it.quantity || 0);
-                const critical = qty <= 2;
-                return (
-                  <div key={it._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, marginBottom: 10, background: critical ? '#fef2f2' : '#ffffff' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: critical ? '#ef4444' : '#f59e0b' }} />
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{it.name}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{it.category}</div>
+              {(() => {
+                const filtered = (stats.lowStock || []).filter((it) => {
+                  const n = String(it.name || '').toLowerCase();
+                  const c = String(it.category || '').toLowerCase();
+                  return !(n.includes('stage') || n.includes('tent') || c.includes('stage') || c.includes('tent'));
+                });
+                if (filtered.length === 0) {
+                  return <div>All inventory levels are healthy.</div>;
+                }
+                return filtered.slice(0, 5).map((it) => {
+                  const qty = Number(it.quantity || 0);
+                  const critical = qty <= 2;
+                  return (
+                    <div key={it._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, marginBottom: 10, background: critical ? '#fef2f2' : '#ffffff' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: critical ? '#ef4444' : '#f59e0b' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{it.name}</div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>{it.category}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>Stock</div>
+                        <div style={{ fontWeight: 700, color: critical ? '#b91c1c' : '#b45309' }}>{qty}</div>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 12, color: '#64748b' }}>Stock</div>
-                      <div style={{ fontWeight: 700, color: critical ? '#b91c1c' : '#b45309' }}>{qty}</div>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
               {/* View more button removed by request */}
             </div>
           )}
