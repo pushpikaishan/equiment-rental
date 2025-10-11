@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import UserNavbar from './UserNavbar';
 import SiteFooter from '../common/SiteFooter';
@@ -7,7 +8,9 @@ export default function MyBookings() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null); // booking object being edited
+  const [payments, setPayments] = useState([]); // user's payments (incl. pending)
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  const navigate = useNavigate();
 
   const fmt = (d) => {
     const dt = new Date(d);
@@ -34,7 +37,20 @@ export default function MyBookings() {
     }
   };
 
-  useEffect(() => { fetchBookings(); }, []);
+  const fetchPayments = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const res = await axios.get(`${baseUrl}/payments/my`, { headers: { Authorization: `Bearer ${token}` } });
+      const items = Array.isArray(res.data?.items) ? res.data.items : [];
+      setPayments(items);
+    } catch (e) {
+      console.warn('Fetch payments failed:', e.response?.data || e.message);
+      setPayments([]);
+    }
+  };
+
+  useEffect(() => { fetchBookings(); fetchPayments(); }, []);
 
   // Edit allowed only within 1 hour after creation (matches backend rule)
   const canEdit = (b) => {
@@ -50,6 +66,12 @@ export default function MyBookings() {
     return Date.now() <= cutoff;
   };
   const isCancelled = (b) => String(b.status).toLowerCase() === 'cancelled';
+  const isPending = (b) => String(b.status).toLowerCase() === 'pending';
+
+  const hasPendingBankDeposit = (bookingId) => {
+    const id = String(bookingId);
+    return payments.some(p => String(p.bookingId) === id && String(p.method).toLowerCase() === 'bank_transfer' && String(p.status).toLowerCase() === 'pending');
+  };
 
   const saveEdit = async () => {
     if (!editing) return;
@@ -158,7 +180,25 @@ export default function MyBookings() {
                     {!isCancelled(b) && !canEdit(b) && <span>Edit locked (only within 1 hour of creation)</span>}
                     {!canDelete(b) && <span>Delete locked (after 24h from creation)</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {String(b.status).toLowerCase() === 'pending' && (
+                      <button disabled style={{ background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa', padding: '8px 12px', borderRadius: 6 }}>
+                        Pending Verification
+                      </button>
+                    )}
+                    {String(b.status).toLowerCase() === 'confirmed' && (
+                      <span style={{ background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '6px 10px', borderRadius: 16, fontWeight: 600 }}>
+                        Confirmed
+                      </span>
+                    )}
+                    {String(b.status).toLowerCase() === 'pending' && !hasPendingBankDeposit(b._id) && (
+                      <button
+                        onClick={() => navigate('/payment', { state: { booking: b, amount: b.securityDeposit, currency: 'LKR' } })}
+                        style={{ background: '#059669', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}
+                      >
+                        Pay Now
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         if (isCancelled(b) || !canEdit(b)) return;

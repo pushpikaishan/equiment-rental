@@ -151,7 +151,8 @@ export default function CartPage() {
       });
       // Navigate to dummy payment gateway with booking data and deposit amount
       const booking = res.data?.booking || res.data;
-  const amount = booking?.securityDeposit ?? total * 0.3;
+      const amount = booking?.securityDeposit ?? total * 0.3;
+      // Go to payment options page (summary + bank deposit or gateway)
       navigate('/payment', { state: { booking, amount, currency: 'LKR' } });
     } catch (e) {
       const msg = e.response?.data?.message || e.message;

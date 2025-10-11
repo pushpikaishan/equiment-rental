@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const ctrl = require('../Controllers/paymentController');
+const upload = require('../helpers/uploadHelper');
 
 // User route: my payments (success/partial)
 router.get('/my', auth, ctrl.my);
@@ -21,5 +22,8 @@ router.get('/:id', auth, ctrl.getOne);
 router.put('/:id/mark-received', auth, ctrl.markReceived);
 router.post('/:id/refund', auth, ctrl.refund);
 router.delete('/:id', auth, ctrl.remove);
+
+// User-facing: upload bank deposit slip for a booking
+router.post('/bank-deposit', auth, upload.single('slip'), ctrl.bankDeposit);
 
 module.exports = router;

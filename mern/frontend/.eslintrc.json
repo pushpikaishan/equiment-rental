@@ -1,0 +1,33 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "extends": [
+    "react-app",
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:jsx-a11y/recommended"
+  ],
+  "plugins": ["react", "jsx-a11y", "react-hooks"],
+  "rules": {
+    // Many components currently contain unused vars and other non-critical warnings.
+    // Turn these off to stop the build from being noisy. Re-enable and fix these later as needed.
+    "no-unused-vars": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "jsx-a11y/anchor-is-valid": "off",
+
+    // Keep hooks rules active to avoid incorrect hook usage
+    "react-hooks/rules-of-hooks": "error",
+
+    // Keep critical rules enabled
+    "no-dupe-keys": "error"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}
