@@ -1,9 +1,17 @@
 const SupplierInventory = require('../Model/supplierInventoryModel');
+const ActivityLog = require('../Model/activityLogModel');
 
 function ensureSupplier(req, res) {
   const role = req.user?.role;
   const ok = role === 'supplier';
   if (!ok) res.status(403).json({ message: 'Supplier only' });
+  return ok;
+}
+
+function ensureAdmin(req, res) {
+  const role = req.user?.role;
+  const ok = role === 'admin' || role === 'staff';
+  if (!ok) res.status(403).json({ message: 'Admin/Staff only' });
   return ok;
 }
 
@@ -183,6 +191,169 @@ exports.renewInfo = async (req, res) => {
     });
   } catch (e) {
     console.error('SupplierInventory renewInfo error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ============== Admin endpoints ==============
+// GET /supplier-inventories/admin
+exports.adminList = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { q = '', category = '', district = '', adStatus = 'all' } = req.query || {};
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || '12', 10)));
+    const now = new Date();
+
+    const filter = {};
+    if (q) {
+      filter.$or = [
+        { name: new RegExp(q, 'i') },
+        { description: new RegExp(q, 'i') },
+        { category: new RegExp(q, 'i') },
+      ];
+    }
+    if (category) filter.category = category;
+    if (district) filter.district = district;
+
+    if (adStatus === 'active') {
+      filter.adActive = true;
+      filter.adExpiresAt = { $gt: now };
+    } else if (adStatus === 'inactive') {
+      filter.$or = [ { adActive: { $ne: true } }, { adExpiresAt: { $lte: now } } ];
+    } else if (adStatus === 'expired') {
+      filter.adActive = true;
+      filter.adExpiresAt = { $lte: now };
+    }
+
+    const total = await SupplierInventory.countDocuments(filter);
+    const items = await SupplierInventory.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate('supplierId', 'companyName name email phone district role')
+      .lean();
+
+    const decorated = items.map(it => {
+      const exp = it.adExpiresAt ? new Date(it.adExpiresAt) : null;
+      const remaining = exp ? Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+      const expired = exp ? exp.getTime() <= now.getTime() : true;
+      return Object.assign(it, { remainingDays: remaining, expired });
+    });
+    res.json({ items: decorated, total, page, limit });
+  } catch (e) {
+    console.error('SupplierInventory adminList error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// PUT /supplier-inventories/admin/:id
+exports.adminUpdate = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { id } = req.params;
+    const { updates = {}, reason = '' } = req.body || {};
+    if (!reason || String(reason).trim().length < 3) return res.status(400).json({ message: 'Reason is required (min 3 chars)' });
+
+    const item = await SupplierInventory.findById(id);
+    if (!item) return res.status(404).json({ message: 'Item not found' });
+
+    const allowed = ['name','description','category','district','location','rentalPrice','quantity','available','adActive'];
+    const changes = {};
+    for (const k of allowed) {
+      if (Object.prototype.hasOwnProperty.call(updates, k)) {
+        changes[k] = updates[k];
+      }
+    }
+    if (typeof changes.rentalPrice !== 'undefined') {
+      const price = Number(changes.rentalPrice);
+      if (!(price > 0)) return res.status(400).json({ message: 'Rental price must be greater than 0' });
+      item.rentalPrice = price;
+      delete changes.rentalPrice;
+    }
+    if (typeof changes.quantity !== 'undefined') {
+      const qty = Number(changes.quantity);
+      if (!(qty >= 1)) return res.status(400).json({ message: 'Quantity must be at least 1' });
+      item.quantity = qty;
+      delete changes.quantity;
+    }
+    if (typeof changes.available === 'boolean') {
+      item.available = changes.available;
+      delete changes.available;
+    }
+    if (typeof changes.name === 'string' && changes.name.trim()) { item.name = changes.name.trim(); delete changes.name; }
+    if (typeof changes.description === 'string') { item.description = changes.description; delete changes.description; }
+    if (typeof changes.category === 'string' && changes.category) { item.category = changes.category; delete changes.category; }
+    if (typeof changes.district === 'string') { item.district = changes.district; delete changes.district; }
+    if (typeof changes.location === 'string') { item.location = changes.location; delete changes.location; }
+
+    // Handle adActive override
+    if (Object.prototype.hasOwnProperty.call(updates, 'adActive')) {
+      const desired = !!updates.adActive;
+      const now = new Date();
+      if (desired) {
+        // If expired or missing, grant a 30-day window as an admin override
+        if (!item.adExpiresAt || new Date(item.adExpiresAt).getTime() <= now.getTime()) {
+          const monthFromNow = new Date(now.getTime());
+          monthFromNow.setMonth(monthFromNow.getMonth() + 1);
+          item.adExpiresAt = monthFromNow;
+          item.adPaidAt = now;
+          item.adRenewals = (Number(item.adRenewals || 0) + 1);
+        }
+        item.adActive = true;
+      } else {
+        item.adActive = false;
+      }
+    }
+
+    await item.save();
+
+    // Log admin action
+    try {
+      await ActivityLog.create({
+        userId: req.user.id,
+        role: req.user.role,
+        email: req.user.email || '',
+        action: 'admin.supplierInventory.update',
+        status: 'success',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'] || '',
+        meta: { inventoryId: item._id, supplierId: item.supplierId, reason, updates }
+      });
+    } catch (_) { /* ignore log errors */ }
+
+    res.json({ item });
+  } catch (e) {
+    console.error('SupplierInventory adminUpdate error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// DELETE /supplier-inventories/admin/:id
+exports.adminRemove = async (req, res) => {
+  try {
+    if (!ensureAdmin(req, res)) return;
+    const { id } = req.params;
+    const { reason = '' } = req.body || {};
+    if (!reason || String(reason).trim().length < 3) return res.status(400).json({ message: 'Reason is required (min 3 chars)' });
+    const item = await SupplierInventory.findById(id);
+    if (!item) return res.status(404).json({ message: 'Item not found' });
+    await item.deleteOne();
+    try {
+      await ActivityLog.create({
+        userId: req.user.id,
+        role: req.user.role,
+        email: req.user.email || '',
+        action: 'admin.supplierInventory.delete',
+        status: 'success',
+        ip: req.ip,
+        userAgent: req.headers['user-agent'] || '',
+        meta: { inventoryId: id, supplierId: item.supplierId, reason }
+      });
+    } catch (_) { /* ignore log errors */ }
+    res.json({ message: 'Deleted' });
+  } catch (e) {
+    console.error('SupplierInventory adminRemove error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };
