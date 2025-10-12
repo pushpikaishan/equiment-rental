@@ -6,6 +6,7 @@ import axios from 'axios';
 import UserManagement from "./usermanage";
 import InventoryManagement from "./inventoryManage";
 import PaymentManagement from "./PaymentManage";
+import SupplierAdsManage from "./SupplierAdsManage";
 import BookingManagement from "./bookingManage";
 import DeliveryManagement from "./deliveryManage";
 // Removed SupplierManage page per request
@@ -190,7 +191,8 @@ function AdminDashboard() {
     { id: 'bookings', icon: '📋', label: 'Booking Manage', color: '#8b5cf6' },
     { id: 'payments', icon: '💳', label: 'Payment Manage', color: '#06b6d4' },
     { id: 'delivery', icon: '🚚', label: 'Delivery Manage', color: '#ef4444' },
-    { id: 'other', icon: '🧩', label: 'Other Management', color: '#22c55e' }
+    { id: 'supplierAds', icon: '🪧', label: 'Supplier Ads Management', color: '#22c55e' },
+    { id: 'other', icon: '🧩', label: 'Other Management', color: '#0ea5e9' }
   ];
 
   return (
@@ -391,8 +393,9 @@ function AdminDashboard() {
         {activeSection === 'editProfile' && <Setting profile={profile} setProfile={setProfile} setActiveSection={setActiveSection} />}
         {activeSection === 'deleteProfile' && <UserManagement />}
         {activeSection === 'users' && <UserManagement />}
-        {activeSection === 'inventory' && <InventoryManagement />}
+  {activeSection === 'inventory' && <InventoryManagement />}
   {activeSection === 'bookings' && <BookingManagement />}
+  {activeSection === 'supplierAds' && <SupplierAdsManage />}
         {activeSection === 'payments' && <PaymentManagement />}
         {activeSection === 'delivery' && <DeliveryManagement />}
         {activeSection === 'other' && <OtherManagement setActiveSection={setActiveSection} />}

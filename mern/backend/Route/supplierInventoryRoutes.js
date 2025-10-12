@@ -12,6 +12,11 @@ router.delete('/:id', auth, ctrl.remove);
 // Ad renew info for supplier
 router.get('/:id/renew', auth, ctrl.renewInfo);
 
+// Admin endpoints (controller enforces admin/staff)
+router.get('/admin', auth, ctrl.adminList);
+router.put('/admin/:id', auth, ctrl.adminUpdate);
+router.delete('/admin/:id', auth, ctrl.adminRemove);
+
 // Public list
 router.get('/public', ctrl.publicList);
 
