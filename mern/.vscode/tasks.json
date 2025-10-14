@@ -30,6 +30,21 @@
 				"$eslint-stylish"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Restart backend server (dev)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"if (Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*node*' }) { Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue }; Set-Location -Path 'd:\\GITHUB\\equment-rental\\mern\\backend'; if (-Not (Test-Path 'node_modules')) { npm install }; if (Test-Path 'package.json') { npx nodemon app.js } else { node app.js }"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
 		}
 	]
 }

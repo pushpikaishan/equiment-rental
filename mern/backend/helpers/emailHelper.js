@@ -41,4 +41,15 @@ async function sendTwoFactorCode(to, code) {
   }
 }
 
-module.exports = { sendMail, sendTwoFactorCode };
+// Send password reset code email
+async function sendPasswordCode(to, code) {
+  const subject = 'Your password reset code';
+  const text = `Use this code to reset your password: ${code}. It expires in 10 minutes.`;
+  const html = `<p>Use this code to reset your password:</p><p style="font-size:20px;font-weight:bold">${code}</p><p>This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.</p>`;
+  await sendMail({ to, subject, text, html });
+  if (!process.env.SMTP_HOST) {
+    console.log(`[DEV] Password reset code for ${to}: ${code}`);
+  }
+}
+
+module.exports = { sendMail, sendTwoFactorCode, sendPasswordCode };
