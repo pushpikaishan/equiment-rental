@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import SupplierTopbar from './SupplierTopbar';
 
 // Simple top bar with Profile and Logout buttons, no global navbar
@@ -9,6 +10,7 @@ export default function SupplierDashboard() {
   const token = localStorage.getItem('token') || '';
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
   const [activeTab, setActiveTab] = useState('equipment'); // equipment | notices | requests
+  const navigate = useNavigate();
 
   const [me, setMe] = useState(null);
   const [items, setItems] = useState([]);
@@ -201,7 +203,14 @@ export default function SupplierDashboard() {
           { key: 'profile', label: 'Profile' },
         ]}
         activeKey={activeTab}
-        onNavChange={setActiveTab}
+        onNavChange={(key) => {
+          if (key === 'profile') {
+            // Redirect to the unified profile page
+            navigate('/userAccount/profile');
+            return;
+          }
+          setActiveTab(key);
+        }}
       />
 
       <div style={{ padding: 16, display: 'grid', gap: 16 }}>

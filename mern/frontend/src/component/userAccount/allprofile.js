@@ -355,7 +355,7 @@ function UserProfile() {
             `}
           </style>
         </div>
-        <SiteFooter />
+        {!(storedRole === 'supplier' || storedRole === 'staff') && <SiteFooter />}
       </>
     );
   }
@@ -608,7 +608,7 @@ function UserProfile() {
           </div>
         </div>
       </div>
-      <SiteFooter />
+      {!(profile.role === 'supplier' || profile.role === 'staff') && <SiteFooter />}
     </>
   );
 }

@@ -26,7 +26,7 @@ import DisAllAdmins from "./component/disalluser/alladmin";
 
 
 
-//lognavigate
+//User profile
 import Userprof from "./component/userAccount/allprofile";
 
 //user account

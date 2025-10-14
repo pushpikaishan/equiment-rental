@@ -163,13 +163,75 @@ function InventoryManagement() {
 
       const doc = new jsPDF({ unit: 'pt', format: 'a4' });
 
-      // Header
+      // Header with Eventrix branding and optional logo
       const now = new Date();
-      doc.setFontSize(18);
-      doc.text("Inventory Report", 40, 40);
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Generated: ${now.toLocaleString()}`, 40, 58);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const marginLeft = 40;
+      const marginTop = 24;
+      let headerBottomY = 64; // default header height
+
+      // Try to load a logo from common public paths; fall back gracefully if not found
+      const publicUrl = (typeof process !== 'undefined' && process.env && process.env.PUBLIC_URL) ? process.env.PUBLIC_URL : '';
+      const logoCandidates = [
+        // favicon.io common outputs
+        `${publicUrl}/favicon.ico`,
+        `${publicUrl}/favicon.png`,
+        `${publicUrl}/favicon-32x32.png`,
+        `${publicUrl}/favicon-16x16.png`,
+        `${publicUrl}/apple-touch-icon.png`,
+        // other app defaults / custom
+        `${publicUrl}/eventrix-logo.png`,
+        `${publicUrl}/logo192.png`,
+        `${publicUrl}/logo512.png`
+      ];
+
+      let logoDataUrl = null;
+      for (const url of logoCandidates) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          logoDataUrl = await toDataURL(url);
+          if (logoDataUrl) break;
+        } catch (e) {
+          // try next candidate
+        }
+      }
+
+      if (logoDataUrl) {
+        // Draw logo + brand
+        const logoSize = 40; // px in points since unit is 'pt'
+        doc.addImage(logoDataUrl, 'JPEG', marginLeft, marginTop, logoSize, logoSize);
+        doc.setTextColor(20);
+        doc.setFontSize(16);
+        doc.text('Eventrix', marginLeft + logoSize + 10, marginTop + 18);
+        doc.setFontSize(12);
+        doc.setTextColor(80);
+        doc.text('Inventory Report', marginLeft + logoSize + 10, marginTop + 36);
+        // Right-aligned timestamp
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated: ${now.toLocaleString()}`, pageWidth - marginLeft, marginTop + 14, { align: 'right' });
+        headerBottomY = marginTop + logoSize + 16; // push content below logo
+      } else {
+        // No image logo found: draw a simple vector logo (blue square with white 'E')
+        const logoSize = 40;
+        doc.setFillColor(37, 99, 235); // Tailwind blue-600
+        doc.rect(marginLeft, marginTop, logoSize, logoSize, 'F');
+        doc.setTextColor(255);
+        doc.setFontSize(22);
+        doc.text('E', marginLeft + 14, marginTop + 28);
+        // Brand text
+        doc.setTextColor(20);
+        doc.setFontSize(16);
+        doc.text('Eventrix', marginLeft + logoSize + 10, marginTop + 18);
+        doc.setFontSize(12);
+        doc.setTextColor(80);
+        doc.text('Inventory Report', marginLeft + logoSize + 10, marginTop + 36);
+        // Right-aligned timestamp
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated: ${now.toLocaleString()}`, pageWidth - marginLeft, marginTop + 14, { align: 'right' });
+        headerBottomY = marginTop + logoSize + 16;
+      }
 
       // Summary
       const totalItems = (items || []).length;
@@ -178,10 +240,11 @@ function InventoryManagement() {
       const outStock = Math.max(0, totalItems - inStock);
       doc.setFontSize(11);
       doc.setTextColor(20);
-      doc.text(`Total items: ${totalItems}`, 40, 80);
-      doc.text(`Total quantity: ${totalQty}`, 160, 80);
-      doc.text(`In stock: ${inStock}`, 300, 80);
-      doc.text(`Out of stock: ${outStock}`, 400, 80);
+      const summaryY = Math.max(headerBottomY, 80);
+      doc.text(`Total items: ${totalItems}`, 40, summaryY);
+      doc.text(`Total quantity: ${totalQty}`, 160, summaryY);
+      doc.text(`In stock: ${inStock}`, 300, summaryY);
+      doc.text(`Out of stock: ${outStock}`, 400, summaryY);
 
       // Table data
       const head = [["#", "Name", "Category", "Price/day (LKR)", "Qty", "Available"]];
@@ -197,7 +260,7 @@ function InventoryManagement() {
       autoTable(doc, {
         head,
         body,
-        startY: 100,
+        startY: Math.max(summaryY + 20, 100),
         styles: { fontSize: 9, cellPadding: 6 },
         headStyles: { fillColor: [37, 99, 235], textColor: 255 },
         alternateRowStyles: { fillColor: [245, 247, 250] },
