@@ -26,10 +26,18 @@ function InventoryManagement() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      };
+      // Derive availability solely from quantity > 0
+      if (name === 'quantity') {
+        const qtyNum = Number(value);
+        next.available = qtyNum > 0;
+      }
+      return next;
+    });
   };
 
   const handleImage = (e) => {
@@ -64,7 +72,8 @@ function InventoryManagement() {
     data.append('rentalPrice', form.rentalPrice);
     data.append('quantity', form.quantity);
     data.append('category', form.category);
-    data.append('available', String(form.available));
+  // Availability derived from quantity > 0
+  data.append('available', String(Number(form.quantity) > 0));
     if (image) data.append('image', image);
 
     setSubmitting(true);
@@ -121,7 +130,7 @@ function InventoryManagement() {
       cleanCSV(it.description),
       String(it.rentalPrice ?? ''),
       String(it.quantity ?? ''),
-      it.available ? 'Yes' : 'No',
+      (Number(it.quantity || 0) > 0) ? 'Yes' : 'No',
       it.image ? `${baseUrl}${it.image}` : ''
     ]);
 
@@ -146,40 +155,75 @@ function InventoryManagement() {
 
   const cleanCSV = (val) => (val == null ? '' : String(val).replace(/\r|\n/g, ' ').trim());
 
-  // Export PDF: include photo thumbnails and key fields
+  // Export PDF: nicely formatted table with summary using jsPDF + autoTable
   const exportToPDF = async (filename = "inventory-report.pdf") => {
     try {
-      // dynamic import prevents webpack from requiring 'jspdf' at build-time
       const { jsPDF } = await import("jspdf");
-      const doc = new jsPDF();
+      const autoTable = (await import("jspdf-autotable")).default;
 
-      // Try to serialize a table with id="inventory-table" if present, otherwise produce a simple report
-      const tableEl = document.getElementById("inventory-table");
-      if (tableEl) {
-        const rows = Array.from(tableEl.querySelectorAll("tr")).map((tr) =>
-          Array.from(tr.querySelectorAll("th,td"))
-            .map((td) => td.innerText.trim())
-            .join(" | ")
-        );
-        doc.setFontSize(10);
-        rows.forEach((r, i) => doc.text(r || " ", 10, 10 + i * 6));
-      } else {
-        // fallback content: basic header + timestamp
-        doc.setFontSize(14);
-        doc.text("Inventory Report", 10, 20);
-        doc.setFontSize(10);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 10, 30);
-        // optionally include a short summary if you have a JS variable with items
-        // doc.text(`Total items: ${items.length}`, 10, 40);
-      }
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+      // Header
+      const now = new Date();
+      doc.setFontSize(18);
+      doc.text("Inventory Report", 40, 40);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated: ${now.toLocaleString()}`, 40, 58);
+
+      // Summary
+      const totalItems = (items || []).length;
+      const totalQty = (items || []).reduce((sum, it) => sum + Number(it.quantity || 0), 0);
+      const inStock = (items || []).filter(it => Number(it.quantity || 0) > 0).length;
+      const outStock = Math.max(0, totalItems - inStock);
+      doc.setFontSize(11);
+      doc.setTextColor(20);
+      doc.text(`Total items: ${totalItems}`, 40, 80);
+      doc.text(`Total quantity: ${totalQty}`, 160, 80);
+      doc.text(`In stock: ${inStock}`, 300, 80);
+      doc.text(`Out of stock: ${outStock}`, 400, 80);
+
+      // Table data
+      const head = [["#", "Name", "Category", "Price/day (LKR)", "Qty", "Available"]];
+      const body = (items || []).map((it, idx) => [
+        String(idx + 1),
+        String(it.name ?? ''),
+        String(it.category ?? ''),
+        (it.rentalPrice != null && !Number.isNaN(Number(it.rentalPrice))) ? Number(it.rentalPrice).toFixed(2) : '',
+        String(it.quantity ?? ''),
+        Number(it.quantity || 0) > 0 ? 'Yes' : 'No'
+      ]);
+
+      autoTable(doc, {
+        head,
+        body,
+        startY: 100,
+        styles: { fontSize: 9, cellPadding: 6 },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        columnStyles: {
+          0: { cellWidth: 30, halign: 'right' },
+          1: { cellWidth: 180 },
+          2: { cellWidth: 120 },
+          3: { cellWidth: 100, halign: 'right' },
+          4: { cellWidth: 60, halign: 'right' },
+          5: { cellWidth: 70, halign: 'center' }
+        },
+        didParseCell: (data) => {
+          // Truncate overly long names/categories if needed
+          if (data.section === 'body' && (data.column.index === 1 || data.column.index === 2)) {
+            const val = String(data.cell.raw || '');
+            if (val.length > 40) {
+              data.cell.text = [val.slice(0, 37) + '…'];
+            }
+          }
+        }
+      });
 
       doc.save(filename);
     } catch (err) {
-      console.error("PDF export failed. Ensure 'jspdf' is installed:", err);
-      // User-friendly guidance
-      alert(
-        "PDF export failed. Install jspdf in the frontend: open a terminal in frontend folder and run:\n\nnpm install jspdf\n\nThen rebuild the app."
-      );
+      console.error("PDF export failed. Ensure 'jspdf' and 'jspdf-autotable' are installed:", err);
+      alert("PDF export failed. Please ensure 'jspdf' and 'jspdf-autotable' are installed, then retry.");
     }
   };
 
@@ -230,7 +274,8 @@ function InventoryManagement() {
     data.append('rentalPrice', editing.rentalPrice);
     data.append('quantity', editing.quantity);
     data.append('category', editing.category || 'General');
-    data.append('available', String(!!editing.available));
+  // Availability derived from quantity > 0
+  data.append('available', String(Number(editing.quantity) > 0));
     if (editImage) data.append('image', editImage);
 
     try {
@@ -300,36 +345,36 @@ function InventoryManagement() {
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>Name</label>
-            <input name="name" value={form.name} onChange={handleChange} placeholder="e.g., Stage Light" style={{ ...inputBox, width: '100%' }} />
+            <label htmlFor="addName" style={{ display: 'block', marginBottom: 6 }}>Name</label>
+            <input id="addName" name="name" value={form.name} onChange={handleChange} placeholder="e.g., Stage Light" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>Category</label>
-            <select name="category" value={form.category} onChange={handleChange} style={{ ...selectBox, width: '100%' }}>
+            <label htmlFor="addCategory" style={{ display: 'block', marginBottom: 6 }}>Category</label>
+            <select id="addCategory" name="category" value={form.category} onChange={handleChange} style={{ ...selectBox, width: '100%' }}>
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </div>
           <div style={{ gridColumn: 'span 2' }}>
-            <label style={{ display: 'block', marginBottom: 6 }}>Description</label>
-            <textarea name="description" value={form.description} onChange={handleChange} rows={3} placeholder="Short description" style={{ ...inputBox, width: '100%' }} />
+            <label htmlFor="addDescription" style={{ display: 'block', marginBottom: 6 }}>Description</label>
+            <textarea id="addDescription" name="description" value={form.description} onChange={handleChange} rows={3} placeholder="Short description" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>Rental Price (per day)</label>
-            <input type="number" step="0.01" min="0.01" name="rentalPrice" value={form.rentalPrice} onChange={handleChange} placeholder="e.g., 1500" style={{ ...inputBox, width: '100%' }} />
+            <label htmlFor="addRentalPrice" style={{ display: 'block', marginBottom: 6 }}>Rental Price (per day)</label>
+            <input id="addRentalPrice" type="number" step="0.01" min="0.01" name="rentalPrice" value={form.rentalPrice} onChange={handleChange} placeholder="e.g., 1500" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>Quantity</label>
-            <input type="number" min="1" name="quantity" value={form.quantity} onChange={handleChange} placeholder="e.g., 10" style={{ ...inputBox, width: '100%' }} />
+            <label htmlFor="addQuantity" style={{ display: 'block', marginBottom: 6 }}>Quantity</label>
+            <input id="addQuantity" type="number" min="1" name="quantity" value={form.quantity} onChange={handleChange} placeholder="e.g., 10" style={{ ...inputBox, width: '100%' }} />
           </div>
           <div>
-            <label style={{ display: 'block', marginBottom: 6 }}>Image</label>
-            <input type="file" accept="image/*" onChange={handleImage} />
+            <label htmlFor="addImage" style={{ display: 'block', marginBottom: 6 }}>Image</label>
+            <input id="addImage" type="file" accept="image/*" onChange={handleImage} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="checkbox" id="available" name="available" checked={form.available} onChange={handleChange} />
-            <label htmlFor="available">Available</label>
+            <input type="checkbox" id="available" name="available" checked={!!form.available} disabled readOnly />
+            <label htmlFor="available">Available (auto)</label>
           </div>
         </div>
 
@@ -390,7 +435,7 @@ function InventoryManagement() {
                     <td style={{ padding: 8 }}>
                       <span style={{ fontWeight: 600, color: Number(it.quantity||0) <= LOW_STOCK_QTY ? '#b91c1c' : '#0f172a' }}>{it.quantity}</span>
                     </td>
-                    <td style={{ padding: 8 }}>{it.available ? 'Yes' : 'No'}</td>
+                    <td style={{ padding: 8 }}>{(Number(it.quantity || 0) > 0) ? 'Yes' : 'No'}</td>
                     <td style={{ padding: 8, display: 'flex', gap: 8 }}>
                       <button onClick={() => startEdit(it)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: 'white' }}>Edit</button>
                       <button onClick={() => deleteItem(it._id)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626' }}>Delete</button>
@@ -477,36 +522,36 @@ function InventoryManagement() {
             <h3 style={{ marginTop: 0 }}>Edit Equipment</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label>Name</label>
-                <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                <label htmlFor="editName">Name</label>
+                <input id="editName" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
               </div>
               <div>
-                <label>Category</label>
-                <select value={categories.includes(editing.category) ? editing.category : 'Lighting'} onChange={(e) => setEditing({ ...editing, category: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }}>
+                <label htmlFor="editCategory">Category</label>
+                <select id="editCategory" value={categories.includes(editing.category) ? editing.category : 'Lighting'} onChange={(e) => setEditing({ ...editing, category: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }}>
                   {categories.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
               <div style={{ gridColumn: 'span 2' }}>
-                <label>Description</label>
-                <textarea value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={3} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                <label htmlFor="editDescription">Description</label>
+                <textarea id="editDescription" value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} rows={3} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
               </div>
               <div>
-                <label>Price</label>
-                <input type="number" step="0.01" min="0.01" value={editing.rentalPrice} onChange={(e) => setEditing({ ...editing, rentalPrice: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                <label htmlFor="editPrice">Price</label>
+                <input id="editPrice" type="number" step="0.01" min="0.01" value={editing.rentalPrice} onChange={(e) => setEditing({ ...editing, rentalPrice: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
               </div>
               <div>
-                <label>Quantity</label>
-                <input type="number" min="1" value={editing.quantity} onChange={(e) => setEditing({ ...editing, quantity: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                <label htmlFor="editQuantity">Quantity</label>
+                <input id="editQuantity" type="number" min="1" value={editing.quantity} onChange={(e) => setEditing({ ...editing, quantity: e.target.value, available: Number(e.target.value) > 0 })} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
               </div>
               <div style={{ gridColumn: 'span 2', display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input type="checkbox" id="editAvailable" checked={!!editing.available} onChange={(e) => setEditing({ ...editing, available: e.target.checked })} />
-                <label htmlFor="editAvailable">Available</label>
+                <input type="checkbox" id="editAvailable" checked={!!editing.available} disabled readOnly />
+                <label htmlFor="editAvailable">Available (auto)</label>
               </div>
               <div style={{ gridColumn: 'span 2' }}>
-                <label>Replace Image</label>
-                <input type="file" accept="image/*" onChange={(e) => setEditImage(e.target.files?.[0] || null)} />
+                <label htmlFor="editImage">Replace Image</label>
+                <input id="editImage" type="file" accept="image/*" onChange={(e) => setEditImage(e.target.files?.[0] || null)} />
               </div>
             </div>
             <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -569,8 +614,8 @@ function InventoryManagement() {
                   </table>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 4 }}>Select wholesaler</label>
-                  <select value={restockWholesaler} onChange={(e) => setRestockWholesaler(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', minWidth: 280 }}>
+                  <label htmlFor="restockWholesalerSelect" style={{ display: 'block', fontSize: 12, color: '#64748b', marginBottom: 4 }}>Select wholesaler</label>
+                  <select id="restockWholesalerSelect" value={restockWholesaler} onChange={(e) => setRestockWholesaler(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', minWidth: 280 }}>
                     <option value="">Choose wholesaler…</option>
                     {WHOLESALERS.map(w => (
                       <option key={w.id} value={w.id}>{w.name}</option>

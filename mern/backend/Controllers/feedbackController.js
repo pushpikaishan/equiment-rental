@@ -4,10 +4,14 @@ const Supplier = require("../Model/supplierModel");
 const Admin = require("../Model/adminModel");
 const Staff = require("../Model/staffModel");
 
-// Public: list latest feedbacks
+// Public: list latest feedbacks (supports ?limit=n, max 100)
 exports.list = async (req, res) => {
   try {
-    const items = await Feedback.find().sort({ createdAt: -1 }).limit(100);
+    const limitParam = parseInt(req.query.limit, 10);
+    const limit = Number.isNaN(limitParam)
+      ? 100
+      : Math.max(1, Math.min(limitParam, 100));
+    const items = await Feedback.find().sort({ createdAt: -1 }).limit(limit);
     res.json({ items });
   } catch (err) {
     console.error("List feedback error:", err);

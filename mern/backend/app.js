@@ -20,6 +20,7 @@ const refundRoutes = require("./Route/refundRoutes");
 const supplierInventoryRoutes = require("./Route/supplierInventoryRoutes");
 const activityRoutes = require("./Route/activityRoutes");
 const supplierRequestRoutes = require("./Route/supplierRequestRoutes");
+const bannerRoutes = require("./Route/bannerRoutes");
 
 
 const app = express();
@@ -45,6 +46,7 @@ app.use("/refunds", refundRoutes);
 app.use("/supplier-inventories", supplierInventoryRoutes);
 app.use("/supplier-requests", supplierRequestRoutes);
 app.use("/activity", activityRoutes);
+app.use("/banners", bannerRoutes);
 // notifications route removed per revert request
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

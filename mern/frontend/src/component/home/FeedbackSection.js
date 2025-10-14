@@ -16,8 +16,10 @@ export default function FeedbackSection() {
 
   const fetchAll = async () => {
     try {
-      const res = await axios.get(`${baseUrl}/feedback`);
-      setItems(res.data.items || []);
+      // Request only the latest 3 feedbacks from backend; also guard on client side
+      const res = await axios.get(`${baseUrl}/feedback`, { params: { limit: 3 } });
+      const list = res.data.items || [];
+      setItems(list.slice(0, 3));
     } catch (e) {
       console.error(e);
     }
@@ -196,6 +198,14 @@ export default function FeedbackSection() {
                         e.target.style.background = 'rgba(255,255,255,0.9)';
                         e.target.style.borderColor = 'rgba(59,130,246,0.3)';
                       }}
+                      onFocus={(e) => {
+                        e.target.style.background = 'rgba(59,130,246,0.1)';
+                        e.target.style.borderColor = '#3b82f6';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.background = 'rgba(255,255,255,0.9)';
+                        e.target.style.borderColor = 'rgba(59,130,246,0.3)';
+                      }}
                     >
                       Edit
                     </button>
@@ -218,6 +228,14 @@ export default function FeedbackSection() {
                         e.target.style.boxShadow = '0 4px 16px rgba(239,68,68,0.4)';
                       }}
                       onMouseOut={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 2px 8px rgba(239,68,68,0.3)';
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.transform = 'translateY(-1px)';
+                        e.target.style.boxShadow = '0 4px 16px rgba(239,68,68,0.4)';
+                      }}
+                      onBlur={(e) => {
                         e.target.style.transform = 'translateY(0)';
                         e.target.style.boxShadow = '0 2px 8px rgba(239,68,68,0.3)';
                       }}
@@ -281,7 +299,7 @@ export default function FeedbackSection() {
               }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <label style={{ 
+              <label htmlFor="ratingSelect" style={{ 
                 fontSize: 14,
                 fontWeight: 600,
                 color: '#374151'
@@ -289,6 +307,7 @@ export default function FeedbackSection() {
                 Rating:
               </label>
               <select 
+                id="ratingSelect"
                 value={rating} 
                 onChange={(e) => setRating(Number(e.target.value))}
                 style={{
@@ -352,6 +371,18 @@ export default function FeedbackSection() {
                     e.target.style.boxShadow = '0 4px 16px rgba(59,130,246,0.3)';
                   }
                 }}
+                onFocus={(e) => {
+                  if (!loading) {
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 6px 24px rgba(59,130,246,0.4)';
+                  }
+                }}
+                onBlur={(e) => {
+                  if (!loading) {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 4px 16px rgba(59,130,246,0.3)';
+                  }
+                }}
               >
                 {loading ? 'Submitting...' : (editing ? 'Update' : 'Submit')}
               </button>
@@ -375,6 +406,14 @@ export default function FeedbackSection() {
                     e.target.style.borderColor = '#94a3b8';
                   }}
                   onMouseOut={(e) => {
+                    e.target.style.background = 'rgba(255,255,255,0.9)';
+                    e.target.style.borderColor = 'rgba(148,163,184,0.3)';
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.background = 'rgba(248,250,252,0.9)';
+                    e.target.style.borderColor = '#94a3b8';
+                  }}
+                  onBlur={(e) => {
                     e.target.style.background = 'rgba(255,255,255,0.9)';
                     e.target.style.borderColor = 'rgba(148,163,184,0.3)';
                   }}

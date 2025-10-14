@@ -243,6 +243,16 @@ export default function SuppliersInventoryList() {
                 e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset';
                 e.currentTarget.style.borderColor = 'rgba(226,232,240,0.6)';
               }}
+              onFocus={(e) => {
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.12), 0 4px 16px rgba(59,130,246,0.1)';
+                e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset';
+                e.currentTarget.style.borderColor = 'rgba(226,232,240,0.6)';
+              }}
             >
               {it.image ? (
                 <img
@@ -384,41 +394,41 @@ export default function SuppliersInventoryList() {
             <div style={{ display: 'grid', gap: 8 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
-                  <label style={{ fontSize: 12, color: '#64748b' }}>Booking date</label>
-                  <input type="date" value={reqDate} min={new Date().toISOString().slice(0,10)} onChange={e => setReqDate(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <label htmlFor="reqBookingDate" style={{ fontSize: 12, color: '#64748b' }}>Booking date</label>
+                  <input id="reqBookingDate" type="date" value={reqDate} min={new Date().toISOString().slice(0,10)} onChange={e => setReqDate(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
-                  <input type="date" value={reqReturn} min={reqDate || undefined} onChange={e => setReqReturn(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <label htmlFor="reqReturnDate" style={{ fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
+                  <input id="reqReturnDate" type="date" value={reqReturn} min={reqDate || undefined} onChange={e => setReqReturn(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: '#64748b' }}>Quantity</label>
-                <input type="number" min={1} max={Number(reqItem.quantity)||undefined} value={reqQty} onChange={e => setReqQty(Math.max(1, Number(e.target.value)))} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                <label htmlFor="reqQty" style={{ fontSize: 12, color: '#64748b' }}>Quantity</label>
+                <input id="reqQty" type="number" min={1} max={Number(reqItem.quantity)||undefined} value={reqQty} onChange={e => setReqQty(Math.max(1, Number(e.target.value)))} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
-                  <label style={{ fontSize: 12, color: '#64748b' }}>Your name</label>
-                  <input value={reqName} onChange={e => setReqName(e.target.value)} placeholder="Full name" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <label htmlFor="reqName" style={{ fontSize: 12, color: '#64748b' }}>Your name</label>
+                  <input id="reqName" value={reqName} onChange={e => setReqName(e.target.value)} placeholder="Full name" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, color: '#64748b' }}>Email</label>
-                  <input type="email" value={reqEmail} onChange={e => setReqEmail(e.target.value)} placeholder="you@example.com" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <label htmlFor="reqEmail" style={{ fontSize: 12, color: '#64748b' }}>Email</label>
+                  <input id="reqEmail" type="email" value={reqEmail} onChange={e => setReqEmail(e.target.value)} placeholder="you@example.com" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
-                  <label style={{ fontSize: 12, color: '#64748b' }}>Phone</label>
-                  <input value={reqPhone} onChange={e => setReqPhone(e.target.value)} placeholder="07X-XXXXXXX" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <label htmlFor="reqPhone" style={{ fontSize: 12, color: '#64748b' }}>Phone</label>
+                  <input id="reqPhone" value={reqPhone} onChange={e => setReqPhone(e.target.value)} placeholder="07X-XXXXXXX" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 12, color: '#64748b' }}>Delivery address</label>
-                  <input value={reqAddress} onChange={e => setReqAddress(e.target.value)} placeholder="Street, city" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <label htmlFor="reqAddress" style={{ fontSize: 12, color: '#64748b' }}>Delivery address</label>
+                  <input id="reqAddress" value={reqAddress} onChange={e => setReqAddress(e.target.value)} placeholder="Street, city" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 12, color: '#64748b' }}>Notes (optional)</label>
-                <textarea rows={3} value={reqNotes} onChange={e => setReqNotes(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                <label htmlFor="reqNotes" style={{ fontSize: 12, color: '#64748b' }}>Notes (optional)</label>
+                <textarea id="reqNotes" rows={3} value={reqNotes} onChange={e => setReqNotes(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                 <div style={{ fontWeight: 600 }}>Price/day: LKR {Number(reqItem.rentalPrice||0).toFixed(2)}</div>

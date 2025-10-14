@@ -61,7 +61,14 @@ async function restoreInventory(items) {
   for (const it of items || []) {
     const qty = Number(it.qty || 0);
     if (!it.equipmentId || qty <= 0) continue;
-    try { await Equipment.findByIdAndUpdate(it.equipmentId, { $inc: { quantity: qty } }, { new: false }); } catch {}
+    try {
+      // Restore quantity and mark available since stock is now > 0
+      await Equipment.findByIdAndUpdate(
+        it.equipmentId,
+        { $inc: { quantity: qty }, $set: { available: true } },
+        { new: false }
+      );
+    } catch {}
   }
 }
 
@@ -230,6 +237,8 @@ exports.remove = async (req, res) => {
       return res.status(400).json({ message: 'You can cancel a booking only within 24 hours after creation' });
     }
 
+    // Restore inventory since this effectively cancels the booking
+    try { await restoreInventory(booking.items || []); } catch (e) { console.error('Restore inventory on delete failed:', e); }
     await booking.deleteOne();
     return res.json({ message: 'Booking deleted' });
   } catch (e) {

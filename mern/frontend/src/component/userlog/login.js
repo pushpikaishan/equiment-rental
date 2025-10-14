@@ -253,8 +253,14 @@ function Login() {
                 onMouseOut={(e) => {
                   e.currentTarget.style.color = "#6b7280";
                 }}
+                onFocus={(e) => {
+                  e.currentTarget.style.color = "#374151";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.color = "#6b7280";
+                }}
               >
-                {showPassword ? "🙈" : "👁️"}
+                {showPassword ? "🙈" : "🙉"}
               </button>
             </div>
           </div>
@@ -273,6 +279,18 @@ function Login() {
               }
             }}
             onMouseOut={(e) => {
+              if (!loading) {
+                e.target.style.transform = "translateY(0)";
+                e.target.style.boxShadow = "none";
+              }
+            }}
+            onFocus={(e) => {
+              if (!loading) {
+                e.target.style.transform = "translateY(-3px)";
+                e.target.style.boxShadow = "0 15px 35px rgba(102, 126, 234, 0.4)";
+              }
+            }}
+            onBlur={(e) => {
               if (!loading) {
                 e.target.style.transform = "translateY(0)";
                 e.target.style.boxShadow = "none";
@@ -323,6 +341,14 @@ function Login() {
                 e.target.style.color = "#667eea";
                 e.target.style.textDecoration = "none";
               }}
+              onFocus={(e) => {
+                e.target.style.color = "#764ba2";
+                e.target.style.textDecoration = "underline";
+              }}
+              onBlur={(e) => {
+                e.target.style.color = "#667eea";
+                e.target.style.textDecoration = "none";
+              }}
             >
               Forgot Password?
             </a>
@@ -334,6 +360,14 @@ function Login() {
                 e.target.style.textDecoration = "underline";
               }}
               onMouseOut={(e) => {
+                e.target.style.color = "#667eea";
+                e.target.style.textDecoration = "none";
+              }}
+              onFocus={(e) => {
+                e.target.style.color = "#764ba2";
+                e.target.style.textDecoration = "underline";
+              }}
+              onBlur={(e) => {
                 e.target.style.color = "#667eea";
                 e.target.style.textDecoration = "none";
               }}

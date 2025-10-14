@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -13,6 +14,28 @@ import DeliveryManagement from "./deliveryManage";
 
 import  Setting from "../userAccount/userMenu";
 import  Profile from "./adminProfile/addminProfile";
+
+// Reusable active slice component for Pie activeShape with PropTypes
+const ActiveSlice = ({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, sectorPath, filterId }) => {
+  const radiusBoost = 6;
+  return (
+    <g filter={`url(#${filterId})`}>
+      <path d={sectorPath(cx, cy, innerRadius, outerRadius + radiusBoost, startAngle, endAngle)} fill={fill} />
+    </g>
+  );
+};
+
+ActiveSlice.propTypes = {
+  cx: PropTypes.number,
+  cy: PropTypes.number,
+  innerRadius: PropTypes.number,
+  outerRadius: PropTypes.number,
+  startAngle: PropTypes.number,
+  endAngle: PropTypes.number,
+  fill: PropTypes.string,
+  sectorPath: PropTypes.func,
+  filterId: PropTypes.string,
+};
 
 // Main Dashboard Component
 function AdminDashboard() {
@@ -206,6 +229,8 @@ function AdminDashboard() {
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
             onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
+            onFocus={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
+            onBlur={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'; }}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             title={sidebarCollapsed ? 'Expand' : 'Collapse'}
           >
@@ -234,6 +259,24 @@ function AdminDashboard() {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }
             }}
+            onFocus={(e) => {
+              if (activeSection !== 'profile') {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+              }
+            }}
+            onBlur={(e) => {
+              if (activeSection !== 'profile') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleProfileClick();
+              }
+            }}
           >
             <img
               src={
@@ -249,6 +292,14 @@ function AdminDashboard() {
                 }
               }}
               onMouseOut={(e) => {
+                e.target.style.transform = 'scale(1)';
+              }}
+              onFocus={(e) => {
+                if (!sidebarCollapsed) {
+                  e.target.style.transform = 'scale(1.05)';
+                }
+              }}
+              onBlur={(e) => {
                 e.target.style.transform = 'scale(1)';
               }}
             />
@@ -285,6 +336,16 @@ function AdminDashboard() {
                     e.target.style.transform = 'translateY(-2px)';
                   }}
                   onMouseOut={(e) => {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+                    e.target.style.transform = 'translateY(-2px)';
+                  }}
+                  onBlur={(e) => {
                     e.target.style.background = 'rgba(255, 255, 255, 0.1)';
                     e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                     e.target.style.transform = 'translateY(0)';
@@ -346,6 +407,24 @@ function AdminDashboard() {
                   e.target.style.backgroundColor = 'transparent';
                 }
               }}
+              onFocus={(e) => {
+                if (activeSection !== item.id) {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                }
+              }}
+              onBlur={(e) => {
+                if (activeSection !== item.id) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveSection(item.id);
+                }
+              }}
             >
               <span style={{ fontSize: '18px', marginRight: sidebarCollapsed ? '0' : '12px' }}>
                 {item.icon}
@@ -370,6 +449,20 @@ function AdminDashboard() {
             }}
             onMouseOut={(e) => {
               e.target.style.backgroundColor = 'transparent';
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleSignOut();
+              }
             }}
           >
             <span style={{ fontSize: '18px', marginRight: sidebarCollapsed ? '0' : '12px' }}>
@@ -399,6 +492,7 @@ function AdminDashboard() {
         {activeSection === 'payments' && <PaymentManagement />}
         {activeSection === 'delivery' && <DeliveryManagement />}
         {activeSection === 'other' && <OtherManagement setActiveSection={setActiveSection} />}
+        {activeSection === 'banner' && <BannerManagement />}
         {activeSection === 'feedback' && <FeedbackManagement />}
         {activeSection === 'faq' && <FaqManagement />}
         {activeSection === 'terms' && <TermsManagement />}
@@ -497,7 +591,7 @@ function DashboardContent() {
           Admin Dashboard
         </h1>
         <p style={{ color: '#64748b', margin: '0' }}>
-          Welcome back! Here's what's happening with your platform.
+          Welcome back! Here&apos;s what&apos;s happening with your platform.
         </p>
       </div>
 
@@ -582,15 +676,9 @@ function DashboardContent() {
                     onMouseEnter={(_, idx) => setActivePayIdx(idx)}
                     onMouseLeave={() => setActivePayIdx(null)}
                     activeIndex={activePayIdx ?? -1}
-                    activeShape={(props) => {
-                      const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-                      const radiusBoost = 6;
-                      return (
-                        <g filter="url(#pieShadowDel)">
-                          <path d={props.sectorPath(cx, cy, innerRadius, outerRadius + radiusBoost, startAngle, endAngle)} fill={fill} />
-                        </g>
-                      );
-                    }}
+                    activeShape={(props) => (
+                      <ActiveSlice {...props} filterId="pieShadowDel" />
+                    )}
                   >
                     {Object.entries(deliverySummary.byStatus).map(([name], idx) => {
                       const colorMap = {
@@ -651,15 +739,9 @@ function DashboardContent() {
                     onMouseEnter={(_, idx) => setActiveBookIdx(idx)}
                     onMouseLeave={() => setActiveBookIdx(null)}
                     activeIndex={activeBookIdx ?? -1}
-                    activeShape={(props) => {
-                      const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-                      const radiusBoost = 6;
-                      return (
-                        <g filter="url(#pieShadow2)">
-                          <path d={props.sectorPath(cx, cy, innerRadius, outerRadius + radiusBoost, startAngle, endAngle)} fill={fill} />
-                        </g>
-                      );
-                    }}
+                    activeShape={(props) => (
+                      <ActiveSlice {...props} filterId="pieShadow2" />
+                    )}
                   >
                     {["#e2e8f0","#10b981","#ef4444","#f59e0b"].map((c, idx) => (
                       <Cell key={`bcell-${idx}`} fill={c} />
@@ -698,6 +780,14 @@ function DashboardContent() {
                 return (
                   <div key={d.date}
                     onClick={() => setSelectedDate(d.date)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedDate(d.date);
+                      }
+                    }}
                     style={{ cursor: 'pointer', background: isSel ? '#f0f9ff' : '#ffffff', border: `2px solid ${isSel ? '#06b6d4' : '#f1f5f9'}`, borderRadius: 12, padding: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                       <div>
@@ -816,6 +906,152 @@ function DashboardContent() {
 
 export default AdminDashboard;
 
+// Banner Management section
+function BannerManagement() {
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [file, setFile] = useState(null);
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+
+  const token = localStorage.getItem('token');
+
+  const fullUrl = (src) => {
+    if (!src) return '';
+    return src.startsWith('http://') || src.startsWith('https://') ? src : `${baseUrl}${src.startsWith('/') ? '' : '/'}${src}`;
+  };
+
+  const load = async () => {
+    setLoading(true);
+    try {
+  const res = await axios.get(`${baseUrl}/banners`);
+  const items = Array.isArray(res?.data) ? res.data : res?.data?.items;
+  setBanners(Array.isArray(items) ? items : []);
+    } catch (e) {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!file && !bannerUrl) return;
+    try {
+      setMessage(''); setError('');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const form = new FormData();
+      if (file) form.append('banner', file);
+      if (title) form.append('title', title);
+      if (!file && bannerUrl) form.append('bannerUrl', bannerUrl);
+      await axios.post(`${baseUrl}/banners`, form, { headers });
+      setTitle('');
+      setFile(null);
+      setBannerUrl('');
+      await load();
+      setMessage('Banner added successfully');
+    } catch (_) {
+      setError('Failed to add banner. Ensure you are logged in as admin and the image/URL is valid.');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!id) return;
+    const ok = window.confirm('Delete this banner?');
+    if (!ok) return;
+    try {
+      setMessage(''); setError('');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await axios.delete(`${baseUrl}/banners/${id}`, { headers });
+      await load();
+      setMessage('Banner deleted');
+    } catch (_) {
+      setError('Failed to delete banner. You might not have permission.');
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ background: 'white', padding: 20, borderRadius: 16, border: '2px solid #f1f5f9', marginBottom: 20 }}>
+        <h2 style={{ margin: 0 }}>Banner Management</h2>
+        <p style={{ margin: 0, color: '#64748b' }}>Upload new homepage banners or manage existing ones.</p>
+      </div>
+
+      {/* Add banner */}
+      <div style={{ background: 'white', padding: 20, borderRadius: 16, border: '2px solid #f1f5f9', marginBottom: 20 }}>
+        {(message || error) && (
+          <div style={{
+            marginBottom: 12,
+            padding: '8px 12px',
+            borderRadius: 10,
+            border: `1px solid ${error ? '#fecaca' : '#bbf7d0'}`,
+            background: error ? '#fee2e2' : '#dcfce7',
+            color: error ? '#991b1b' : '#166534',
+            fontSize: 13,
+            fontWeight: 600
+          }}>
+            {error || message}
+          </div>
+        )}
+        <form onSubmit={handleAdd}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <label htmlFor="bannerTitle" style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>Title (optional)</label>
+              <input id="bannerTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Summer Sale" style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e2e8f0' }} />
+            </div>
+            <div>
+              <label htmlFor="bannerUrl" style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>Banner URL (optional)</label>
+              <input id="bannerUrl" type="url" value={bannerUrl} onChange={(e) => setBannerUrl(e.target.value)} placeholder="https://example.com/banner.jpg" style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e2e8f0' }} />
+            </div>
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <label htmlFor="bannerFile" style={{ display: 'block', fontSize: 13, color: '#64748b', marginBottom: 6 }}>Or upload a banner image</label>
+            <input id="bannerFile" type="file" accept="image/*" onChange={(e) => setFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)} />
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <button type="submit" style={{ padding: '10px 16px', background: '#111827', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer' }}>
+              Add Banner
+            </button>
+          </div>
+          <p style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>Provide either a URL or upload a file. If both are provided, the file upload will be used.</p>
+        </form>
+      </div>
+
+      {/* List banners */}
+      <div style={{ background: 'white', padding: 20, borderRadius: 16, border: '2px solid #f1f5f9' }}>
+        <h3 style={{ marginTop: 0 }}>Existing Banners</h3>
+        {loading ? (
+          <div>Loading…</div>
+        ) : banners.length === 0 ? (
+          <div>No banners yet.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+            {banners.map((b) => (
+              <div key={b._id} style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ height: 140, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img alt={b.title || 'Banner'} src={fullUrl(b.image || b.imageUrl)} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                </div>
+                <div style={{ padding: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{b.title || 'Untitled'}</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{new Date(b.createdAt).toLocaleString()}</div>
+                  </div>
+                  <button onClick={() => handleDelete(b._id)} style={{ padding: '6px 10px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Other Management placeholder section
 function OtherManagement({ setActiveSection }) {
   const grid = {
@@ -842,9 +1078,9 @@ function OtherManagement({ setActiveSection }) {
     cursor: 'pointer'
   };
   const items = [
-    { id: 'feedback', icon: '💬', title: 'Feedback', text: 'Read and respond to customer feedback.' },
+    { id: 'banner', icon: '🪧', title: 'Banner Manage', text: 'Upload and manage homepage banners.' },
     { id: 'faq', icon: '❓', title: 'FAQ', text: 'Manage frequently asked questions for users.' },
-    { id: 'terms', icon: '�', title: 'Terms & Conditions', text: 'Update your platform terms and policies.' },
+    { id: 'terms', icon: '⛽️', title: 'Terms & Conditions', text: 'Update your platform terms and policies.' },
     { id: 'privacy', icon: '🛡️', title: 'Privacy Policy', text: 'Configure and publish privacy policy details.' },
     { id: 'support', icon: '🛟', title: 'Support', text: 'Handle support topics and contact options.' },
   ];
@@ -923,3 +1159,12 @@ function SupportManagement() {
     </SectionShell>
   );
 }
+
+OtherManagement.propTypes = {
+  setActiveSection: PropTypes.func.isRequired,
+};
+
+SectionShell.propTypes = {
+  title: PropTypes.string.isRequired,
+  children: PropTypes.node,
+};
