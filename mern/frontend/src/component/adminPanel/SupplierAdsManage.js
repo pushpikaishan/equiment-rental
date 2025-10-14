@@ -39,6 +39,20 @@ export default function SupplierAdsManage() {
     }
   };
 
+  const applyFilters = () => {
+    setPage(1);
+    fetchList();
+  };
+
+  const resetFilters = () => {
+    setQ('');
+    setCategory('');
+    setDistrict('');
+    setAdStatus('all');
+    setPage(1);
+    fetchList();
+  };
+
   useEffect(() => {
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,16 +105,25 @@ export default function SupplierAdsManage() {
     <div>
       <h2 style={{ marginTop: 0 }}>Supplier Ads Management</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, margin: '12px 0' }}>
-        <input placeholder="Search..." value={q} onChange={e => setQ(e.target.value)} />
-        <input placeholder="Category" value={category} onChange={e => setCategory(e.target.value)} />
-        <input placeholder="District" value={district} onChange={e => setDistrict(e.target.value)} />
-        <select value={adStatus} onChange={e => setAdStatus(e.target.value)}>
+        <input placeholder="Search..." value={q} onChange={e => setQ(e.target.value)}
+               style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} />
+        <input placeholder="Category" value={category} onChange={e => setCategory(e.target.value)}
+               style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} />
+        <input placeholder="District" value={district} onChange={e => setDistrict(e.target.value)}
+               style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} />
+        <select value={adStatus} onChange={e => setAdStatus(e.target.value)}
+                style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }}>
           <option value="all">All</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
           <option value="expired">Expired</option>
         </select>
-        <button onClick={() => { setPage(1); fetchList(); }}>Filter</button>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <button onClick={applyFilters} style={{ background: '#06b6d4', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8, fontWeight: 700 }}>Apply Filters</button>
+        <button onClick={resetFilters} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 8, fontWeight: 700 }}>Reset</button>
+        <div style={{ flex: 1 }} />
+        <div style={{ fontSize: 12, color: '#64748b' }}>Results: {total}</div>
       </div>
       {error && <div style={{ color: '#dc2626', marginBottom: 8 }}>{error}</div>}
       {loading ? (
@@ -114,7 +137,12 @@ export default function SupplierAdsManage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 12, padding: 12 }}>
                   <div>
                     {it.image ? (
-                      <img src={it.image} alt={it.name} style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 6 }} />
+                      <img
+                        src={/^https?:\/\//i.test(it.image) ? it.image : `${baseUrl}${it.image.startsWith('/') ? it.image : `/${it.image}`}`}
+                        alt={it.name}
+                        style={{ width: '100%', height: 120, objectFit: 'cover', borderRadius: 6 }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
                     ) : (
                       <div style={{ width: '100%', height: 120, background: '#f1f5f9', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>No Image</div>
                     )}

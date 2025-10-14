@@ -57,6 +57,39 @@ exports.create = async (req, res) => {
   }
 };
 
+// GET /supplier-inventories/updates/mine
+// List admin updates (e.g., activate/deactivate with reasons) for the supplier
+exports.updatesList = async (req, res) => {
+  try {
+    if (!ensureSupplier(req, res)) return;
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || '10', 10)));
+    const supplierIdStr = String(req.user.id);
+    let supplierIdObj = null;
+    try { const m = require('mongoose'); if (m.Types.ObjectId.isValid(supplierIdStr)) supplierIdObj = new m.Types.ObjectId(supplierIdStr); } catch (_) {}
+    const q = {
+      action: 'admin.supplierInventory.update',
+      $or: [
+        { 'meta.supplierId': supplierIdStr },
+        ...(supplierIdObj ? [{ 'meta.supplierId': supplierIdObj }] : [])
+      ]
+    };
+    const total = await ActivityLog.countDocuments(q);
+    const items = await ActivityLog.find(q).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+    const notices = items.map(it => ({
+      id: String(it._id),
+      at: it.createdAt,
+      inventoryId: it.meta?.inventoryId || '',
+      name: it.meta?.name || '',
+      reason: it.meta?.reason || '',
+      updates: it.meta?.updates || {}
+    }));
+    res.json({ items: notices, total, page, limit });
+  } catch (e) {
+    console.error('SupplierInventory updatesList error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 // GET /supplier-inventories/mine
 exports.getMine = async (req, res) => {
   try {
@@ -348,12 +381,47 @@ exports.adminRemove = async (req, res) => {
         status: 'success',
         ip: req.ip,
         userAgent: req.headers['user-agent'] || '',
-        meta: { inventoryId: id, supplierId: item.supplierId, reason }
+        meta: { inventoryId: id, supplierId: item.supplierId, reason, name: item.name || '' }
       });
     } catch (_) { /* ignore log errors */ }
     res.json({ message: 'Deleted' });
   } catch (e) {
     console.error('SupplierInventory adminRemove error:', e);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// GET /supplier-inventories/deletions/mine
+// List recent admin deletions targeting the current supplier with reasons
+exports.deletionsList = async (req, res) => {
+  try {
+    if (!ensureSupplier(req, res)) return;
+    const page = Math.max(1, parseInt(req.query.page || '1', 10));
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || '10', 10)));
+    // Match supplierId stored either as ObjectId or string in activity meta
+    const supplierIdStr = String(req.user.id);
+    let supplierIdObj = null;
+    try { const m = require('mongoose'); if (m.Types.ObjectId.isValid(supplierIdStr)) supplierIdObj = new m.Types.ObjectId(supplierIdStr); } catch (_) {}
+    const q = {
+      action: 'admin.supplierInventory.delete',
+      $or: [
+        { 'meta.supplierId': supplierIdStr },
+        ...(supplierIdObj ? [{ 'meta.supplierId': supplierIdObj }] : [])
+      ]
+    };
+    const total = await ActivityLog.countDocuments(q);
+    const items = await ActivityLog.find(q).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+    // Map to a compact payload for frontend
+    const notices = items.map(it => ({
+      id: String(it._id),
+      at: it.createdAt,
+      inventoryId: it.meta?.inventoryId || '',
+      name: it.meta?.name || '',
+      reason: it.meta?.reason || ''
+    }));
+    res.json({ items: notices, total, page, limit });
+  } catch (e) {
+    console.error('SupplierInventory deletionsList error:', e);
     res.status(500).json({ message: 'Server error' });
   }
 };

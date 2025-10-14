@@ -11,6 +11,10 @@ router.put('/:id', auth, upload.single('image'), ctrl.update);
 router.delete('/:id', auth, ctrl.remove);
 // Ad renew info for supplier
 router.get('/:id/renew', auth, ctrl.renewInfo);
+// Supplier deletion notices
+router.get('/deletions/mine', auth, ctrl.deletionsList);
+// Supplier update notices (activate/deactivate etc.)
+router.get('/updates/mine', auth, ctrl.updatesList);
 
 // Admin endpoints (controller enforces admin/staff)
 router.get('/admin', auth, ctrl.adminList);

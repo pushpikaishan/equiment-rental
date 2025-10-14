@@ -20,13 +20,16 @@ export default function PaymentManagement() {
   const [successPopup, setSuccessPopup] = useState('');
   const [depositModal, setDepositModal] = useState(null); // holds selected bank deposit payment
   const [depositBusy, setDepositBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState('paid'); // 'paid' | 'refunds'
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
-  const fetchData = async () => {
+  const fetchData = async (overrides) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ ...q, page, limit: 10 });
+      const nextQ = overrides?.q ?? q;
+      const nextPage = overrides?.page ?? page;
+      const params = new URLSearchParams({ ...nextQ, page: nextPage, limit: 10 });
       const res = await axios.get(`${baseUrl}/payments?${params.toString()}`, { headers });
       setItems(res.data.items || []);
       setTotal(res.data.total || 0);
@@ -49,6 +52,15 @@ export default function PaymentManagement() {
 
   useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [page]);
   useEffect(() => { fetchSummary(); /* eslint-disable-next-line */ }, []);
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    // For 'paid' tab, narrow to paid via server filter; for 'refunds', keep server filters and filter client-side
+    const nextQ = { ...q, status: tab === 'paid' ? 'paid' : '' };
+    setQ(nextQ);
+    setPage(1);
+    fetchData({ q: nextQ, page: 1 });
+  };
 
   const markReceived = async (id, method) => {
     await axios.put(`${baseUrl}/payments/${id}/mark-received`, method ? { method } : {}, { headers });
@@ -144,6 +156,8 @@ export default function PaymentManagement() {
     return <span className="pm-chip pm-chip--pending">Pending</span>;
   };
 
+  const isSupplierAd = (it) => String(it?.meta?.type || '') === 'supplier_ad';
+
   // Compute recollect-derived refund values if backend hasn't materialized them
   const computeRecollect = (it) => {
     const r = it?.recollect || {};
@@ -206,6 +220,29 @@ export default function PaymentManagement() {
       </div>
 
       <div className="pm-card">
+        {/* Paid / Refunds navigation just above the payment chart/table */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <button
+            onClick={() => switchTab('paid')}
+            className="pm-btn"
+            style={{
+              background: activeTab === 'paid' ? '#0ea5e9' : 'white',
+              color: activeTab === 'paid' ? 'white' : '#0f172a',
+              border: '1px solid #cbd5e1',
+              fontWeight: 700
+            }}
+          >Paid</button>
+          <button
+            onClick={() => switchTab('refunds')}
+            className="pm-btn"
+            style={{
+              background: activeTab === 'refunds' ? '#0ea5e9' : 'white',
+              color: activeTab === 'refunds' ? 'white' : '#0f172a',
+              border: '1px solid #cbd5e1',
+              fontWeight: 700
+            }}
+          >Refunds</button>
+        </div>
         <div style={{ overflowX: 'auto' }}>
           <table className="pm-table">
             <thead>
@@ -225,19 +262,40 @@ export default function PaymentManagement() {
             <tbody>
               {loading ? (
                 <tr><td colSpan="10">Loading…</td></tr>
-              ) : items.length === 0 ? (
-                <tr><td colSpan="10">No payments found.</td></tr>
-              ) : (
-                items.map((it) => (
+              ) : (() => {
+                const visibleItems = (items || []).filter(it => (
+                  activeTab === 'paid'
+                    ? String(it.status) === 'paid'
+                    : (String(it.status) === 'refunded' || String(it.status) === 'partial_refunded')
+                ));
+                if (visibleItems.length === 0) {
+                  return (<tr><td colSpan="10">No payments found for this view.</td></tr>);
+                }
+                return visibleItems.map((it) => (
                   <tr key={it._id}>
                     <td>{new Date(it.createdAt).toLocaleString()}</td>
-                    <td><code>{it.orderId || it.bookingId || it._id}</code></td>
+                    <td>
+                      <div><code>{it.orderId || it.bookingId || it._id}</code></div>
+                      {isSupplierAd(it) && (
+                        <div style={{ fontSize: 12, color: '#64748b' }}>Supplier Ad Fee</div>
+                      )}
+                    </td>
                     <td>{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
-                    <td>{it.booking?.deliveryAddress || '-'}</td>
-                    <td>{it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-'}</td>
-                    <td>{bookingChip(it.booking?.status)}</td>
-                    <td>{it.method || it.gateway || '-'}</td>
-                    <td>{statusChip(it.status)}</td>
+                    <td>{isSupplierAd(it) ? '-' : (it.booking?.deliveryAddress || '-')}</td>
+                    <td>{isSupplierAd(it) ? '-' : (it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-')}</td>
+                    <td>{isSupplierAd(it) ? <span className="pm-chip pm-chip--pending">Supplier Ad</span> : bookingChip(it.booking?.status)}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span>{it.method || it.gateway || '-'}</span>
+                        {isSupplierAd(it) && (<span className="pm-pill">Supplier Ad Fee</span>)}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <div>{statusChip(it.status)}</div>
+                        {isSupplierAd(it) && (<div style={{ fontSize: 12, color: '#64748b' }}>Supplier Ad Fee</div>)}
+                      </div>
+                    </td>
                     <td style={{ textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -250,16 +308,16 @@ export default function PaymentManagement() {
                             return (
                               <>
                                 {/* Pending bank transfer: view deposit details (with slip) then mark received */}
-                                {(it.method === 'bank_transfer' && it.status === 'pending') ? (
+                                {(!isSupplierAd(it) && it.method === 'bank_transfer' && it.status === 'pending') ? (
                                   <button onClick={() => openDepositModal(it)} className="pm-btn pm-btn--success">View Deposit</button>
                                 ) : (
                                   // Fallback mark received for other pending types
-                                  (it.status !== 'paid' && (
+                                  (!isSupplierAd(it) && it.status !== 'paid' && (
                                     <button onClick={() => markReceived(it._id)} className="pm-btn pm-btn--success">Mark Received</button>
                                   ))
                                 )}
                                 {/* Show full refund button for cancelled bookings (paid/partial_refunded) */}
-                                {(it.booking?.status === 'cancelled' && (it.status === 'paid' || it.status === 'partial_refunded')) && (
+                                {(!isSupplierAd(it) && it.booking?.status === 'cancelled' && (it.status === 'paid' || it.status === 'partial_refunded')) && (
                                   <button onClick={() => openCancelFullRefund(it)} className="pm-btn pm-btn--refund">Refund</button>
                                 )}
                                 <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
@@ -270,8 +328,8 @@ export default function PaymentManagement() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
+                ));
+              })()}
             </tbody>
           </table>
         </div>
