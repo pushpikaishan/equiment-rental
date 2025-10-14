@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import axios from 'axios';
 import SupplierTopbar from '../supplierPanel/SupplierTopbar';
 
@@ -145,11 +146,13 @@ export default function DriverDashboard() {
             { headers }
           );
         }
-      } catch (_) {}
+      } catch (err) {
+        try { console.debug('Location send failed', err?.message || err); } catch (_) { /* noop */ }
+      }
     };
     const watchId = navigator.geolocation.watchPosition(
       send,
-      () => {},
+      (err) => { try { console.debug('Geolocation watch error', err?.message || err); } catch (e) { /* noop */ } },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
     );
     trackers.set(bookingId, { watchId });
@@ -221,83 +224,89 @@ export default function DriverDashboard() {
     <div style={{ background: 'white', padding: 16, borderRadius: 12, boxShadow: '0 4px 10px rgba(0,0,0,0.05)', ...style }}>{children}</div>
   );
 
+  Card.propTypes = {
+    children: PropTypes.node,
+    style: PropTypes.object,
+  };
+
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ width: '100%', margin: 0 }}>
       <SupplierTopbar title="Driver Dashboard" />
-      <div style={{ padding: '16px 12px' }}>
-      {/* Profile card removed as per request */}
-
-      <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ marginTop: 0 }}>Assigned Deliveries</h3>
-          {role !== 'staff' && <span style={{ color: '#dc2626', fontSize: 12 }}>Not a staff account</span>}
-        </div>
-        {loading ? (
-          <div>Loading…</div>
-        ) : deliveries.length === 0 ? (
-          <div>No deliveries assigned.</div>
-        ) : (
-          <div style={{ display: 'grid', gap: 12 }}>
-            {deliveries.map(d => (
-              <div key={d._id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>Order: <code>{d.bookingId}</code></div>
-                    <div style={{ color: '#64748b' }}>Customer: {d.customerName || '-'}</div>
-                    <div style={{ color: '#64748b' }}>Address: {d.deliveryAddress || '-'}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div>Status: <span style={{ textTransform: 'capitalize' }}>{d.status}</span></div>
-                    <div>Booking Date: {d.bookingDate ? new Date(d.bookingDate).toLocaleDateString() : '-'}</div>
-                    <div>Total: LKR {Number(d.total || 0).toFixed(2)}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => { updateStatus(d.bookingId, 'in-progress'); startTracking(d.bookingId); }} disabled={d.status !== 'assigned'} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Start</button>
-                  <button onClick={() => { updateStatus(d.bookingId, 'delivered'); stopTracking(d.bookingId); }} disabled={!(d.status === 'assigned' || d.status === 'in-progress')} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Completed</button>
-                  <button onClick={() => updateStatus(d.bookingId, 'failed')} disabled={d.status === 'delivered'} style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Reject</button>
-                </div>
-              </div>
-            ))}
+      <div style={{ padding: '16px 24px' }}>
+      {/* Two-column layout: left = Assigned Deliveries, right = Recollect Tasks */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <Card>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ marginTop: 0 }}>Assigned Deliveries</h3>
+            {role !== 'staff' && <span style={{ color: '#dc2626', fontSize: 12 }}>Not a staff account</span>}
           </div>
-        )}
-      </Card>
+          {loading ? (
+            <div>Loading…</div>
+          ) : deliveries.length === 0 ? (
+            <div>No deliveries assigned.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {deliveries.map(d => (
+                <div key={d._id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>Order: <code>{d.bookingId}</code></div>
+                      <div style={{ color: '#64748b' }}>Customer: {d.customerName || '-'}</div>
+                      <div style={{ color: '#64748b' }}>Address: {d.deliveryAddress || '-'}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div>Status: <span style={{ textTransform: 'capitalize' }}>{d.status}</span></div>
+                      <div>Booking Date: {d.bookingDate ? new Date(d.bookingDate).toLocaleDateString() : '-'}</div>
+                      <div>Total: LKR {Number(d.total || 0).toFixed(2)}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                    <button onClick={() => { updateStatus(d.bookingId, 'in-progress'); startTracking(d.bookingId); }} disabled={d.status !== 'assigned'} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Start</button>
+                    <button onClick={() => { updateStatus(d.bookingId, 'delivered'); stopTracking(d.bookingId); }} disabled={!(d.status === 'assigned' || d.status === 'in-progress')} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Completed</button>
+                    <button onClick={() => updateStatus(d.bookingId, 'failed')} disabled={d.status === 'delivered'} style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Reject</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
 
-      <Card style={{ marginTop: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ marginTop: 0 }}>Recollect Tasks</h3>
-        </div>
-        {loading ? (
-          <div>Loading…</div>
-        ) : recollects.length === 0 ? (
-          <div>No recollect tasks assigned.</div>
-        ) : (
-          <div style={{ display: 'grid', gap: 12 }}>
-            {recollects.map(r => (
-              <div key={r._id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>Order: <code>{r.bookingId}</code></div>
-                    <div style={{ color: '#64748b' }}>Customer: {r.customerName || '-'}</div>
-                    <div style={{ color: '#64748b' }}>Address: {r.deliveryAddress || '-'}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div>Status: <span style={{ textTransform: 'capitalize' }}>{r.status}</span></div>
-                    <div>Booking Date: {r.bookingDate ? new Date(r.bookingDate).toLocaleDateString() : '-'}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                  <button onClick={() => updateRecollectStatus(r.bookingId, 'accepted')} disabled={!(r.status === 'assigned')} style={{ background: '#22c55e', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Accept</button>
-                  <button onClick={() => updateRecollectStatus(r.bookingId, 'rejected')} disabled={!(r.status === 'assigned')} style={{ background: '#f97316', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Reject</button>
-                  {/* Removed Start button as requested */}
-                  <button onClick={() => openReport(r)} disabled={['report_submitted','returned','completed'].includes(String(r.status || ''))} style={{ background: '#7c3aed', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Report</button>
-                  <button onClick={() => updateRecollectStatus(r.bookingId, 'completed')} disabled={!(r.status === 'accepted' || r.status === 'in-progress')} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Completed</button>
-                </div>
-              </div>
-            ))}
+        <Card>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ marginTop: 0 }}>Recollect Tasks</h3>
           </div>
-        )}
-      </Card>
+          {loading ? (
+            <div>Loading…</div>
+          ) : recollects.length === 0 ? (
+            <div>No recollect tasks assigned.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>
+              {recollects.map(r => (
+                <div key={r._id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>Order: <code>{r.bookingId}</code></div>
+                      <div style={{ color: '#64748b' }}>Customer: {r.customerName || '-'}</div>
+                      <div style={{ color: '#64748b' }}>Address: {r.deliveryAddress || '-'}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div>Status: <span style={{ textTransform: 'capitalize' }}>{r.status}</span></div>
+                      <div>Booking Date: {r.bookingDate ? new Date(r.bookingDate).toLocaleDateString() : '-'}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                    <button onClick={() => updateRecollectStatus(r.bookingId, 'accepted')} disabled={!(r.status === 'assigned')} style={{ background: '#22c55e', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Accept</button>
+                    <button onClick={() => updateRecollectStatus(r.bookingId, 'rejected')} disabled={!(r.status === 'assigned')} style={{ background: '#f97316', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Reject</button>
+                    {/* Removed Start button as requested */}
+                    <button onClick={() => openReport(r)} disabled={['report_submitted','returned','completed'].includes(String(r.status || ''))} style={{ background: '#7c3aed', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Report</button>
+                    <button onClick={() => updateRecollectStatus(r.bookingId, 'completed')} disabled={!(r.status === 'accepted' || r.status === 'in-progress')} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Completed</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
       {reportFor && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
@@ -318,11 +327,11 @@ export default function DriverDashboard() {
                 <div>Security Deposit: LKR {Number(reportBooking.securityDeposit || 0).toFixed(2)}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 8, marginTop: 8 }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 4 }}>Actual Return Date</label>
-                    <input type="date" value={reportReturnDate} onChange={(e) => setReportReturnDate(e.target.value)} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+                    <label htmlFor="actual-return-date" style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 4 }}>Actual Return Date</label>
+                    <input id="actual-return-date" type="date" value={reportReturnDate} onChange={(e) => setReportReturnDate(e.target.value)} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 4 }}>Days Late</label>
+                    <span style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 4 }}>Days Late</span>
                     <div style={{ padding: 8, border: '1px solid #e2e8f0', borderRadius: 6, background: '#f8fafc' }}>
                       {(() => {
                         const planned = reportBooking.returnDate ? new Date(reportBooking.returnDate) : null;
@@ -412,8 +421,8 @@ export default function DriverDashboard() {
               </div>
             </div>
             <div style={{ marginTop: 10 }}>
-              <label style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 4 }}>Comment</label>
-              <textarea value={reportComment} onChange={(e) => setReportComment(e.target.value)} rows={3} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
+              <label htmlFor="report-comment" style={{ display: 'block', fontSize: 12, color: '#334155', marginBottom: 4 }}>Comment</label>
+              <textarea id="report-comment" value={reportComment} onChange={(e) => setReportComment(e.target.value)} rows={3} style={{ width: '100%', padding: 8, border: '1px solid #e2e8f0', borderRadius: 6 }} />
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
               <button onClick={closeReport} style={{ background: '#64748b', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 8 }}>Cancel</button>

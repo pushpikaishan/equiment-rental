@@ -16,11 +16,17 @@ export default function PaymentManagement() {
   const [summary, setSummary] = useState(null);
   const [refundModal, setRefundModal] = useState(null); // holds selected payment
   const [refundAmount, setRefundAmount] = useState('');
-  const [refundType, setRefundType] = useState('custom'); // 'custom' | 'deposit'
+  const [refundType, setRefundType] = useState('custom'); // 'custom' | 'deposit' | 'cancel'
   const [successPopup, setSuccessPopup] = useState('');
   const [depositModal, setDepositModal] = useState(null); // holds selected bank deposit payment
   const [depositBusy, setDepositBusy] = useState(false);
-  const [activeTab, setActiveTab] = useState('paid'); // 'paid' | 'refunds'
+  const [activeTab, setActiveTab] = useState('paid'); // 'paid' | 'refunds' | 'supplier'
+  // Track last time admin viewed Supplier tab to show only new supplier payments count
+  const [supplierLastSeenAt, setSupplierLastSeenAt] = useState(() => {
+    const raw = localStorage.getItem('supplierPaymentsLastSeenAt');
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  });
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -55,11 +61,16 @@ export default function PaymentManagement() {
 
   const switchTab = (tab) => {
     setActiveTab(tab);
-    // For 'paid' tab, narrow to paid via server filter; for 'refunds', keep server filters and filter client-side
-    const nextQ = { ...q, status: tab === 'paid' ? 'paid' : '' };
+    const nextQ = { ...q, status: '' };
     setQ(nextQ);
     setPage(1);
     fetchData({ q: nextQ, page: 1 });
+    // When opening Supplier tab, mark as read now
+    if (tab === 'supplier') {
+      const now = Date.now();
+      setSupplierLastSeenAt(now);
+      localStorage.setItem('supplierPaymentsLastSeenAt', String(now));
+    }
   };
 
   const markReceived = async (id, method) => {
@@ -68,13 +79,8 @@ export default function PaymentManagement() {
   };
   const openDepositModal = (payment) => setDepositModal(payment);
   const closeDepositModal = () => setDepositModal(null);
-  const openRefundModal = (payment) => {
-    setRefundModal(payment);
-    setRefundAmount('');
-    setRefundType('custom');
-  };
+  // Open a generic refund modal (currently not used; prefer specific helpers below)
   const openCancelFullRefund = (payment) => {
-    // Full refund due to cancellation
     setRefundModal(payment);
     const amt = Number(payment?.amount || 0);
     setRefundAmount(amt > 0 ? amt.toFixed(2) : '');
@@ -163,10 +169,10 @@ export default function PaymentManagement() {
     const r = it?.recollect || {};
     const deposit = Number(r.deposit || 0);
     const estimateTotal = Number(r.estimateTotal || 0);
-    // Only consider the driver report submitted when backend explicitly sets hasReport === true
     const hasReport = r.hasReport === true;
+    const depositRefunded = (r.depositRefunded === true) || (it.depositRefunded === true);
     const suggestedRefund = Math.max(0, deposit - estimateTotal);
-    return { deposit, estimateTotal, hasReport, suggestedRefund };
+    return { deposit, estimateTotal, hasReport, suggestedRefund, depositRefunded };
   };
 
   return (
@@ -186,6 +192,30 @@ export default function PaymentManagement() {
 
       <div className="pm-card" style={{ marginBottom: 16 }}>
         <div style={{ fontWeight: 700, color: '#334155', marginBottom: 8 }}>Payments</div>
+        {summary && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, marginBottom: 8 }}>
+            <div className="pm-pill" style={{ justifyContent: 'space-between' }}>
+              <span>Paid</span>
+              <strong>{summary.countPaid}</strong>
+            </div>
+            <div className="pm-pill" style={{ justifyContent: 'space-between' }}>
+              <span>Refunded</span>
+              <strong>{summary.countRefunded}</strong>
+            </div>
+            <div className="pm-pill" style={{ justifyContent: 'space-between' }}>
+              <span>Partial Refunded</span>
+              <strong>{summary.countPartialRefunded}</strong>
+            </div>
+            <div className="pm-pill" style={{ justifyContent: 'space-between' }}>
+              <span>Pending</span>
+              <strong>{summary.countPending}</strong>
+            </div>
+            <div className="pm-pill" style={{ justifyContent: 'space-between' }}>
+              <span>Bank Deposits Pending</span>
+              <strong>{summary.countBankDepositPending}</strong>
+            </div>
+          </div>
+        )}
         <div className="pm-grid-auto" style={{ marginBottom: 8 }}>
           <select value={q.status} onChange={(e) => setQ({ ...q, status: e.target.value })} className="pm-select">
             <option value="">Status</option>
@@ -220,8 +250,8 @@ export default function PaymentManagement() {
       </div>
 
       <div className="pm-card">
-        {/* Paid / Refunds navigation just above the payment chart/table */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        {/* Paid / Refunds / Supplier navigation */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
           <button
             onClick={() => switchTab('paid')}
             className="pm-btn"
@@ -239,95 +269,202 @@ export default function PaymentManagement() {
               background: activeTab === 'refunds' ? '#0ea5e9' : 'white',
               color: activeTab === 'refunds' ? 'white' : '#0f172a',
               border: '1px solid #cbd5e1',
-              fontWeight: 700
+              fontWeight: 700,
+              position: 'relative'
             }}
-          >Refunds</button>
+          >
+            Refunds
+            {(() => {
+              const count = (items || []).filter(it => {
+                if (isSupplierAd(it)) return false;
+                const rec = computeRecollect(it);
+                const isPaidOrPartial = (it.status === 'paid' || it.status === 'partial_refunded');
+                const cancelledCandidate = (it.booking && it.booking.status === 'cancelled' && isPaidOrPartial);
+                const depositCandidate = (rec.hasReport && !rec.depositRefunded && rec.suggestedRefund > 0 && isPaidOrPartial);
+                return cancelledCandidate || depositCandidate;
+              }).length;
+              return (
+                <span style={{ position: 'absolute', top: -8, right: -8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, fontSize: 11, lineHeight: '18px', borderRadius: 9999, background: '#ef4444', color: 'white', padding: '0 5px', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>{count}</span>
+              );
+            })()}
+          </button>
+          <button
+            onClick={() => switchTab('supplier')}
+            className="pm-btn"
+            style={{
+              background: activeTab === 'supplier' ? '#0ea5e9' : 'white',
+              color: activeTab === 'supplier' ? 'white' : '#0f172a',
+              border: '1px solid #cbd5e1',
+              fontWeight: 700,
+              position: 'relative'
+            }}
+          >
+            Supplier Paid
+            {(() => {
+              const unread = (items || []).filter(it => {
+                if (!isSupplierAd(it)) return false;
+                const created = Number(new Date(it.createdAt).getTime());
+                return Number.isFinite(created) && created > supplierLastSeenAt;
+              }).length;
+              if (!unread) return null; // hide when 0
+              return (
+                <span style={{ position: 'absolute', top: -8, right: -8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 18, height: 18, fontSize: 11, lineHeight: '18px', borderRadius: 9999, background: '#22c55e', color: 'white', padding: '0 5px', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>{unread}</span>
+              );
+            })()}
+          </button>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table className="pm-table">
             <thead>
-              <tr>
-                <th>Created</th>
-                <th>Order</th>
-                <th>Customer</th>
-                <th>Address</th>
-                <th>Booking Date</th>
-                <th>Booking Status</th>
-                <th>Method</th>
-                <th>Payment Status</th>
-                <th className="text-right">Amount</th>
-                <th>Actions</th>
-              </tr>
+              {activeTab === 'supplier' ? (
+                <tr>
+                  <th>Created</th>
+                  <th>Order</th>
+                  <th>Supplier</th>
+                  <th>Method</th>
+                  <th>Payment Status</th>
+                  <th className="text-right">Amount</th>
+                  <th>Actions</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th>Created</th>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Address</th>
+                  <th>Booking Date</th>
+                  <th>Booking Status</th>
+                  <th>Method</th>
+                  <th>Payment Status</th>
+                  <th className="text-right">Amount</th>
+                  <th>Actions</th>
+                </tr>
+              )}
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="10">Loading…</td></tr>
+                <tr><td colSpan={activeTab === 'supplier' ? 7 : 10}>Loading…</td></tr>
               ) : (() => {
-                const visibleItems = (items || []).filter(it => (
-                  activeTab === 'paid'
-                    ? String(it.status) === 'paid'
-                    : (String(it.status) === 'refunded' || String(it.status) === 'partial_refunded')
-                ));
+                const visibleItems = (items || []).filter(it => {
+                  if (activeTab === 'paid') {
+                    return !isSupplierAd(it) && (String(it.status) === 'paid' || (String(it.status) === 'pending' && it.method === 'bank_transfer'));
+                  }
+                  if (activeTab === 'refunds') {
+                    return (
+                      String(it.status) === 'refunded' ||
+                      String(it.status) === 'partial_refunded' ||
+                      (it.booking && it.booking.status === 'cancelled') ||
+                      (!isSupplierAd(it) && computeRecollect(it).hasReport === true)
+                    );
+                  }
+                  return isSupplierAd(it);
+                });
                 if (visibleItems.length === 0) {
-                  return (<tr><td colSpan="10">No payments found for this view.</td></tr>);
+                  return (<tr><td colSpan={activeTab === 'supplier' ? 7 : 10}>No payments found for this view.</td></tr>);
                 }
                 return visibleItems.map((it) => (
-                  <tr key={it._id}>
-                    <td>{new Date(it.createdAt).toLocaleString()}</td>
-                    <td>
-                      <div><code>{it.orderId || it.bookingId || it._id}</code></div>
-                      {isSupplierAd(it) && (
-                        <div style={{ fontSize: 12, color: '#64748b' }}>Supplier Ad Fee</div>
-                      )}
-                    </td>
-                    <td>{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
-                    <td>{isSupplierAd(it) ? '-' : (it.booking?.deliveryAddress || '-')}</td>
-                    <td>{isSupplierAd(it) ? '-' : (it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-')}</td>
-                    <td>{isSupplierAd(it) ? <span className="pm-chip pm-chip--pending">Supplier Ad</span> : bookingChip(it.booking?.status)}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span>{it.method || it.gateway || '-'}</span>
-                        {isSupplierAd(it) && (<span className="pm-pill">Supplier Ad Fee</span>)}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <div>{statusChip(it.status)}</div>
-                        {isSupplierAd(it) && (<div style={{ fontSize: 12, color: '#64748b' }}>Supplier Ad Fee</div>)}
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                        {(it.status === 'refunded' || it.status === 'partial_refunded') ? (
-                          // If refunded (full or partial), show only Delete in the actions section
+                  activeTab === 'supplier' ? (
+                    <tr key={it._id}>
+                      <td>{new Date(it.createdAt).toLocaleString()}</td>
+                      <td>
+                        <div><code>{it.orderId || it._id}</code></div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>Supplier Ad Fee{it.meta?.inventoryId ? ` · Ad ID: ${String(it.meta.inventoryId).slice(-6)}` : ''}</div>
+                      </td>
+                      <td>{it.customerName || it.customerEmail || '-'}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span>{it.method || it.gateway || '-'}</span>
+                          <span className="pm-pill">Supplier Ad</span>
+                        </div>
+                      </td>
+                      <td><div>{statusChip(it.status)}</div></td>
+                      <td style={{ textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {(it.status !== 'paid') && (
+                            it.method === 'bank_transfer'
+                              ? (<button onClick={() => openDepositModal(it)} className="pm-btn pm-btn--success">Mark Supplier Paid</button>)
+                              : (<button onClick={() => markReceived(it._id, it.method)} className="pm-btn pm-btn--success">Mark Supplier Paid</button>)
+                          )}
                           <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
-                        ) : (
-                          (() => {
-                            const rec = computeRecollect(it);
-                            return (
-                              <>
-                                {/* Pending bank transfer: view deposit details (with slip) then mark received */}
-                                {(!isSupplierAd(it) && it.method === 'bank_transfer' && it.status === 'pending') ? (
-                                  <button onClick={() => openDepositModal(it)} className="pm-btn pm-btn--success">View Deposit</button>
-                                ) : (
-                                  // Fallback mark received for other pending types
-                                  (!isSupplierAd(it) && it.status !== 'paid' && (
-                                    <button onClick={() => markReceived(it._id)} className="pm-btn pm-btn--success">Mark Received</button>
-                                  ))
-                                )}
-                                {/* Show full refund button for cancelled bookings (paid/partial_refunded) */}
-                                {(!isSupplierAd(it) && it.booking?.status === 'cancelled' && (it.status === 'paid' || it.status === 'partial_refunded')) && (
-                                  <button onClick={() => openCancelFullRefund(it)} className="pm-btn pm-btn--refund">Refund</button>
-                                )}
-                                <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
-                              </>
-                            );
-                          })()
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={it._id}>
+                      <td>{new Date(it.createdAt).toLocaleString()}</td>
+                      <td>
+                        <div><code>{it.orderId || it.bookingId || it._id}</code></div>
+                        {isSupplierAd(it) && (
+                          <div style={{ fontSize: 12, color: '#64748b' }}>Supplier Ad Fee</div>
                         )}
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td>{it.customerName || it.customerEmail || it.booking?.customerName || it.booking?.customerEmail || '-'}</td>
+                      <td>{isSupplierAd(it) ? '-' : (it.booking?.deliveryAddress || '-')}</td>
+                      <td>{isSupplierAd(it) ? '-' : (it.booking?.bookingDate ? new Date(it.booking.bookingDate).toLocaleDateString() : '-')}</td>
+                      <td>
+                        {isSupplierAd(it) ? (
+                          <span className="pm-chip pm-chip--pending">Supplier Ad</span>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {bookingChip(it.booking?.status)}
+                            {(activeTab === 'refunds' && it.booking?.status === 'cancelled' && it.booking?.cancelReason) && (
+                              <span style={{ fontSize: 12, color: '#64748b' }}>Reason: {it.booking.cancelReason}</span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span>{it.method || it.gateway || '-'}</span>
+                          {isSupplierAd(it) && (<span className="pm-pill">Supplier Ad Fee</span>)}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <div>{statusChip(it.status)}</div>
+                          {isSupplierAd(it) && (<div style={{ fontSize: 12, color: '#64748b' }}>Supplier Ad Fee</div>)}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>{it.currency} {Number(it.amount).toFixed(2)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {(it.status === 'refunded' || it.status === 'partial_refunded') ? (
+                            <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
+                          ) : (
+                            (() => {
+                              const rec = computeRecollect(it);
+                              return (
+                                <>
+                                  {(!isSupplierAd(it) && it.method === 'bank_transfer' && it.status === 'pending') ? (
+                                    <button onClick={() => openDepositModal(it)} className="pm-btn pm-btn--success">View Deposit</button>
+                                  ) : (
+                                    (!isSupplierAd(it) && it.status !== 'paid' && (
+                                      <button onClick={() => markReceived(it._id)} className="pm-btn pm-btn--success">Mark Received</button>
+                                    ))
+                                  )}
+                                  {(activeTab === 'refunds' && !isSupplierAd(it) && it.booking?.status === 'cancelled' && (it.status === 'paid' || it.status === 'partial_refunded')) && (
+                                    <button onClick={() => openCancelFullRefund(it)} className="pm-btn pm-btn--refund">Refund</button>
+                                  )}
+                                  {(() => {
+                                    if (activeTab !== 'refunds' || isSupplierAd(it)) return null;
+                                    const rec = computeRecollect(it);
+                                    if (!rec.hasReport || rec.depositRefunded) return null;
+                                    if (!(it.status === 'paid' || it.status === 'partial_refunded' || it.status === 'refunded')) return null;
+                                    if (rec.suggestedRefund <= 0) return null;
+                                    return (
+                                      <button onClick={() => openDepositRefund(it)} className="pm-btn pm-btn--refund">Refund Deposit</button>
+                                    );
+                                  })()}
+                                  <button onClick={() => removePayment(it._id)} className="pm-btn pm-btn--muted">Delete</button>
+                                </>
+                              );
+                            })()
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
                 ));
               })()}
             </tbody>
@@ -411,8 +548,8 @@ export default function PaymentManagement() {
         {depositModal && (
           <div className="pm-modal">
             <div className="pm-modal__content">
-              <h3 className="pm-modal__title">Bank Deposit Details</h3>
-              <div className="pm-modal__hint">Verify the depositor information and slip. Mark received to confirm the booking.</div>
+              <h3 className="pm-modal__title">{isSupplierAd(depositModal) ? 'Supplier Payment Approval' : 'Bank Deposit Details'}</h3>
+              <div className="pm-modal__hint">{isSupplierAd(depositModal) ? 'Verify the payment and mark the supplier ad fee as received.' : 'Verify the depositor information and slip. Mark received to confirm the booking.'}</div>
               <div className="pm-modal__grid" style={{ marginBottom: 8 }}>
                 <div>
                   <div className="pm-subtitle" style={{ margin: 0 }}>Order</div>
@@ -473,7 +610,7 @@ export default function PaymentManagement() {
                     try {
                       setDepositBusy(true);
                       await markReceived(depositModal._id, 'bank_transfer');
-                      setSuccessPopup('Marked received and booking confirmed');
+                      setSuccessPopup(isSupplierAd(depositModal) ? 'Supplier payment marked received' : 'Marked received and booking confirmed');
                       setTimeout(() => setSuccessPopup(''), 1500);
                     } catch (e) {
                       alert(e.response?.data?.message || 'Failed to mark received');
@@ -484,7 +621,7 @@ export default function PaymentManagement() {
                   }}
                   className="pm-btn pm-btn--success"
                   disabled={depositBusy}
-                >{depositBusy ? 'Processing…' : 'Mark Received & Confirm'}</button>
+                >{depositBusy ? 'Processing…' : (isSupplierAd(depositModal) ? 'Mark Supplier Paid' : 'Mark Received & Confirm')}</button>
               </div>
             </div>
           </div>

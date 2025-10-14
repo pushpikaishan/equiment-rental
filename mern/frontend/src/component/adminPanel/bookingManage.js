@@ -25,7 +25,8 @@ export default function BookingManagement() {
       setItems(res.data.items || []);
       setTotal(res.data.total || 0);
     } catch (e) {
-      // ignore
+      // eslint-disable-next-line no-console
+      console.debug('Failed to fetch bookings list', e);
     } finally {
       setLoading(false);
     }
@@ -35,7 +36,10 @@ export default function BookingManagement() {
     try {
       const res = await axios.get(`${baseUrl}/bookings/admin/summary`, { headers });
       setSummary(res.data);
-    } catch {}
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.debug('Failed to fetch bookings summary', e);
+    }
   };
 
   useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [page, statusFilter]);
@@ -104,8 +108,8 @@ export default function BookingManagement() {
       <div style={{ ...card, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ fontWeight: 600, color: '#334155' }}>Bookings</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <label style={{ color: '#334155', fontSize: 14 }}>Status:</label>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={select}>
+          <label htmlFor="statusFilter" style={{ color: '#334155', fontSize: 14 }}>Status:</label>
+          <select id="statusFilter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={select}>
             <option value="">All</option>
             <option value="pending">Pending</option>
             <option value="confirmed">Confirmed</option>

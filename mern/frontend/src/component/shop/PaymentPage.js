@@ -192,20 +192,20 @@ export default function PaymentPage() {
                   </div>
                   <div style={{ display: 'grid', gap: 8 }}>
                     <div>
-                      <label>Depositor Name</label>
-                      <input type="text" value={depositForm.depositorName} onChange={(e) => setDepositForm({ ...depositForm, depositorName: e.target.value })} style={{ width: '100%' }} />
+                      <label htmlFor="dep-name">Depositor Name</label>
+                      <input id="dep-name" type="text" value={depositForm.depositorName} onChange={(e) => setDepositForm({ ...depositForm, depositorName: e.target.value })} style={{ width: '100%' }} />
                     </div>
                     <div>
-                      <label>Reference No.</label>
-                      <input type="text" value={depositForm.referenceNo} onChange={(e) => setDepositForm({ ...depositForm, referenceNo: e.target.value })} style={{ width: '100%' }} />
+                      <label htmlFor="dep-ref">Reference No.</label>
+                      <input id="dep-ref" type="text" value={depositForm.referenceNo} onChange={(e) => setDepositForm({ ...depositForm, referenceNo: e.target.value })} style={{ width: '100%' }} />
                     </div>
                     <div>
-                      <label>Note (optional)</label>
-                      <input type="text" value={depositForm.note} onChange={(e) => setDepositForm({ ...depositForm, note: e.target.value })} style={{ width: '100%' }} />
+                      <label htmlFor="dep-note">Note (optional)</label>
+                      <input id="dep-note" type="text" value={depositForm.note} onChange={(e) => setDepositForm({ ...depositForm, note: e.target.value })} style={{ width: '100%' }} />
                     </div>
                     <div>
-                      <label>Upload Deposit Slip (JPG, PNG, PDF)</label>
-                      <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setDepositForm({ ...depositForm, slip: e.target.files?.[0] || null })} />
+                      <label htmlFor="dep-slip">Upload Deposit Slip (JPG, PNG, PDF)</label>
+                      <input id="dep-slip" type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setDepositForm({ ...depositForm, slip: e.target.files?.[0] || null })} />
                     </div>
                     <button
                       onClick={submitBankDeposit}
