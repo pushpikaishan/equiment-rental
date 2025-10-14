@@ -57,7 +57,12 @@ function Login() {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    //background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    // Fullscreen background image with subtle overlay for readability
+    backgroundImage:
+      "linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)), url('/logback.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
     padding: "20px",
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
   };
