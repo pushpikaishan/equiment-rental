@@ -107,6 +107,9 @@ exports.list = async (req, res) => {
           customerEmail: b.customerEmail,
           customerPhone: b.customerPhone,
           total: b.total,
+          cancelledAt: b.cancelledAt,
+          cancelReason: b.cancelReason || '',
+          cancelledByRole: b.cancelledByRole || '',
         } : null,
         recollect,
         depositRefunded,
@@ -210,18 +213,28 @@ exports.summary = async (req, res) => {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const [totalRevenue, monthlyRevenue, dailyRevenue, byMethod] = await Promise.all([
+    const [totalRevenue, monthlyRevenue, dailyRevenue, byMethod, countPaid, countRefunded, countPartialRefunded, countPending, countBankDepositPending] = await Promise.all([
       Payment.aggregate([{ $match: { status: { $in: ['paid', 'partial_refunded'] } } }, { $group: { _id: null, sum: { $sum: '$amount' } } } ]),
       Payment.aggregate([{ $match: { status: { $in: ['paid', 'partial_refunded'] }, createdAt: { $gte: monthStart } } }, { $group: { _id: null, sum: { $sum: '$amount' } } } ]),
       Payment.aggregate([{ $match: { status: { $in: ['paid', 'partial_refunded'] }, createdAt: { $gte: dayStart } } }, { $group: { _id: null, sum: { $sum: '$amount' } } } ]),
-      Payment.aggregate([{ $group: { _id: '$method', count: { $sum: 1 } } }])
+      Payment.aggregate([{ $group: { _id: '$method', count: { $sum: 1 } } }]),
+      Payment.countDocuments({ status: 'paid' }),
+      Payment.countDocuments({ status: 'refunded' }),
+      Payment.countDocuments({ status: 'partial_refunded' }),
+      Payment.countDocuments({ status: 'pending' }),
+      Payment.countDocuments({ method: 'bank_transfer', status: 'pending' }),
     ]);
 
     res.json({
       totalRevenue: totalRevenue[0]?.sum || 0,
       monthlyRevenue: monthlyRevenue[0]?.sum || 0,
       dailyRevenue: dailyRevenue[0]?.sum || 0,
-      byMethod: byMethod.reduce((acc, cur) => { acc[cur._id || 'unknown'] = cur.count; return acc; }, {})
+      byMethod: byMethod.reduce((acc, cur) => { acc[cur._id || 'unknown'] = cur.count; return acc; }, {}),
+      countPaid,
+      countRefunded,
+      countPartialRefunded,
+      countPending,
+      countBankDepositPending,
     });
   } catch (e) {
     console.error('Payments summary error:', e);
