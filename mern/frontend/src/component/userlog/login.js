@@ -6,6 +6,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async () => {
@@ -202,26 +203,55 @@ function Login() {
             />
           </div>
 
-          <div style={inputGroupStyle}>
-            <input
-              style={inputStyle}
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#667eea";
-                e.target.style.background = "white";
-                e.target.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
-                e.target.style.transform = "translateY(-2px)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#e1e5e9";
-                e.target.style.background = "#f8f9fa";
-                e.target.style.boxShadow = "none";
-                e.target.style.transform = "translateY(0)";
-              }}
-            />
+          <div style={{ ...inputGroupStyle }}>
+            <div style={{ position: "relative" }}>
+              <input
+                style={{ ...inputStyle, paddingRight: 44 }}
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={(e) => {
+                  e.target.style.borderColor = "#667eea";
+                  e.target.style.background = "white";
+                  e.target.style.boxShadow = "0 0 0 3px rgba(102, 126, 234, 0.1)";
+                  e.target.style.transform = "translateY(-2px)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "#e1e5e9";
+                  e.target.style.background = "#f8f9fa";
+                  e.target.style.boxShadow = "none";
+                  e.target.style.transform = "translateY(0)";
+                }}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((s) => !s)}
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 6,
+                  color: "#6b7280",
+                  fontSize: 18,
+                  lineHeight: 1,
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.color = "#374151";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.color = "#6b7280";
+                }}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
           </div>
 
           <button
