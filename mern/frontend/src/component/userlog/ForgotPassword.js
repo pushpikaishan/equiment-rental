@@ -46,11 +46,55 @@ export default function ForgotPassword() {
 
   return (
     <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 20, fontFamily: "Segoe UI, Tahoma, Geneva, Verdana, sans-serif"
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundImage: "linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)), url('/logback.png')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      padding: 20,
+      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     }}>
-      <div style={{ background: "#fff", borderRadius: 16, boxShadow: "0 20px 40px rgba(0,0,0,0.1)", width: "100%", maxWidth: 420 }}>
-        <div style={{ padding: 28, background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)", color: "#fff" }}>
+      <div style={{
+        width: "100%",
+        maxWidth: 650,
+        display: "flex",
+        flexDirection: "column",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderRadius: 24,
+        boxShadow: "0 25px 50px rgba(0,0,0,0.15)",
+        overflow: "hidden",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
+        //background: "rgba(255,255,255,0.7)"
+      }}>
+        <div style={{
+          padding: 28,
+          //background: "linear-gradient(135deg, rgba(59,130,246,0.9) 0%, rgba(29,78,216,0.9) 100%)",
+          color: "#fff",
+          borderBottom: "1px solid rgba(255,255,255,0.35)",
+          textAlign: "center"
+        }}>
+          <div style={{
+            width: 60,
+            height: 60,
+            borderRadius: "50%",
+            background: "#1d2d47",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 12px",
+            border: "1px solid rgba(255,255,255,0.45)"
+          }}>
+            <img
+              src={`${process.env.PUBLIC_URL}/favicon.ico`}
+              alt="Eventrix logo"
+              style={{ width: 28, height: 28 }}
+              onError={(e) => { e.currentTarget.src = `${process.env.PUBLIC_URL}/logo192.png`; }}
+            />
+          </div>
           <h2 style={{ margin: 0 }}>{step === 1 ? "Forgot Password" : "Enter Code & New Password"}</h2>
         </div>
         <div style={{ padding: 28 }}>
@@ -60,7 +104,7 @@ export default function ForgotPassword() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+              style={{ width: "100%", padding: 12, borderRadius: 10, border: "2px solid rgba(226,232,240,0.9)", background: "rgba(248,249,250,0.8)" }}
               disabled={step === 2}
             />
           </div>
@@ -71,7 +115,7 @@ export default function ForgotPassword() {
                   placeholder="6-digit code"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                  style={{ width: "100%", padding: 12, borderRadius: 10, border: "2px solid rgba(226,232,240,0.9)", background: "rgba(248,249,250,0.8)" }}
                 />
               </div>
               <div style={{ marginBottom: 12 }}>
@@ -80,7 +124,7 @@ export default function ForgotPassword() {
                   placeholder="New password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                  style={{ width: "100%", padding: 12, borderRadius: 10, border: "2px solid rgba(226,232,240,0.9)", background: "rgba(248,249,250,0.8)" }}
                 />
               </div>
             </>
@@ -88,7 +132,7 @@ export default function ForgotPassword() {
           <button
             onClick={step === 1 ? requestCode : resetPassword}
             disabled={loading}
-            style={{ width: "100%", padding: 12, background: "#1d4ed8", color: "#fff", border: 0, borderRadius: 8, fontWeight: 600 }}
+            style={{ width: "100%", padding: 14, background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)", color: "#fff", border: 0, borderRadius: 10, fontWeight: 600, boxShadow: "0 10px 25px rgba(59,130,246,0.35)" }}
           >
             {loading ? "Please wait..." : step === 1 ? "Send Code" : "Change Password"}
           </button>
@@ -96,7 +140,7 @@ export default function ForgotPassword() {
             <button
               onClick={requestCode}
               disabled={loading}
-              style={{ marginTop: 8, width: "100%", padding: 10, background: "#f3f4f6", color: "#111827", border: 0, borderRadius: 8 }}
+              style={{ marginTop: 10, width: "100%", padding: 12, background: "rgba(243,244,246,0.85)", color: "#111827", border: 0, borderRadius: 10 }}
             >
               Resend code
             </button>

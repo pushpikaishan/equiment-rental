@@ -20,15 +20,19 @@ function Register() {
     justifyContent: "center",
     padding: "32px",
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%)',
+    backgroundImage: "linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)), url('/logback.png')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundRepeat: "no-repeat",
   };
 
   const cardStyle = {
-    background: "rgba(255, 255, 255, 0.95)",
-    backdropFilter: "blur(12px)",
+    //background: "rgba(255, 255, 255, 0.75)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
     borderRadius: "24px",
     border: "1px solid rgba(255, 255, 255, 0.2)",
-    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.1), 0 8px 32px rgba(0, 0, 0, 0.1)",
+    boxShadow: "0 25px 50px rgba(0, 0, 0, 0.15)",
     overflow: "hidden",
     width: "100%",
     maxWidth: "420px",
@@ -36,18 +40,19 @@ function Register() {
   };
 
   const headerStyle = {
-   background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+    //background: "linear-gradient(135deg, rgba(59,130,246,0.9) 0%, rgba(29,78,216,0.9) 100%)",
     padding: "40px 32px",
     textAlign: "center",
     color: "white",
     position: "relative",
     overflow: "hidden",
+    borderBottom: "1px solid rgba(255,255,255,0.35)",
   };
 
   const iconStyle = {
     width: "72px",
     height: "72px",
-    background: "rgba(255, 255, 255, 0.15)",
+    background: "#1d2d47",
     backdropFilter: "blur(8px)",
     borderRadius: "50%",
     display: "flex",
@@ -56,7 +61,7 @@ function Register() {
     margin: "0 auto 24px",
     fontSize: "28px",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    border: "1px solid rgba(255, 255, 255, 0.2)",
+    border: "1px solid rgba(255, 255, 255, 0.45)",
     animation: "float 3s ease-in-out infinite",
   };
 
@@ -82,7 +87,7 @@ function Register() {
 
   const toggleContainerStyle = {
     display: "flex",
-    background: "rgba(248, 250, 252, 0.8)",
+    //background: "rgba(248, 250, 252, 0.8)",
     backdropFilter: "blur(8px)",
     borderRadius: "16px",
     padding: "6px",
@@ -179,7 +184,14 @@ function Register() {
 
       <div style={cardStyle}>
         <div style={headerStyle}>
-          <div style={iconStyle}>📝</div>
+          <div style={iconStyle} role="img" aria-label="App logo">
+            <img
+              src={`${process.env.PUBLIC_URL}/favicon.ico`}
+              alt="Eventrix logo"
+              style={{ width: 34, height: 34 }}
+              onError={(e) => { e.currentTarget.src = `${process.env.PUBLIC_URL}/logo192.png`; }}
+            />
+          </div>
           <h2 style={titleStyle}>Join Our Platform</h2>
           <p style={subtitleStyle}>Choose your account type</p>
         </div>
@@ -220,6 +232,14 @@ function Register() {
               e.target.style.transform = "translateY(0) scale(1)";
               e.target.style.boxShadow = "0 8px 24px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(59, 130, 246, 0.2)";
             }}
+            onFocus={(e) => {
+              e.target.style.transform = "translateY(-4px) scale(1.02)";
+              e.target.style.boxShadow = "0 16px 48px rgba(59, 130, 246, 0.4), 0 8px 24px rgba(59, 130, 246, 0.3)";
+            }}
+            onBlur={(e) => {
+              e.target.style.transform = "translateY(0) scale(1)";
+              e.target.style.boxShadow = "0 8px 24px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(59, 130, 246, 0.2)";
+            }}
           >
             Continue as {userType === "customer" ? "Customer" : "Supplier"}
           </button>
@@ -233,6 +253,16 @@ function Register() {
               e.target.style.transform = "translateY(-1px)";
             }}
             onMouseOut={(e) => {
+              e.target.style.color = "#3b82f6";
+              e.target.style.textDecoration = "none";
+              e.target.style.transform = "translateY(0)";
+            }}
+            onFocus={(e) => {
+              e.target.style.color = "#1d4ed8";
+              e.target.style.textDecoration = "underline";
+              e.target.style.transform = "translateY(-1px)";
+            }}
+            onBlur={(e) => {
               e.target.style.color = "#3b82f6";
               e.target.style.textDecoration = "none";
               e.target.style.transform = "translateY(0)";
