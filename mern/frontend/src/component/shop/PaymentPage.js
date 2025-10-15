@@ -4,6 +4,7 @@ import axios from 'axios';
 import UserNavbar from './UserNavbar';
 import SiteFooter from '../common/SiteFooter';
 import PaymentGateway from './PaymentGateway';
+import './PaymentPage.css';
 
 export default function PaymentPage() {
   const location = useLocation();
@@ -24,6 +25,39 @@ export default function PaymentPage() {
     slip: null,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [refError, setRefError] = useState('');
+  const [slipError, setSlipError] = useState('');
+
+  // Simple name validator: letters and spaces only, 2-60 chars, at least two letters
+  const isValidName = (val) => {
+    const v = String(val || '').trim();
+    if (v.length < 2 || v.length > 60) return false;
+    // Only letters and spaces
+    if (!/^[A-Za-z ]+$/.test(v)) return false;
+    // Require at least 2 letters
+    const letters = v.replace(/[^A-Za-z]/g, '');
+    if (letters.length < 2) return false;
+    // No multiple consecutive spaces
+    if (/ {2,}/.test(v)) return false;
+    return true;
+  };
+
+  // Reference number: alphanumeric only, length 6-15
+  const isValidRef = (val) => {
+    const v = String(val || '').trim();
+    return /^[A-Za-z0-9]{6,15}$/.test(v);
+  };
+
+  // Slip validation: require file; allow jpg/jpeg/png/pdf; optionally up to 10MB
+  const isValidSlip = (file) => {
+    if (!file) return false;
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!allowed.includes(file.type)) return false;
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size <= 0 || file.size > maxSize) return false;
+    return true;
+  };
 
   useEffect(() => {
     // If booking not provided via state, try loading last created booking (optional)
@@ -69,15 +103,17 @@ export default function PaymentPage() {
 
   const submitBankDeposit = async () => {
     if (!booking?._id) { alert('No booking found'); return; }
-    if (!depositForm.slip) { alert('Please upload your bank deposit slip'); return; }
-    if (!depositForm.depositorName || !depositForm.referenceNo) { alert('Please fill depositor name and reference no.'); return; }
+    if (!isValidSlip(depositForm.slip)) { setSlipError('Upload JPG, PNG, or PDF (max 10MB)'); return; }
+    // Validate depositor name strictly
+    if (!isValidName(depositForm.depositorName)) { setNameError('Enter a valid name (letters and spaces, 2+ characters)'); return; }
+  if (!isValidRef(depositForm.referenceNo)) { setRefError('Reference should be 6-15 letters/numbers only'); return; }
     try {
       setSubmitting(true);
       const fd = new FormData();
       fd.append('bookingId', booking._id);
       fd.append('amount', total);
-      fd.append('depositorName', depositForm.depositorName);
-      fd.append('referenceNo', depositForm.referenceNo);
+      fd.append('depositorName', String(depositForm.depositorName || '').trim());
+  fd.append('referenceNo', String(depositForm.referenceNo || '').trim().toUpperCase());
       fd.append('note', depositForm.note || '');
       fd.append('slip', depositForm.slip);
       const res = await axios.post(`${baseUrl}/payments/bank-deposit`, fd, {
@@ -94,30 +130,57 @@ export default function PaymentPage() {
   };
 
   return (
-    <div>
-      <UserNavbar />
-      <div style={{ maxWidth: 1100, margin: '16px auto', padding: '0 12px' }}>
-        <h2>Payment</h2>
-        {loading && <div>Loading…</div>}
+    <div 
+      className="ppage"
+      style={{
+        position: 'relative',
+        minHeight: '100vh',
+        backgroundImage: "url('/logback.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      }}
+    >
+      {/* Semi-transparent overlay for readability */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          left: 0,
+          background: 'rgba(29, 45, 71, 0.75)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <UserNavbar />
+        <div className="ppage-container">
+        <h2 className="pp-title">Payment</h2>
+        {loading && <div className="pp-hint" style={{ color: '#ffffff' }}>Loading…</div>}
         {error && <div style={{ color: '#dc2626' }}>{error}</div>}
 
         {!loading && booking && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="ppage-grid">
             {/* Left: Order Summary */}
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#ffffff' }}>
-              <div style={{ padding: 12, borderBottom: '1px solid #e2e8f0' }}>
-                <div style={{ fontWeight: 700 }}>Order Summary</div>
-                <div style={{ color: '#64748b' }}>Order ID: <code>{booking._id}</code></div>
-                <div style={{ color: '#64748b' }}>Status: {booking.status || '-'}</div>
+            <div className="pp-card">
+              <div className="pp-card__header">
+                <div className="pp-section-title">Order Summary</div>
+                <div className="pp-hint">Order ID: <code className="pp-mono">{booking._id}</code></div>
+                <div className="pp-hint">Status: {booking.status || '-'}</div>
               </div>
-              <div style={{ padding: 12 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="pp-card__body">
+                <table className="pp-table">
                   <thead>
-                    <tr style={{ background: '#f8fafc' }}>
-                      <th style={{ textAlign: 'left', padding: 6 }}>Item</th>
-                      <th style={{ textAlign: 'left', padding: 6 }}>Price/day</th>
-                      <th style={{ textAlign: 'left', padding: 6 }}>Qty</th>
-                      <th style={{ textAlign: 'left', padding: 6 }}>Line total</th>
+                    <tr>
+                      <th>Item</th>
+                      <th className="right">Price/day</th>
+                      <th>Qty</th>
+                      <th className="right">Line total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -126,11 +189,11 @@ export default function PaymentPage() {
                       const qty = Number(it.qty) || 0;
                       const line = price * qty * days;
                       return (
-                        <tr key={it.equipmentId} style={{ borderTop: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: 6 }}>{it.name}</td>
-                          <td style={{ padding: 6 }}>{fmt(price)}</td>
-                          <td style={{ padding: 6 }}>{qty}</td>
-                          <td style={{ padding: 6 }}>{fmt(line)}</td>
+                        <tr key={it.equipmentId}>
+                          <td>{it.name}</td>
+                          <td className="right">{fmt(price)}</td>
+                          <td>{qty}</td>
+                          <td className="right">{fmt(line)}</td>
                         </tr>
                       );
                     })}
@@ -155,65 +218,90 @@ export default function PaymentPage() {
 
             {/* Right: Methods */}
             <div style={{ display: 'grid', gap: 12 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => { setActiveMethod('bank'); }}
-                  style={{
-                    background: activeMethod === 'bank' ? '#1e293b' : '#ffffff',
-                    color: activeMethod === 'bank' ? '#ffffff' : '#1e293b',
-                    border: '1px solid #cbd5e1',
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    flex: 1,
-                  }}
-                >
-                  Bank Deposit
-                </button>
-                <button
-                  onClick={() => { setActiveMethod('gateway'); }}
-                  style={{
-                    background: activeMethod === 'gateway' ? '#1e293b' : '#ffffff',
-                    color: activeMethod === 'gateway' ? '#ffffff' : '#1e293b',
-                    border: '1px solid #cbd5e1',
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    flex: 1,
-                  }}
-                >
-                  Pay Online (Gateway)
-                </button>
+              <div className="pp-tabs">
+                <button onClick={() => { setActiveMethod('bank'); }} className={`pp-tab ${activeMethod === 'bank' ? 'is-active' : ''}`}>Bank Deposit</button>
+                <button onClick={() => { setActiveMethod('gateway'); }} className={`pp-tab ${activeMethod === 'gateway' ? 'is-active' : ''}`}>Pay Online (Gateway)</button>
               </div>
 
               {activeMethod === 'bank' && (
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#ffffff', padding: 12 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 8 }}>Bank Deposit</div>
-                  <div style={{ color: '#64748b', marginBottom: 8 }}>
+                <div className="pp-card" style={{ padding: 12 }}>
+                  <div className="pp-section-title" style={{ marginBottom: 8 }}>Bank Deposit</div>
+                  <div className="pp-hint" style={{ marginBottom: 8 }}>
                     Deposit the total to our account and upload the slip. We will verify and confirm your booking.
                   </div>
-                  <div style={{ display: 'grid', gap: 8 }}>
+                  <div className="pp-form">
                     <div>
-                      <label htmlFor="dep-name">Depositor Name</label>
-                      <input id="dep-name" type="text" value={depositForm.depositorName} onChange={(e) => setDepositForm({ ...depositForm, depositorName: e.target.value })} style={{ width: '100%' }} />
+                      <label className="pp-label" htmlFor="dep-name">Depositor Name {isValidName(depositForm.depositorName) && <span style={{ color: '#16a34a', marginLeft: 6 }}>✓</span>}</label>
+                      <input
+                        id="dep-name"
+                        type="text"
+                        value={depositForm.depositorName}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDepositForm({ ...depositForm, depositorName: val });
+                          if (val && !isValidName(val)) setNameError('Only letters and spaces, 2-60 characters');
+                          else setNameError('');
+                        }}
+                        onBlur={(e) => {
+                          const val = e.target.value;
+                          if (!isValidName(val)) setNameError('Enter a valid name (letters and spaces, 2+ characters)');
+                        }}
+                        placeholder="e.g., John Doe"
+                        className={`pp-input ${nameError ? 'is-error' : isValidName(depositForm.depositorName) ? 'is-valid' : ''}`}
+                      />
+                      {nameError && <div className="pp-error" style={{ animation: 'fadeIn 0.3s ease' }}>{nameError}</div>}
                     </div>
                     <div>
-                      <label htmlFor="dep-ref">Reference No.</label>
-                      <input id="dep-ref" type="text" value={depositForm.referenceNo} onChange={(e) => setDepositForm({ ...depositForm, referenceNo: e.target.value })} style={{ width: '100%' }} />
+                      <label className="pp-label" htmlFor="dep-ref">Reference No. {isValidRef(depositForm.referenceNo) && <span style={{ color: '#16a34a', marginLeft: 6 }}>✓</span>}</label>
+                      <input
+                        id="dep-ref"
+                        type="text"
+                        value={depositForm.referenceNo}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDepositForm({ ...depositForm, referenceNo: val.toUpperCase() });
+                          if (val && !isValidRef(val)) setRefError('Reference should be 6-15 letters/numbers only');
+                          else setRefError('');
+                        }}
+                        onBlur={(e) => { const val = e.target.value; if (!isValidRef(val)) setRefError('Reference should be 6-15 letters/numbers only'); }}
+                        placeholder="e.g., ABC12345"
+                        className={`pp-input ${refError ? 'is-error' : isValidRef(depositForm.referenceNo) ? 'is-valid' : ''}`}
+                        style={{ textTransform: 'uppercase' }}
+                      />
+                      {refError && <div className="pp-error" style={{ animation: 'fadeIn 0.3s ease' }}>{refError}</div>}
                     </div>
                     <div>
-                      <label htmlFor="dep-note">Note (optional)</label>
-                      <input id="dep-note" type="text" value={depositForm.note} onChange={(e) => setDepositForm({ ...depositForm, note: e.target.value })} style={{ width: '100%' }} />
+                      <label className="pp-label" htmlFor="dep-note">Note (optional)</label>
+                      <input id="dep-note" type="text" value={depositForm.note} onChange={(e) => setDepositForm({ ...depositForm, note: e.target.value })} className="pp-input" />
                     </div>
                     <div>
-                      <label htmlFor="dep-slip">Upload Deposit Slip (JPG, PNG, PDF)</label>
-                      <input id="dep-slip" type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setDepositForm({ ...depositForm, slip: e.target.files?.[0] || null })} />
+                      <label className="pp-label" htmlFor="dep-slip">Upload Deposit Slip (JPG, PNG, PDF) {isValidSlip(depositForm.slip) && <span style={{ color: '#16a34a', marginLeft: 6 }}>✓</span>}</label>
+                      <input
+                        id="dep-slip"
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setDepositForm({ ...depositForm, slip: file });
+                          if (!isValidSlip(file)) setSlipError('Upload JPG, PNG, or PDF (max 10MB)'); else setSlipError('');
+                        }}
+                        className={`pp-file ${slipError ? 'is-error' : isValidSlip(depositForm.slip) ? 'is-valid' : ''}`}
+                      />
+                      {depositForm.slip && (
+                        <div className={`pp-hint ${isValidSlip(depositForm.slip) ? 'pp-hint--success' : ''}`} style={{ marginTop: 4 }}>
+                          {depositForm.slip.name} · {(depositForm.slip.size / 1024).toFixed(0)} KB
+                        </div>
+                      )}
+                      {slipError && <div className="pp-error" style={{ animation: 'fadeIn 0.3s ease' }}>{slipError}</div>}
                     </div>
-                    <button
-                      onClick={submitBankDeposit}
-                      disabled={submitting || isCancelled}
-                      style={{ background: '#16a34a', color: 'white', border: 'none', padding: '10px 12px', borderRadius: 6, opacity: (submitting || isCancelled) ? 0.6 : 1 }}
-                    >
-                      {submitting ? 'Submitting…' : `Submit Deposit (${fmt(total)})`}
-                    </button>
+                    {(() => {
+                      const disabled = submitting || isCancelled || !isValidName(depositForm.depositorName) || !isValidRef(depositForm.referenceNo) || !isValidSlip(depositForm.slip);
+                      return (
+                        <button onClick={submitBankDeposit} disabled={disabled} className="pp-submit">
+                          {submitting ? (<><span className="pp-spinner" />Submitting…</>) : `Submit Deposit (${fmt(total)})`}
+                        </button>
+                      );
+                    })()}
                     {isCancelled && <div style={{ color: '#64748b' }}>Booking is cancelled.</div>}
                   </div>
                 </div>
@@ -227,6 +315,7 @@ export default function PaymentPage() {
         )}
       </div>
       <SiteFooter />
+      </div>
     </div>
   );
 }
