@@ -279,12 +279,19 @@ function SupplierRegister() {
   };
 
   // CSS Styles
+  const isAdmin = (typeof window !== 'undefined') && localStorage.getItem('role') === 'admin';
   const containerStyle = {
     margin: 0,
-    padding: 0,
+    
     boxSizing: 'border-box',
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    background: 'linear-gradient(135deg, #ffffffff 0%, #ffffffff 100%)',
+    // If not admin, use regCusOrSup-like overlay image background
+    background: isAdmin ? 'linear-gradient(135deg, #ffffffff 0%, #ffffffff 100%)' : undefined,
+    backgroundImage: isAdmin ? undefined : "linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)), url('/logback.png')",
+    backgroundSize: isAdmin ? undefined : 'cover',
+    backgroundPosition: isAdmin ? undefined : 'center',
+    backgroundRepeat: isAdmin ? undefined : 'no-repeat',
+    backgroundAttachment: isAdmin ? undefined : 'fixed',
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
@@ -293,9 +300,12 @@ function SupplierRegister() {
   };
 
   const registerContainerStyle = {
-    background: 'white',
+    background: isAdmin ? 'white' : 'rgba(255, 255, 255, 0.75)',
+    backdropFilter: isAdmin ? undefined : 'blur(20px)',
+    WebkitBackdropFilter: isAdmin ? undefined : 'blur(20px)',
+    border: isAdmin ? undefined : '1px solid rgba(255, 255, 255, 0.2)',
     borderRadius: '20px',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+    boxShadow: isAdmin ? '0 20px 40px rgba(0, 0, 0, 0.1)' : '0 25px 50px rgba(0, 0, 0, 0.15)',
     overflow: 'hidden',
     width: '100%',
     maxWidth: '500px',
@@ -769,6 +779,8 @@ function SupplierRegister() {
                   onClick={() => togglePassword("password")}
                   onMouseOver={(e) => e.target.style.color = '#667eea'}
                   onMouseOut={(e) => e.target.style.color = '#999'}
+                  onFocus={(e) => e.target.style.color = '#667eea'}
+                  onBlur={(e) => e.target.style.color = '#999'}
                 >
                   {showPassword ? "🙈" : "👁️"}
                 </button>
@@ -818,6 +830,8 @@ function SupplierRegister() {
                   onClick={() => togglePassword("confirmPassword")}
                   onMouseOver={(e) => e.target.style.color = '#667eea'}
                   onMouseOut={(e) => e.target.style.color = '#999'}
+                  onFocus={(e) => e.target.style.color = '#667eea'}
+                  onBlur={(e) => e.target.style.color = '#999'}
                 >
                   {showConfirmPassword ? "🙈" : "👁️"}
                 </button>
@@ -854,6 +868,16 @@ function SupplierRegister() {
                 }
               }}
               onMouseOut={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }}
+              onFocus={(e) => {
+                if (!isLoading) {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.3)';
+                }
+              }}
+              onBlur={(e) => {
                 e.target.style.transform = 'translateY(0)';
                 e.target.style.boxShadow = 'none';
               }}

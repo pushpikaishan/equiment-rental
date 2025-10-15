@@ -35,6 +35,17 @@ export default function EquipmentList() {
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
+  // If navigated with #inventory-list, scroll to it after mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#inventory-list') {
+      const el = document.getElementById('inventory-list');
+      if (el) {
+        // Small timeout to ensure layout is ready
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -89,7 +100,7 @@ export default function EquipmentList() {
   return (
     <div style={{ 
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+      background: 'linear-gradient(135deg, #72839eff 0%, #334155 50%, #68768aff 100%)',
       minHeight: '100vh',
       margin: 0,
       padding: 0,
@@ -100,7 +111,7 @@ export default function EquipmentList() {
       {/* Hero Slider */}
       <HeroSlider />
 
-      <div style={{ 
+      <div id="inventory-list" style={{ 
         padding: '16px 10px', 
         maxWidth: 1200, 
         margin: '0 auto'
@@ -143,7 +154,7 @@ export default function EquipmentList() {
                 border: '1px solid rgba(226,232,240,0.6)', 
                 borderRadius: 16, 
                 overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset',
+                boxShadow: '0 4px 20px rgba(255,255,255,0.25), 0 1px 0 rgba(255,255,255,0.9) inset',
                 backdropFilter: 'saturate(180%) blur(20px)',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 display: 'flex',
@@ -152,22 +163,22 @@ export default function EquipmentList() {
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-6px)';
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0,0,0,0.15), 0 4px 16px rgba(59,130,246,0.15)';
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(255,255,255,0.35), 0 4px 16px rgba(255,255,255,0.25)';
                 e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(255,255,255,0.25), 0 1px 0 rgba(255,255,255,0.9) inset';
                 e.currentTarget.style.borderColor = 'rgba(226,232,240,0.6)';
               }}
               onFocus={(e) => {
                 e.currentTarget.style.transform = 'translateY(-6px)';
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0,0,0,0.15), 0 4px 16px rgba(59,130,246,0.15)';
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(255,255,255,0.35), 0 4px 16px rgba(255,255,255,0.25)';
                 e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(255,255,255,0.25), 0 1px 0 rgba(255,255,255,0.9) inset';
                 e.currentTarget.style.borderColor = 'rgba(226,232,240,0.6)';
               }}
             >

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import UserNavbar from './UserNavbar';
 import SiteFooter from '../common/SiteFooter';
+import './PaymentPage.css';
 
 export default function CartPage() {
   const [cart, setCart] = useState([]);
@@ -200,23 +201,10 @@ export default function CartPage() {
   };
 
   return (
-    <div style={{ 
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-      minHeight: '100vh'
-    }}>
+    <div>
       <UserNavbar />
-      <div style={{ padding: '24px 16px', maxWidth: 1100, margin: '0 auto' }}>
-      <h2 style={{ 
-        margin: 0,
-        fontSize: 28,
-        fontWeight: 800,
-        background: 'linear-gradient(135deg, #1e293b, #475569)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        letterSpacing: '-0.025em',
-        marginBottom: 10
-      }}>Your Booking Cart</h2>
+      <div style={{ padding: 20, maxWidth: 900, margin: '0 auto' }}>
+      <h2>Your Booking Cart</h2>
       {cart.length === 0 ? (
         <div>Your cart is empty.</div>
       ) : (
@@ -275,39 +263,25 @@ export default function CartPage() {
             </div>
           )}
           {/* Checkout form */}
-          <div style={{ 
-            marginTop: 20, 
-            padding: 16, 
-            border: '1px solid rgba(226,232,240,0.8)', 
-            borderRadius: 14, 
-            background: 'rgba(255,255,255,0.85)',
-            boxShadow: '0 10px 30px rgba(2,8,23,0.06)',
-            backdropFilter: 'saturate(180%) blur(12px)'
-          }}>
-            <h3 style={{ 
-              marginTop: 0, 
-              marginBottom: 12,
-              fontSize: 20,
-              fontWeight: 800,
-              color: '#0f172a'
-            }}>Booking details</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+          <div style={{ marginTop: 20, padding: 12, border: '1px solid #e2e8f0', borderRadius: 8, background: 'white' }}>
+            <h3 style={{ marginTop: 0 }}>Booking details</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               <div>
-                <label htmlFor="name" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Full name</label>
-                <input id="name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setFieldTouched('name')} placeholder="Your name" style={{ width: '100%', padding: '10px 12px', border: `1px solid ${touched.name && errors.name ? '#ef4444' : 'rgba(226,232,240,0.9)'}`, borderRadius: 10, outline: 'none', transition: 'all .2s ease' }} onFocus={(e)=>{e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'; e.target.style.borderColor='#93c5fd';}} onBlurCapture={(e)=>{e.target.style.boxShadow='none';}} aria-invalid={!!(touched.name && errors.name)} aria-describedby={touched.name && errors.name ? 'name-error' : undefined} />
+                <label htmlFor="name" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Full name</label>
+                <input id="name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setFieldTouched('name')} placeholder="Your name" style={{ width: '100%', padding: 8, border: `1px solid ${touched.name && errors.name ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.name && errors.name)} aria-describedby={touched.name && errors.name ? 'name-error' : undefined} />
                 {touched.name && errors.name && (
                   <div id="name-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.name}</div>
                 )}
               </div>
               <div>
-                <label htmlFor="email" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email</label>
-                <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setFieldTouched('email')} placeholder="you@example.com" style={{ width: '100%', padding: '10px 12px', border: `1px solid ${touched.email && errors.email ? '#ef4444' : 'rgba(226,232,240,0.9)'}`, borderRadius: 10, outline: 'none', transition: 'all .2s ease' }} onFocus={(e)=>{e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'; e.target.style.borderColor='#93c5fd';}} onBlurCapture={(e)=>{e.target.style.boxShadow='none';}} aria-invalid={!!(touched.email && errors.email)} aria-describedby={touched.email && errors.email ? 'email-error' : undefined} />
+                <label htmlFor="email" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Email</label>
+                <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setFieldTouched('email')} placeholder="you@example.com" style={{ width: '100%', padding: 8, border: `1px solid ${touched.email && errors.email ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.email && errors.email)} aria-describedby={touched.email && errors.email ? 'email-error' : undefined} />
                 {touched.email && errors.email && (
                   <div id="email-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.email}</div>
                 )}
               </div>
               <div>
-                <label htmlFor="phone" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Phone</label>
+                <label htmlFor="phone" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Phone</label>
                 <input 
                   id="phone" 
                   type="tel"
@@ -321,8 +295,7 @@ export default function CartPage() {
                   onBlur={() => setFieldTouched('phone')} 
                   placeholder="0712345678" 
                   maxLength={12}
-                  style={{ width: '100%', padding: '10px 12px', border: `1px solid ${touched.phone && errors.phone ? '#ef4444' : 'rgba(226,232,240,0.9)'}`, borderRadius: 10, outline: 'none', transition: 'all .2s ease' }} 
-                  onFocus={(e)=>{e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'; e.target.style.borderColor='#93c5fd';}} onBlurCapture={(e)=>{e.target.style.boxShadow='none';}}
+                  style={{ width: '100%', padding: 8, border: `1px solid ${touched.phone && errors.phone ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} 
                   aria-invalid={!!(touched.phone && errors.phone)} 
                   aria-describedby={touched.phone && errors.phone ? 'phone-error' : undefined} 
                 />
@@ -331,21 +304,21 @@ export default function CartPage() {
                 )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label htmlFor="deliveryAddress" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Delivery address</label>
-                <input id="deliveryAddress" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} onBlur={() => setFieldTouched('deliveryAddress')} placeholder="Street, city, additional directions" style={{ width: '100%', padding: '10px 12px', border: `1px solid ${touched.deliveryAddress && errors.deliveryAddress ? '#ef4444' : 'rgba(226,232,240,0.9)'}`, borderRadius: 10, outline: 'none', transition: 'all .2s ease' }} onFocus={(e)=>{e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'; e.target.style.borderColor='#93c5fd';}} onBlurCapture={(e)=>{e.target.style.boxShadow='none';}} aria-invalid={!!(touched.deliveryAddress && errors.deliveryAddress)} aria-describedby={touched.deliveryAddress && errors.deliveryAddress ? 'deliveryAddress-error' : undefined} />
+                <label htmlFor="deliveryAddress" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Delivery address</label>
+                <input id="deliveryAddress" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} onBlur={() => setFieldTouched('deliveryAddress')} placeholder="Street, city, additional directions" style={{ width: '100%', padding: 8, border: `1px solid ${touched.deliveryAddress && errors.deliveryAddress ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.deliveryAddress && errors.deliveryAddress)} aria-describedby={touched.deliveryAddress && errors.deliveryAddress ? 'deliveryAddress-error' : undefined} />
                 {touched.deliveryAddress && errors.deliveryAddress && (
                   <div id="deliveryAddress-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.deliveryAddress}</div>
                 )}
               </div>
               <div>
-                <label htmlFor="bookingDate" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Booking date</label>
-                <input id="bookingDate" type="date" value={bookingDate} min={todayStr} onChange={(e) => setBookingDate(e.target.value)} onBlur={() => setFieldTouched('bookingDate')} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${touched.bookingDate && errors.bookingDate ? '#ef4444' : 'rgba(226,232,240,0.9)'}`, borderRadius: 10, outline: 'none', transition: 'all .2s ease' }} onFocus={(e)=>{e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'; e.target.style.borderColor='#93c5fd';}} onBlurCapture={(e)=>{e.target.style.boxShadow='none';}} aria-invalid={!!(touched.bookingDate && errors.bookingDate)} aria-describedby={touched.bookingDate && errors.bookingDate ? 'bookingDate-error' : undefined} />
+                <label htmlFor="bookingDate" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Booking date</label>
+                <input id="bookingDate" type="date" value={bookingDate} min={todayStr} onChange={(e) => setBookingDate(e.target.value)} onBlur={() => setFieldTouched('bookingDate')} style={{ width: '100%', padding: 8, border: `1px solid ${touched.bookingDate && errors.bookingDate ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.bookingDate && errors.bookingDate)} aria-describedby={touched.bookingDate && errors.bookingDate ? 'bookingDate-error' : undefined} />
                 {touched.bookingDate && errors.bookingDate && (
                   <div id="bookingDate-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.bookingDate}</div>
                 )}
               </div>
               <div>
-                <label htmlFor="returnDate" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Return date (optional)</label>
+                <label htmlFor="returnDate" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
                 <input
                   id="returnDate"
                   type="date"
@@ -353,8 +326,7 @@ export default function CartPage() {
                   min={bookingDate ? new Date(new Date(bookingDate).getTime() + 86400000).toISOString().slice(0, 10) : undefined}
                   onChange={(e) => setReturnDate(e.target.value)}
                   onBlur={() => setFieldTouched('returnDate')}
-                  style={{ width: '100%', padding: '10px 12px', border: `1px solid ${touched.returnDate && errors.returnDate ? '#ef4444' : 'rgba(226,232,240,0.9)'}`, borderRadius: 10, outline: 'none', transition: 'all .2s ease' }}
-                  onFocus={(e)=>{e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'; e.target.style.borderColor='#93c5fd';}} onBlurCapture={(e)=>{e.target.style.boxShadow='none';}}
+                  style={{ width: '100%', padding: 8, border: `1px solid ${touched.returnDate && errors.returnDate ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }}
                   aria-invalid={!!(touched.returnDate && errors.returnDate)}
                   aria-describedby={touched.returnDate && errors.returnDate ? 'returnDate-error' : undefined}
                 />
@@ -363,7 +335,7 @@ export default function CartPage() {
                 )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label htmlFor="notes" style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569' }}>
+                <label htmlFor="notes" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>
                   Notes (optional)
                   <span style={{ float: 'right', fontSize: 11, color: notes.length > 300 ? '#dc2626' : '#94a3b8' }}>
                     {notes.length}/300
@@ -374,10 +346,14 @@ export default function CartPage() {
                   value={notes} 
                   onChange={(e) => setNotes(e.target.value)} 
                   onBlur={() => setFieldTouched('notes')}
-                  rows={3}
+                  rows={3} 
                   placeholder="Any instructions or notes" 
-                  style={{ width: '100%', padding: '10px 12px', border: `1px solid ${touched.notes && errors.notes ? '#ef4444' : 'rgba(226,232,240,0.9)'}`, borderRadius: 10, outline: 'none', transition: 'all .2s ease' }}
-                  onFocus={(e)=>{e.target.style.boxShadow='0 0 0 3px rgba(59,130,246,.12)'; e.target.style.borderColor='#93c5fd';}} onBlurCapture={(e)=>{e.target.style.boxShadow='none';}}
+                  style={{ 
+                    width: '100%', 
+                    padding: 8, 
+                    border: `1px solid ${touched.notes && errors.notes ? '#ef4444' : '#cbd5e1'}`, 
+                    borderRadius: 6 
+                  }}
                   aria-invalid={!!(touched.notes && errors.notes)}
                   aria-describedby={touched.notes && errors.notes ? 'notes-error' : undefined}
                   maxLength={300}
@@ -390,13 +366,13 @@ export default function CartPage() {
           </div>
 
           <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <button onClick={handleClear} style={{ background: 'white', border: '1px solid rgba(226,232,240,0.9)', padding: '10px 14px', borderRadius: 10, color: '#0f172a' }}>Clear Cart</button>
+            <button onClick={handleClear} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 8 }}>Clear Cart</button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>Security deposit (30%):</span>
               <strong>LKR {(total * 0.30).toFixed(2)}</strong>
             </div>
             <div style={{ fontWeight: 700 }}>Total (per day): LKR {total.toFixed(2)}</div>
-            <button onClick={createBooking} disabled={creating || cart.length === 0 || !isValid} style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 10, opacity: (creating || !isValid) ? 0.8 : 1, boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}>{creating ? 'Creating…' : 'Proceed to Payment'}</button>
+            <button onClick={createBooking} disabled={creating || cart.length === 0 || !isValid} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 8, opacity: (creating || !isValid) ? 0.8 : 1 }}>{creating ? 'Creating…' : 'Proceed to Payment'}</button>
           </div>
         </>
       )}
