@@ -214,7 +214,7 @@ export default function CartPage() {
               <tr style={{ background: '#f1f5f9' }}>
                 <th style={{ textAlign: 'left', padding: 8 }}>Item</th>
                 <th style={{ textAlign: 'left', padding: 8 }}>Price / day</th>
-                <th style={{ textAlign: 'left', padding: 8 }}>Qty</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Quantity</th>
                 <th style={{ textAlign: 'left', padding: 8 }}>Subtotal</th>
                 <th style={{ textAlign: 'left', padding: 8 }}>Action</th>
               </tr>
