@@ -1085,7 +1085,6 @@ function OtherManagement({ setActiveSection }) {
     cursor: 'pointer'
   };
   const items = [
-    { id: 'banner', icon: '🪧', title: 'Banner Manage', text: 'Upload and manage homepage banners.' },
     { id: 'faq', icon: '❓', title: 'FAQ', text: 'Manage frequently asked questions for users.' },
     { id: 'terms', icon: '⛽️', title: 'Terms & Conditions', text: 'Update your platform terms and policies.' },
     { id: 'privacy', icon: '🛡️', title: 'Privacy Policy', text: 'Configure and publish privacy policy details.' },
