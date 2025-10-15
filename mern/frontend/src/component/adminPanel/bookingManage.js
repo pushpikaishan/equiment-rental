@@ -45,11 +45,6 @@ export default function BookingManagement() {
   useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [page, statusFilter]);
   useEffect(() => { fetchSummary(); /* eslint-disable-next-line */ }, []);
 
-  const toggleDispute = async (id, current) => {
-    const note = window.prompt(current ? 'Update dispute note (optional):' : 'Enter dispute note (optional):', '');
-    await axios.put(`${baseUrl}/bookings/admin/${id}/dispute`, { disputed: !current, note }, { headers });
-    fetchData();
-  };
   const cancelBooking = async (id) => {
     const reason = window.prompt('Reason for cancellation? (optional)', '');
     await axios.put(`${baseUrl}/bookings/admin/${id}/cancel`, { reason }, { headers });
@@ -91,14 +86,14 @@ export default function BookingManagement() {
     <div>
       <div style={headerCard}>
         <h1 style={headerTitle}>Booking Management</h1>
-        <p style={headerSub}>Monitor system usage, handle disputes,cancellations and export booking reports.</p>
+  <p style={headerSub}>Monitor system usage, handle cancellations and export booking reports.</p>
         {summary && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
             <div style={{ ...input }}>Total: {summary.total}</div>
             <div style={{ ...input }}>Pending: {summary.pending}</div>
             <div style={{ ...input }}>Confirmed: {summary.confirmed}</div>
             <div style={{ ...input }}>Cancelled: {summary.cancelled}</div>
-            <div style={{ ...input }}>Disputed: {summary.disputed}</div>
+            {/* Disputed removed from UI */}
             <div style={{ ...input }}>Totals: subtotal {Number(summary.totals?.subtotal||0).toFixed(2)} | deposit {Number(summary.totals?.deposit||0).toFixed(2)} | total {Number(summary.totals?.totalAmount||0).toFixed(2)}</div>
           </div>
         )}
@@ -130,16 +125,15 @@ export default function BookingManagement() {
                 <th style={{ padding: 10 }}>Customer</th>
                 <th style={{ padding: 10 }}>Date</th>
                 <th style={{ padding: 10 }}>Status</th>
-                <th style={{ padding: 10 }}>Disputed</th>
                 <th style={{ padding: 10, textAlign: 'right' }}>Total</th>
                 <th style={{ padding: 10 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="8" style={{ padding: 10 }}>Loading…</td></tr>
+                <tr><td colSpan="7" style={{ padding: 10 }}>Loading…</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan="8" style={{ padding: 10 }}>No bookings found.</td></tr>
+                <tr><td colSpan="7" style={{ padding: 10 }}>No bookings found.</td></tr>
               ) : (
                 items.map((b) => (
                   <tr key={b._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -158,19 +152,8 @@ export default function BookingManagement() {
                         fontSize: 12
                       }}>{b.status}</span>
                     </td>
-                    <td style={{ padding: 10 }}>{b.disputed ? 'Yes' : 'No'}</td>
                     <td style={{ padding: 10, textAlign: 'right' }}>{Number(b.total).toFixed(2)}</td>
                     <td style={{ padding: 10, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => toggleDispute(b._id, b.disputed)}
-                        style={{
-                          // Blue for "Mark Dispute", Grey for "Resolve"
-                          ...btn(b.disputed ? 'var(--muted)' : '#1e40af'),
-                          minWidth: 120,
-                        }}
-                      >
-                        {b.disputed ? 'Resolve' : 'Mark Dispute'}
-                      </button>
                       {b.status !== 'cancelled' && (
                         <button
                           onClick={() => cancelBooking(b._id)}

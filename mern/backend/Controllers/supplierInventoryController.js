@@ -191,6 +191,7 @@ exports.publicList = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
+      .populate('supplierId', 'companyName name email phone district profileImage')
       .lean();
     // Attach remainingDays
     const decorated = items.map(it => {

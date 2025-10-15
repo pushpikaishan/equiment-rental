@@ -23,9 +23,20 @@ export const addToCart = (product, qty = 1) => {
   const cart = getCart();
   const idx = cart.findIndex((i) => i._id === product._id);
   if (idx >= 0) {
-    cart[idx].qty = Math.min((cart[idx].qty || 0) + qty, Number(product.quantity) || 9999);
+    const available = Number(product.quantity);
+    const nextQty = (cart[idx].qty || 0) + qty;
+    cart[idx].qty = available > 0 ? Math.min(nextQty, available) : Math.max(1, nextQty);
+    // keep latest known available quantity
+    cart[idx].quantity = Number.isFinite(available) ? available : cart[idx].quantity;
   } else {
-    cart.push({ _id: product._id, name: product.name, price: product.rentalPrice, image: product.image, qty });
+    cart.push({ 
+      _id: product._id, 
+      name: product.name, 
+      price: product.rentalPrice, 
+      image: product.image, 
+      qty: Math.max(1, qty),
+      quantity: Number(product.quantity) || 0
+    });
   }
   saveCart(cart);
   return cart;
@@ -35,7 +46,9 @@ export const updateQty = (id, qty) => {
   const cart = getCart();
   const idx = cart.findIndex((i) => i._id === id);
   if (idx >= 0) {
-    cart[idx].qty = Math.max(1, qty);
+    const available = Number(cart[idx].quantity);
+    const desired = Math.max(1, Number(qty) || 1);
+    cart[idx].qty = available > 0 ? Math.min(desired, available) : desired;
     saveCart(cart);
   }
   return cart;
