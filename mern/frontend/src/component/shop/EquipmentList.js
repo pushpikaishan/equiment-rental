@@ -35,6 +35,17 @@ export default function EquipmentList() {
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
+  // If navigated with #inventory-list, scroll to it after mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#inventory-list') {
+      const el = document.getElementById('inventory-list');
+      if (el) {
+        // Small timeout to ensure layout is ready
+        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -100,7 +111,7 @@ export default function EquipmentList() {
       {/* Hero Slider */}
       <HeroSlider />
 
-      <div style={{ 
+      <div id="inventory-list" style={{ 
         padding: '16px 10px', 
         maxWidth: 1200, 
         margin: '0 auto'
