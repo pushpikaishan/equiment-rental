@@ -454,43 +454,37 @@ exports.invoice = async (req, res) => {
     if (pay.status !== 'paid' && pay.status !== 'partial_refunded') {
       return res.status(400).json({ message: 'Invoice available only for paid or partially refunded payments' });
     }
-    const doc = new PDFDocument({ margin: 36, size: 'A4' });
+    // Prefer the original booking for items/details; fallback to payment-only summary
+    let bookingDoc = null;
+    if (pay.bookingId) {
+      try { bookingDoc = await Booking.findById(pay.bookingId).lean(); } catch (_) {}
+    }
+    const baseObj = bookingDoc ? {
+      ...bookingDoc,
+      _id: pay.orderId || pay._id, // show order code on invoice
+    } : {
+      _id: pay.orderId || pay._id,
+      customerName: pay.customerName,
+      customerEmail: pay.customerEmail,
+      subtotal: Number(pay.subtotal || pay.amount || 0),
+      securityDeposit: Number(pay.deposit || 0),
+      items: [],
+    };
+    const bookingForPdf = {
+      ...baseObj,
+      paymentMethod: pay.method || pay.gateway || 'N/A',
+      paymentStatus: pay.status,
+      paidAt: pay.createdAt,
+    };
+    const { generateInvoicePDF } = require('./invoiceHelper');
+    const invoicePath = await generateInvoicePDF(bookingForPdf);
+    const abs = require('path').join(process.cwd(), invoicePath.replace(/^\//, ''));
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-${pay.orderId || pay._id}.pdf"`);
-    doc.pipe(res);
-
-    doc.font('Helvetica-Bold').fontSize(20).text('INVOICE', { align: 'right' });
-    doc.moveDown();
-    doc.font('Helvetica').fontSize(10);
-    doc.text(`Invoice No: ${pay.orderId || pay._id}`);
-    doc.text(`Date: ${new Date(pay.createdAt).toLocaleString()}`);
-    doc.moveDown();
-    doc.text(`Billed To:`);
-    doc.font('Helvetica-Bold').text(`${pay.customerName || ''}`);
-    doc.font('Helvetica').text(`${pay.customerEmail || ''}`);
-    doc.moveDown();
-    doc.text(`Payment Method: ${pay.method || pay.gateway || 'N/A'}`);
-    doc.text(`Status: ${(pay.status || '').replace(/_/g, ' ')}`);
-    doc.moveDown();
-    doc.font('Helvetica-Bold').text('Summary');
-    doc.font('Helvetica');
-    const lines = [
-      ['Subtotal', `${pay.currency || 'LKR'} ${(Number(pay.subtotal || pay.amount) || 0).toFixed(2)}`],
-      ['Deposit', `${pay.currency || 'LKR'} ${(Number(pay.deposit || 0) || 0).toFixed(2)}`],
-      ['Taxes', `${pay.currency || 'LKR'} ${(Number(pay.taxes || 0) || 0).toFixed(2)}`],
-      ['Discount', `${pay.currency || 'LKR'} ${(Number(pay.discount || 0) || 0).toFixed(2)}`],
-      ['Total Paid', `${pay.currency || 'LKR'} ${(Number(pay.amount || 0) || 0).toFixed(2)}`],
-    ];
-    const labelWidth = 120;
-    lines.forEach(([k, v]) => {
-      const y = doc.y;
-      doc.text(k, 36, y, { width: labelWidth });
-      doc.text(v, 36 + labelWidth + 10, y);
-      doc.moveDown(0.5);
-    });
-    doc.moveDown(2);
-    doc.font('Helvetica-Oblique').fontSize(9).fillColor('#64748b').text('Thank you for your business.');
-    doc.end();
+    const fs = require('fs');
+    const stream = fs.createReadStream(abs);
+    stream.on('error', (err) => { console.error('Stream invoice error:', err); res.status(500).end(); });
+    stream.pipe(res);
   } catch (e) {
     console.error('Invoice PDF error:', e);
     res.status(500).json({ message: 'Server error' });
@@ -512,42 +506,15 @@ exports.receipt = async (req, res) => {
     }
     // Fetch last refund audit as reference
     const lastRefund = await PaymentAudit.findOne({ paymentId: id, action: { $in: ['refund', 'partial_refund'] } }).sort({ createdAt: -1 }).lean();
-    const doc = new PDFDocument({ margin: 36, size: 'A4' });
+    const { generateReceiptPDF } = require('./invoiceHelper');
+    const receiptPath = await generateReceiptPDF(pay, lastRefund);
+    const abs = require('path').join(process.cwd(), receiptPath.replace(/^\//, ''));
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="receipt-${pay.orderId || pay._id}.pdf"`);
-    doc.pipe(res);
-
-    doc.font('Helvetica-Bold').fontSize(20).text('REFUND RECEIPT', { align: 'right' });
-    doc.moveDown();
-    doc.font('Helvetica').fontSize(10);
-    doc.text(`Receipt No: ${pay.orderId || pay._id}`);
-    doc.text(`Date: ${new Date((lastRefund?.createdAt) || pay.updatedAt || Date.now()).toLocaleString()}`);
-    doc.moveDown();
-    doc.text(`Customer:`);
-    doc.font('Helvetica-Bold').text(`${pay.customerName || ''}`);
-    doc.font('Helvetica').text(`${pay.customerEmail || ''}`);
-    doc.moveDown();
-    const refunded = Number(lastRefund?.amount || 0);
-    const title = (pay.status === 'partial_refunded') ? 'Partial Refund Amount' : 'Refund Amount';
-    const currency = pay.currency || 'LKR';
-    doc.font('Helvetica-Bold').text('Summary');
-    doc.font('Helvetica');
-    const lines = [
-      [title, `${currency} ${refunded ? refunded.toFixed(2) : (Number(pay.amount || 0)).toFixed(2)}`],
-      ['Original Payment', `${currency} ${(Number(pay.amount || 0)).toFixed(2)}`],
-      ['Status', (pay.status || '').replace(/_/g, ' ')],
-      ['Note', lastRefund?.note || ''],
-    ];
-    const labelWidth = 150;
-    lines.forEach(([k, v]) => {
-      const y = doc.y;
-      doc.text(k, 36, y, { width: labelWidth });
-      doc.text(String(v), 36 + labelWidth + 10, y);
-      doc.moveDown(0.5);
-    });
-    doc.moveDown(2);
-    doc.font('Helvetica-Oblique').fontSize(9).fillColor('#64748b').text('This receipt acknowledges the refund to your original payment method.');
-    doc.end();
+    const fs = require('fs');
+    const stream = fs.createReadStream(abs);
+    stream.on('error', (err) => { console.error('Stream receipt error:', err); res.status(500).end(); });
+    stream.pipe(res);
   } catch (e) {
     console.error('Receipt PDF error:', e);
     res.status(500).json({ message: 'Server error' });
@@ -574,11 +541,26 @@ exports.remove = async (req, res) => {
 exports.bankDeposit = async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const { bookingId, amount, depositorName, referenceNo, note } = req.body || {};
+  const { bookingId, amount, depositorName, referenceNo, note } = req.body || {};
     if (!bookingId) return res.status(400).json({ message: 'bookingId is required' });
     const booking = await Booking.findById(bookingId);
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
     if (String(booking.userId) !== String(req.user.id)) return res.status(403).json({ message: 'Forbidden' });
+
+    // Validate depositor name: letters and spaces only, 2-60 chars, at least two letters
+    const rawName = String(depositorName || '').trim();
+    const lettersOnly = rawName.replace(/[^A-Za-z]/g, '');
+    const namePattern = /^(?!.* {2,})[A-Za-z ]{2,60}$/; // no double spaces, only letters/spaces
+    if (!rawName || !namePattern.test(rawName) || lettersOnly.length < 2) {
+      return res.status(400).json({ message: 'Invalid depositor name. Use letters and spaces only (min 2 characters).' });
+    }
+    const safeDepositorName = rawName;
+
+    // Validate reference number: alphanumeric only, 6-15
+    const rawRef = String(referenceNo || '').trim().toUpperCase();
+    if (!/^[A-Z0-9]{6,15}$/.test(rawRef)) {
+      return res.status(400).json({ message: 'Invalid reference number. Use 6-15 letters/numbers.' });
+    }
 
     // Attach uploaded file path if provided
     const slipPath = req.file ? `/uploads/${req.file.filename}` : '';
@@ -586,6 +568,12 @@ exports.bankDeposit = async (req, res) => {
   // Create or update a pending bank transfer payment record
     let payment = await Payment.findOne({ bookingId: booking._id, method: 'bank_transfer' });
     const payAmount = Number(amount || booking.total || 0);
+    // Enforce uniqueness of reference number across bank deposits
+    const refExists = await Payment.findOne({ method: 'bank_transfer', 'meta.referenceNo': rawRef });
+    if (refExists && String(refExists.bookingId) !== String(booking._id)) {
+      return res.status(409).json({ message: 'This reference number is already used for another deposit.' });
+    }
+
     if (!payment) {
       payment = await Payment.create({
         bookingId: booking._id,
@@ -600,12 +588,12 @@ exports.bankDeposit = async (req, res) => {
         subtotal: Number(booking.subtotal) || 0,
         deposit: Number(booking.securityDeposit) || 0,
         gateway: 'manual_bank',
-        meta: { depositorName, referenceNo, note: note || '', slipPath },
+        meta: { depositorName: safeDepositorName, referenceNo: rawRef, note: note || '', slipPath },
       });
       await PaymentAudit.create({ paymentId: payment._id, action: 'created', actorId: req.user.id, actorRole: req.user.role, note: 'Bank deposit submitted', amount: payAmount });
     } else {
       payment.amount = payAmount || payment.amount;
-      payment.meta = Object.assign({}, payment.meta || {}, { depositorName, referenceNo, note: note || '', slipPath: slipPath || payment.meta?.slipPath });
+  payment.meta = Object.assign({}, payment.meta || {}, { depositorName: safeDepositorName, referenceNo: rawRef, note: note || '', slipPath: slipPath || payment.meta?.slipPath });
       payment.status = 'pending';
       await payment.save();
       await PaymentAudit.create({ paymentId: payment._id, action: 'updated', actorId: req.user.id, actorRole: req.user.role, note: 'Bank deposit updated', amount: payment.amount });

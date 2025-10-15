@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
+import PropTypes from 'prop-types';
 import axios from 'axios';
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserNavbar from './UserNavbar';
 import SiteFooter from '../common/SiteFooter';
 import { clearCart } from '../../utils/cart';
+import './PaymentGateway.css';
 
 // Reusable gateway component (page or embedded)
 export default function PaymentGateway({ embedded = false, booking: bookingProp, amount: amountProp, currency: currencyProp = 'LKR', onSuccess, onError }) {
@@ -23,6 +25,7 @@ export default function PaymentGateway({ embedded = false, booking: bookingProp,
   const [cvv, setCvv] = useState('');
   const [processing, setProcessing] = useState(false);
   const [touchedName, setTouchedName] = useState(false);
+  const [cardNameError, setCardNameError] = useState('');
   const [touchedNumber, setTouchedNumber] = useState(false);
   const [touchedMonth, setTouchedMonth] = useState(false);
   const [touchedYear, setTouchedYear] = useState(false);
@@ -33,7 +36,7 @@ export default function PaymentGateway({ embedded = false, booking: bookingProp,
   // Helpers
   const luhnCheck = (num) => {
     const digits = (num || '').replace(/\D/g, '');
-    if (digits.length < 12) return false;
+    if (digits.length !== 16) return false; // VISA/MC are 16 digits
     let sum = 0;
     let dbl = false;
     for (let i = digits.length - 1; i >= 0; i--) {
@@ -55,19 +58,22 @@ export default function PaymentGateway({ embedded = false, booking: bookingProp,
     return true;
   };
 
-  const isFormValid = useMemo(() => (
-    cardName.trim().length > 1 && luhnCheck(cardNumber) && validExpiry(expMonth, expYear) && /(\d{3,4})/.test(cvv)
-  ), [cardName, cardNumber, expMonth, expYear, cvv]);
+  const digitsOnly = (cardNumber || '').replace(/\D/g, '');
+  const brand = useMemo(() => detectBrand(digitsOnly), [digitsOnly]);
+  const cardLengthOk = digitsOnly.length === 16;
+  const cardTypeAccepted = brand === 'visa' || brand === 'mastercard';
+  const cardNumberOk = cardLengthOk && cardTypeAccepted && luhnCheck(cardNumber);
+  const cvvOk = /^\d{3}$/.test(cvv);
 
   const onCardNumberChange = (val) => {
-    const digits = (val || '').replace(/\D/g, '').slice(0, 19);
+    const digits = (val || '').replace(/\D/g, '').slice(0, 16);
     const formatted = digits.replace(/(.{4})/g, '$1 ').trim();
     setCardNumber(formatted);
     setCardBrand(detectBrand(digits));
   };
   const onMonthChange = (val) => setExpMonth(val);
   const onYearChange = (val) => setExpYear(val);
-  const onCvvChange = (val) => setCvv((val || '').replace(/\D/g, '').slice(0, 4));
+  const onCvvChange = (val) => setCvv((val || '').replace(/\D/g, '').slice(0, 3));
 
   const chargeAmount = useMemo(() => {
     const deposit = Number(amount ?? booking?.securityDeposit ?? 0);
@@ -76,7 +82,13 @@ export default function PaymentGateway({ embedded = false, booking: bookingProp,
   }, [amount, booking]);
 
   const handleSuccess = async () => {
-    if (!isFormValid || !acceptedTerms || !booking || chargeAmount <= 0) {
+    const { valid, error } = validateCardholderName(cardName);
+    if (!valid) {
+      setTouchedName(true);
+      setCardNameError(error);
+      console.error('Cardholder name validation failed:', error);
+    }
+    if (!isFormValid || !acceptedTerms || !booking || chargeAmount <= 0 || !valid) {
       setTouchedName(true); setTouchedNumber(true); setTouchedMonth(true); setTouchedYear(true); setTouchedCvv(true);
       alert('Please complete valid payment details and accept the terms.');
       return;
@@ -102,66 +114,218 @@ export default function PaymentGateway({ embedded = false, booking: bookingProp,
     if (typeof onError === 'function') onError(new Error('Payment failed')); else navigate('/cart');
   };
 
+  // Validation helpers for cardholder name
+  const nameAllowedChars = /^[A-Za-z\s\-']*$/; // typing filter
+  const nameFormatPattern = /^[A-Za-z]+(?:[-'\s][A-Za-z]+)*$/; // full format
+
+  const sanitizeNameInput = (val) => {
+    let s = String(val || '');
+    // Remove disallowed characters immediately
+    s = s.replace(/[^A-Za-z\s\-']/g, '');
+    // Collapse multiple consecutive separators (space, hyphen, apostrophe)
+    s = s.replace(/([-'\s])\1+/g, '$1');
+    // Remove leading/trailing separators
+    s = s.replace(/^[\s-']+/, '').replace(/[\s-']+$/, '');
+    // Enforce max length 50
+    if (s.length > 50) s = s.slice(0, 50);
+    return s;
+  };
+
+  const titleCaseName = (val) => {
+    // Title-case runs of letters while preserving separators (space, hyphen, apostrophe)
+    return String(val || '')
+      .toLowerCase()
+      .replace(/([A-Za-z])([A-Za-z]*)/g, (_, f, r) => f.toUpperCase() + r);
+  };
+
+  const validateCardholderName = (raw) => {
+    const original = String(raw || '');
+    const value = original.trim();
+    if (!value) return { valid: false, error: 'Cardholder name is required' };
+    if (value.length < 2) return { valid: false, error: 'Name must be at least 2 characters' };
+    if (value.length > 50) return { valid: false, error: 'Name must not exceed 50 characters' };
+    if (!nameAllowedChars.test(original)) return { valid: false, error: 'Name can only contain letters, spaces, hyphens, and apostrophes' };
+    if (/^[\s-']|[\s-']$/.test(original)) return { valid: false, error: 'Name cannot start or end with spaces or special characters' };
+    const letterCount = (value.match(/[A-Za-z]/g) || []).length;
+    if (letterCount < 2) return { valid: false, error: 'Name must contain at least two letters' };
+    if (/([-'\s])\1/.test(value)) return { valid: false, error: 'Name cannot contain multiple consecutive spaces or special characters' };
+    if (!nameFormatPattern.test(value)) return { valid: false, error: 'Please enter a valid name format' };
+    return { valid: true, error: '' };
+  };
+
+  const nameValidation = useMemo(() => validateCardholderName(cardName), [cardName]);
+  const cardNameOk = nameValidation.valid;
+  const isFormValid = useMemo(() => (
+    cardNameOk && cardNumberOk && validExpiry(expMonth, expYear) && cvvOk && cardTypeAccepted
+  ), [cardNameOk, cardNumberOk, expMonth, expYear, cvvOk, cardTypeAccepted]);
+
+  const onCardNameChange = (val) => {
+    const sanitized = sanitizeNameInput(val);
+    setCardName(sanitized);
+    // real-time error status (only when field touched)
+    if (touchedName) {
+      const { valid, error } = validateCardholderName(sanitized);
+      setCardNameError(error);
+    }
+  };
+
+  const onCardNameBlur = () => {
+    setTouchedName(true);
+    const formatted = titleCaseName(sanitizeNameInput(cardName).trim().replace(/\s+/g, ' '));
+    setCardName(formatted);
+    const { valid, error } = validateCardholderName(formatted);
+    setCardNameError(error);
+    if (!valid) console.warn('Cardholder name validation failed:', error);
+  };
+
   // Render pieces
   const Header = (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-      <div style={{ fontWeight: 700, color: '#0f172a' }}>Credit & Debit cards</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 12, color: '#64748b', marginRight: 8 }}>Transaction fee may apply</span>
+    <div className="pg-header">
+      <div className="pg-header__title">Credit & Debit cards</div>
+      <div className="pg-header__brands">
+        <span className="pg-header__hint">Transaction fee may apply</span>
         <BrandPill label="VISA" bg="#dbeafe" color="#1e3a8a" />
         <BrandPill label="MasterCard" bg="#ffedd5" color="#7c2d12" />
-        <BrandPill label="Maestro" bg="#d1fae5" color="#065f46" />
       </div>
     </div>
   );
 
   const Form = (
-    <div style={{ padding: '16px 24px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-        <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Cardholder Name</label>
-          <input value={cardName} onChange={(e) => setCardName(e.target.value)} onBlur={() => setTouchedName(true)} placeholder="Name on card" style={{ width: '100%', padding: 10, border: '1px solid #cbd5e1', borderRadius: 6, outline: 'none' }} />
-          {touchedName && cardName.trim().length <= 1 && (<div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>Please enter the name on the card.</div>)}
+    <div className="pg-form">
+      <div className="pg-form__grid">
+        <div className="pg-form__field">
+          <label htmlFor="pg-card-name" className="pg-label">
+            Cardholder Name {cardNameOk && <span className="pg-valid-icon">✓</span>}
+          </label>
+          <input 
+            id="pg-card-name" 
+            value={cardName} 
+            onChange={(e) => onCardNameChange(e.target.value)} 
+            onBlur={onCardNameBlur} 
+            placeholder="e.g., Mary O'Brien"
+            className={`pg-input ${touchedName ? (cardNameOk ? 'is-valid' : cardNameError ? 'is-error' : '') : ''}`}
+          />
+          {touchedName && !cardNameOk && (
+            <div className="pg-error">{cardNameError || 'Please enter the name on the card.'}</div>
+          )}
+          {touchedName && cardNameOk && cardName && !/\s/.test(cardName) && (
+            <div className="pg-hint">Tip: enter your full name as it appears on the card.</div>
+          )}
         </div>
-        <div>
-          <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Card Number</label>
-          <div style={{ position: 'relative' }}>
-            <input value={cardNumber} onChange={(e) => onCardNumberChange(e.target.value)} onBlur={() => setTouchedNumber(true)} placeholder="4242 4242 4242 4242" inputMode="numeric" style={{ width: '100%', padding: '10px 64px 10px 10px', border: '1px solid #cbd5e1', borderRadius: 6, outline: 'none' }} />
-            {cardBrand && (
-              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, padding: '2px 8px', borderRadius: 12, background: cardBrand === 'visa' ? '#dbeafe' : cardBrand === 'mastercard' ? '#ffedd5' : '#d1fae5', color: cardBrand === 'visa' ? '#1e3a8a' : cardBrand === 'mastercard' ? '#7c2d12' : '#065f46' }}>
-                {cardBrand === 'visa' ? 'VISA' : cardBrand === 'mastercard' ? 'MasterCard' : 'Maestro'}
+        
+        <div className="pg-form__field">
+          <label htmlFor="pg-card-number" className="pg-label">
+            Card Number {cardNumberOk && <span className="pg-valid-icon">✓</span>}
+          </label>
+          <div className="pg-input-wrapper">
+            <input
+              id="pg-card-number"
+              value={cardNumber}
+              onChange={(e) => onCardNumberChange(e.target.value)}
+              onBlur={() => setTouchedNumber(true)}
+              placeholder="XXXX XXXX XXXX XXXX"
+              inputMode="numeric"
+              maxLength={19}
+              className={`pg-input ${touchedNumber && !cardNumberOk ? 'is-error' : cardNumberOk ? 'is-valid' : ''}`}
+              style={{ paddingRight: brand ? '80px' : '16px' }}
+            />
+            {brand && (
+              <span 
+                className="pg-card-brand" 
+                style={{ 
+                  background: brand === 'visa' ? '#dbeafe' : '#ffedd5', 
+                  color: brand === 'visa' ? '#1e3a8a' : '#7c2d12' 
+                }}
+              >
+                {brand === 'visa' ? 'VISA' : 'MasterCard'}
               </span>
             )}
           </div>
-          {touchedNumber && ((cardNumber || '').replace(/\D/g, '').length >= 16) && !luhnCheck(cardNumber) && (<div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>Enter a valid card number.</div>)}
+          {touchedNumber && (!cardLengthOk) && (
+            <div className="pg-error">Card number must be 16 digits</div>
+          )}
+          {touchedNumber && cardLengthOk && !cardTypeAccepted && (
+            <div className="pg-error">Card type not accepted</div>
+          )}
+          {touchedNumber && cardLengthOk && cardTypeAccepted && !luhnCheck(cardNumber) && (
+            <div className="pg-error">Invalid card number (failed Luhn check)</div>
+          )}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>End Date</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <select value={expMonth} onChange={(e) => onMonthChange(e.target.value)} onBlur={() => setTouchedMonth(true)} style={{ width: '100%', padding: 10, border: '1px solid #cbd5e1', borderRadius: 6, outline: 'none' }}>
+        
+        <div className="pg-expiry-grid">
+          <div className="pg-form__field">
+            <label htmlFor="pg-exp-month" className="pg-label">Expiration Date</label>
+            <div className="pg-expiry-inputs">
+              <select 
+                id="pg-exp-month" 
+                value={expMonth} 
+                onChange={(e) => onMonthChange(e.target.value)} 
+                onBlur={() => setTouchedMonth(true)} 
+                className="pg-select"
+              >
                 <option value="">mm</option>
-                {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (<option key={m} value={m}>{m}</option>))}
+                {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
               </select>
-              <select value={expYear} onChange={(e) => onYearChange(e.target.value)} onBlur={() => setTouchedYear(true)} style={{ width: '100%', padding: 10, border: '1px solid #cbd5e1', borderRadius: 6, outline: 'none' }}>
+              <select 
+                id="pg-exp-year" 
+                value={expYear} 
+                onChange={(e) => onYearChange(e.target.value)} 
+                onBlur={() => setTouchedYear(true)} 
+                className="pg-select"
+              >
                 <option value="">yyyy</option>
-                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() + i).map(y => (<option key={y} value={y}>{y}</option>))}
+                {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() + i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
               </select>
             </div>
-            {(touchedMonth || touchedYear) && !validExpiry(expMonth, expYear) && (<div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>Enter a valid future date.</div>)}
+            {(touchedMonth || touchedYear) && !validExpiry(expMonth, expYear) && (
+              <div className="pg-error">Card has expired</div>
+            )}
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>CVV</label>
-            <input value={cvv} onChange={(e) => onCvvChange(e.target.value)} onBlur={() => setTouchedCvv(true)} placeholder="3 or 4 digits" inputMode="numeric" style={{ width: '100%', padding: 10, border: '1px solid #cbd5e1', borderRadius: 6, outline: 'none' }} />
-            {touchedCvv && !/(\d{3,4})/.test(cvv) && (<div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>CVV must be 3 or 4 digits.</div>)}
+          
+          <div className="pg-form__field">
+            <label htmlFor="pg-cvv" className="pg-label">
+              CVV {cvvOk && <span className="pg-valid-icon">✓</span>}
+            </label>
+            <input 
+              id="pg-cvv" 
+              value={cvv} 
+              type="password" 
+              maxLength={3} 
+              onChange={(e) => onCvvChange(e.target.value)} 
+              onBlur={() => setTouchedCvv(true)} 
+              placeholder="- - -" 
+              inputMode="numeric" 
+              className={`pg-input ${touchedCvv && !cvvOk ? 'is-error' : cvvOk ? 'is-valid' : ''}`}
+            />
+            {touchedCvv && !cvvOk && (
+              <div className="pg-error">CVV must be 3 digits</div>
+            )}
           </div>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#0f172a', marginTop: 8 }}>
-          <input type="checkbox" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} />
-          <span>I have read and accept the terms of use, rules of flight and privacy policy</span>
-        </label>
-        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={handleSuccess} disabled={!isFormValid || !acceptedTerms || processing || !booking || chargeAmount <= 0} style={{ background: '#22c55e', color: 'white', border: 'none', padding: '12px 18px', borderRadius: 6, fontWeight: 700, cursor: (!isFormValid || !acceptedTerms || processing || !booking || chargeAmount <= 0) ? 'not-allowed' : 'pointer', opacity: (!isFormValid || !acceptedTerms || processing || !booking || chargeAmount <= 0) ? 0.6 : 1 }}>
+        
+        <div className="pg-checkbox-wrapper">
+          <input 
+            type="checkbox" 
+            id="pg-terms"
+            checked={acceptedTerms} 
+            onChange={(e) => setAcceptedTerms(e.target.checked)} 
+            className="pg-checkbox"
+          />
+          <label htmlFor="pg-terms" className="pg-checkbox-label">
+            I have read and accept the terms of use, rules of flight and privacy policy
+          </label>
+        </div>
+        
+        <div className="pg-button-wrapper">
+          <button 
+            onClick={handleSuccess} 
+            disabled={!isFormValid || !acceptedTerms || processing || !booking || chargeAmount <= 0} 
+            className="pg-button"
+          >
             {processing ? 'Processing…' : 'Pay Now »'}
           </button>
         </div>
@@ -171,7 +335,7 @@ export default function PaymentGateway({ embedded = false, booking: bookingProp,
 
   if (embedded) {
     return (
-      <div style={{ padding: 0, border: '1px solid #e2e8f0', borderRadius: 8, background: 'white', overflow: 'hidden' }}>
+      <div className="pg-embedded">
         {Header}
         {Form}
       </div>
@@ -213,12 +377,27 @@ export default function PaymentGateway({ embedded = false, booking: bookingProp,
 
 function detectBrand(digits) {
   if (!digits) return '';
-  if (/^4\d{0,18}$/.test(digits)) return 'visa';
+  if (/^4\d{0,15}$/.test(digits)) return 'visa';
+  // MasterCard: 51-55 or 2221-2720
   if (/^(5[1-5]\d{0,14}|2(2(2[1-9]|[3-9]\d)|[3-6]\d{2}|7(0\d|1\d|20))\d{0,10})$/.test(digits)) return 'mastercard';
-  if (/^(50|5[6-9]|6[0-9])\d{0,17}$/.test(digits)) return 'maestro';
   return '';
 }
 
 function BrandPill({ label, bg, color }) {
-  return <span style={{ background: bg, color, fontSize: 12, padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>{label}</span>;
+  return <span className="pg-brand-pill" style={{ background: bg, color }}>{label}</span>;
 }
+
+PaymentGateway.propTypes = {
+  embedded: PropTypes.bool,
+  booking: PropTypes.object,
+  amount: PropTypes.number,
+  currency: PropTypes.string,
+  onSuccess: PropTypes.func,
+  onError: PropTypes.func,
+};
+
+BrandPill.propTypes = {
+  label: PropTypes.string.isRequired,
+  bg: PropTypes.string,
+  color: PropTypes.string,
+};
