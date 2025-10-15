@@ -367,7 +367,8 @@ function Login() {
                     e.currentTarget.style.color = "#6b7280";
                   }}
                 >
-                  {showPassword ? "🙈" : "🙉"}
+                  <span style={{ display: 'inline-block', filter: 'hue-rotate(200deg) saturate(2)' }}>
+                  {showPassword ? "🙈" : "🙉"}</span>
                 </button>
               </div>
             </div>
