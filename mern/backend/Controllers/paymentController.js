@@ -4,6 +4,8 @@ const Booking = require('../Model/bookingModel');
 const Delivery = require('../Model/deliveryModel');
 const PDFDocument = require('pdfkit');
 const SupplierInventory = require('../Model/supplierInventoryModel');
+const fs = require('fs');
+const path = require('path');
 
 // Admin guard helper
 function ensureAdmin(req, res) {
@@ -281,14 +283,45 @@ exports.exportPDF = async (req, res) => {
     const margin = doc.page.margins.left; // assume left/right equal
     const contentWidth = pageWidth - margin * 2;
 
-    // Title
-    doc.font('Helvetica-Bold').fontSize(18).fillColor('#0f172a');
-    doc.text('Payments Report', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.font('Helvetica').fontSize(10).fillColor('#334155');
+    // Branded header (match Inventory Report look)
     const generatedAt = new Date().toLocaleString();
-    doc.text(`Generated at: ${generatedAt}`, { align: 'center' });
-    doc.moveDown(1);
+    const brandBlue = '#2563eb';
+    const textDark = '#0f172a';
+    const textMuted = '#64748b';
+
+    // Try to load a logo from common public paths (favicon or app logos)
+    let logoPath = null;
+    try {
+      const candidates = [
+        path.join(process.cwd(), 'frontend', 'public', 'favicon.ico'),
+        path.join(process.cwd(), '..', 'frontend', 'public', 'favicon.ico'),
+        path.join(process.cwd(), 'public', 'favicon.ico'),
+        path.join(process.cwd(), 'frontend', 'public', 'favicon.png'),
+        path.join(process.cwd(), 'frontend', 'public', 'favicon-32x32.png'),
+        path.join(process.cwd(), 'frontend', 'public', 'logo192.png'),
+        path.join(process.cwd(), 'frontend', 'public', 'logo512.png')
+      ];
+      logoPath = candidates.find((p) => { try { return fs.existsSync(p); } catch { return false; } });
+    } catch (_) { /* ignore */ }
+
+    const logoSize = 40;
+    const headerTop = margin; // start at top margin
+    // Draw logo (or fallback vector) and brand text
+    if (logoPath) {
+      try { doc.image(logoPath, margin, headerTop - 2, { width: logoSize, height: logoSize }); } catch (_) {}
+    } else {
+      // Fallback: blue square with white 'E'
+      doc.save().fillColor(brandBlue).rect(margin, headerTop - 2, logoSize, logoSize).fill().restore();
+      doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(22).text('E', margin + 14, headerTop + 10);
+    }
+    // Brand name and subtitle
+    doc.fillColor(textDark).font('Helvetica-Bold').fontSize(16).text('Eventrix', margin + logoSize + 10, headerTop + 10);
+    doc.fillColor(textMuted).font('Helvetica').fontSize(12).text('Payments Report', margin + logoSize + 10, headerTop + 28);
+  // Right-aligned timestamp (constrain to content width to avoid clipping)
+  doc.fillColor('#6b7280').font('Helvetica').fontSize(10).text(`Generated: ${generatedAt}`, margin, headerTop + 12, { align: 'right', width: contentWidth });
+
+    // Move cursor below header block
+    doc.y = Math.max(doc.y, headerTop + logoSize + 14);
 
     // Table header styling
     const headers = ['Created', 'Order', 'Customer', 'Method', 'Status', 'Curr', 'Amount'];
@@ -298,19 +331,19 @@ exports.exportPDF = async (req, res) => {
     let y = doc.y;
 
     const drawHeader = () => {
-      // Header background
+      // Header background (blue, white text)
       doc.save();
-      doc.fillColor('#e2e8f0');
-      doc.rect(startX, y, contentWidth, 22).fill();
+      doc.fillColor(brandBlue);
+      doc.rect(startX, y, contentWidth, 24).fill();
       doc.restore();
       // Header text
-      doc.font('Helvetica-Bold').fontSize(10).fillColor('#0f172a');
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#ffffff');
       let x = startX + 6;
       headers.forEach((h, idx) => {
-        doc.text(h, x, y + 6, { width: colWidths[idx] - 12, ellipsis: true });
+        doc.text(h, x, y + 7, { width: colWidths[idx] - 12, ellipsis: true });
         x += colWidths[idx];
       });
-      y += 22;
+      y += 24;
     };
 
     const truncateToWidth = (text, width, fontSize = 9, font = 'Helvetica') => {
@@ -328,7 +361,7 @@ exports.exportPDF = async (req, res) => {
       return out.slice(0, Math.max(0, low - 1)) + ell;
     };
 
-    const rowHeight = 20;
+  const rowHeight = 20;
 
     const drawRow = (row, zebra) => {
       // zebra background
