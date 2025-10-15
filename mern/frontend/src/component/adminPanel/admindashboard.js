@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Sector, Cell, Tooltip, Legend, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -16,11 +16,19 @@ import  Setting from "../userAccount/userMenu";
 import  Profile from "./adminProfile/addminProfile";
 
 // Reusable active slice component for Pie activeShape with PropTypes
-const ActiveSlice = ({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, sectorPath, filterId }) => {
+const ActiveSlice = ({ cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, filterId }) => {
   const radiusBoost = 6;
   return (
     <g filter={`url(#${filterId})`}>
-      <path d={sectorPath(cx, cy, innerRadius, outerRadius + radiusBoost, startAngle, endAngle)} fill={fill} />
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + radiusBoost}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
     </g>
   );
 };
@@ -33,7 +41,6 @@ ActiveSlice.propTypes = {
   startAngle: PropTypes.number,
   endAngle: PropTypes.number,
   fill: PropTypes.string,
-  sectorPath: PropTypes.func,
   filterId: PropTypes.string,
 };
 
