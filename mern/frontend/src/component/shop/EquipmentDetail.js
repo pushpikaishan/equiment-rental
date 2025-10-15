@@ -35,7 +35,7 @@ export default function EquipmentDetail() {
   return (
     <div>
       <UserNavbar />
-      <div style={{ padding: 20, maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ padding: 20, maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, }}>
       <div>
         {item.image ? (
           <img
