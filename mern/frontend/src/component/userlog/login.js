@@ -199,7 +199,7 @@ function Login() {
   };
 
   const linkStyle = {
-    color: "#3b82f6",
+    color: "#aafbffff",
     textDecoration: "none",
     transition: "color 0.3s ease",
     cursor: "pointer",
