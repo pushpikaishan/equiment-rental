@@ -277,7 +277,7 @@
 /* Submit button */
 .pp-submit {
   width: 100%;
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: #ffffff;
   border: none;
   padding: 14px 24px;
@@ -286,14 +286,14 @@
   font-size: 16px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.3), 0 2px 4px -1px rgba(22, 163, 74, 0.2);
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3), 0 2px 4px -1px rgba(59, 130, 246, 0.2);
   margin-top: 8px;
 }
 
 .pp-submit:hover {
-  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(22, 163, 74, 0.3), 0 4px 6px -2px rgba(22, 163, 74, 0.2);
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2);
 }
 
 .pp-submit:active {
@@ -306,6 +306,33 @@
   transform: none;
   background: #94a3b8;
   box-shadow: none;
+}
+
+/* Danger outline button (for destructive actions like remove) */
+.pp-btn-danger {
+  background: #ffffff;
+  color: #dc2626;
+  border: 2px solid #f87171; /* red-400 */
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.pp-btn-danger:hover {
+  background: #fee2e2; /* red-100 */
+  border-color: #ef4444; /* red-500 */
+  color: #b91c1c; /* red-700 */
+  transform: translateY(-1px);
+}
+
+.pp-btn-danger:active {
+  transform: translateY(0);
+}
+
+.pp-btn-danger:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
 }
 
 .pp-spinner {
