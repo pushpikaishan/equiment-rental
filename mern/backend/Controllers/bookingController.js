@@ -457,6 +457,24 @@ exports.adminCancel = async (req, res) => {
       try { await restoreInventory(booking.items || []); } catch (e) { console.error('Restore inventory on admin cancel failed:', e); }
     }
     await booking.save();
+
+    // Notify customer via email with cancellation reason (only on first cancel)
+    if (!wasCancelled && booking.customerEmail) {
+      try {
+        const { sendMail } = require('../helpers/emailHelper');
+        const subject = `Your booking ${booking._id} has been cancelled`;
+        const safeReason = (reason && String(reason).trim()) ? String(reason).trim() : 'No reason provided.';
+        const text = `Hello ${booking.customerName},\n\nWe are writing to inform you that your booking (${booking._id}) scheduled for ${booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString() : 'N/A'} has been cancelled by our team.\n\nReason: ${safeReason}\n\nIf you have any questions, please reply to this email.\n\nRegards,\nSupport Team`;
+        const html = `<p>Hello ${booking.customerName},</p>
+          <p>We are writing to inform you that your booking (<strong>${booking._id}</strong>) scheduled for <strong>${booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString() : 'N/A'}</strong> has been cancelled by our team.</p>
+          <p><strong>Reason:</strong> ${safeReason}</p>
+          <p>If you have any questions, please reply to this email.</p>
+          <p>Regards,<br/>Support Team</p>`;
+        await sendMail({ to: booking.customerEmail, subject, text, html });
+      } catch (mailErr) {
+        console.error('Send cancellation email failed:', mailErr);
+      }
+    }
     res.json({ booking });
   } catch (e) {
     console.error('Admin cancel booking error:', e);

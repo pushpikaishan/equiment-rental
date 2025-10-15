@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Link, useSearchParams } from 'react-router-dom';
 import UserNavbar from './UserNavbar';
 import SiteFooter from '../common/SiteFooter';
 import { addToCart } from '../../utils/cart';
 import FeedbackSection from '../home/FeedbackSection';
+import HeroSlider from './HeroSlider';
+
 
 const categories = [
   'All',
@@ -23,26 +25,15 @@ const categories = [
 export default function EquipmentList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [q, setQ] = useState('');
-  const [cat, setCat] = useState('All');
   const [params] = useSearchParams();
   const [page, setPage] = useState(0);
   const [columnsCount, setColumnsCount] = useState(4);
 
-  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  // Get search query and category from URL params
+  const q = params.get('q') || '';
+  const cat = params.get('category') || 'All';
 
-  // Banners for top carousel
-  const [banners, setBanners] = useState([]);
-  const [bLoading, setBLoading] = useState(false);
-  const [bIndex, setBIndex] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(true);
-  const bScrollRef = useRef(null);
-  const fullUrl = (src) => {
-    if (!src) return '';
-    return src.startsWith('http://') || src.startsWith('https://')
-      ? src
-      : `${baseUrl}${src.startsWith('/') ? '' : '/'}${src}`;
-  };
+  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,31 +49,6 @@ export default function EquipmentList() {
     };
     fetchData();
   }, [baseUrl]);
-
-  // Fetch banners for homepage top carousel
-  useEffect(() => {
-    const loadBanners = async () => {
-      setBLoading(true);
-      try {
-        const res = await axios.get(`${baseUrl}/banners`);
-        const items = Array.isArray(res?.data) ? res.data : res?.data?.items;
-        setBanners(Array.isArray(items) ? items : []);
-      } catch (e) {
-        // ignore for now
-      } finally {
-        setBLoading(false);
-      }
-    };
-    loadBanners();
-  }, [baseUrl]);
-
-  // Initialize category from query param
-  useEffect(() => {
-    const c = params.get('category');
-    if (c) {
-      setCat(categories.includes(c) ? c : 'Select Category');
-    }
-  }, [params]);
 
   const filtered = useMemo(() => {
     const list = (items || []).filter((it) => {
@@ -120,208 +86,27 @@ export default function EquipmentList() {
   const end = start + itemsPerPage;
   const paged = (filtered || []).slice(start, end);
 
-  // Banner carousel helpers
-  useEffect(() => { setBIndex(0); }, [banners.length]);
-  const onBannerScroll = () => {
-    const sc = bScrollRef.current;
-    if (!sc) return;
-    const i = Math.round(sc.scrollLeft / Math.max(1, sc.clientWidth));
-    if (i !== bIndex) setBIndex(i);
-  };
-  const goToBanner = (i) => {
-    const sc = bScrollRef.current;
-    if (!sc) return;
-    const clamped = Math.max(0, Math.min((banners.length || 1) - 1, i));
-    sc.scrollTo({ left: clamped * sc.clientWidth, behavior: 'smooth' });
-  };
-  const prevBanner = () => goToBanner(bIndex - 1);
-  const nextBanner = () => goToBanner(bIndex + 1);
-
-  // Autoplay banners every 4s; pause on hover/focus/touch
-  useEffect(() => {
-    if (!autoPlay || banners.length < 2) return;
-    const id = setInterval(() => {
-      const next = (bIndex + 1) % banners.length;
-      goToBanner(next);
-    }, 4000);
-    return () => clearInterval(id);
-  }, [autoPlay, bIndex, banners.length]);
-
   return (
     <div style={{ 
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-      minHeight: '100vh'
+      minHeight: '100vh',
+      margin: 0,
+      padding: 0,
+      position: 'relative'
     }}>
       <UserNavbar />
+      
+      {/* Hero Slider */}
+      <HeroSlider />
 
       <div style={{ 
-        padding: '32px 20px', 
+        padding: '16px 10px', 
         maxWidth: 1200, 
         margin: '0 auto'
-      }}>
-        
-        <div style={{ 
-          display: 'flex', 
-          gap: 16, 
-          marginBottom: 32,
-          flexWrap: 'wrap'
-        }}>
-          <input 
-            value={q} 
-            onChange={(e) => setQ(e.target.value)} 
-            placeholder="Search equipment..." 
-            style={{ 
-              flex: 1,
-              minWidth: 250,
-              padding: '14px 18px', 
-              borderRadius: 12, 
-              border: '1px solid rgba(226,232,240,0.8)',
-              background: 'rgba(255,255,255,0.8)',
-              fontSize: 14,
-              fontWeight: 500,
-              color: '#374151',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              backdropFilter: 'saturate(180%) blur(20px)'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'rgba(59,130,246,0.4)';
-              e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1), 0 4px 12px rgba(0,0,0,0.08)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = 'rgba(226,232,240,0.8)';
-              e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
-            }}
-          />
-          <select 
-            value={cat} 
-            onChange={(e) => setCat(e.target.value)} 
-            style={{ 
-              padding: '14px 18px', 
-              borderRadius: 12, 
-              border: '1px solid rgba(226,232,240,0.8)',
-              background: 'rgba(255,255,255,0.8)',
-              fontSize: 14,
-              fontWeight: 500,
-              color: '#374151',
-              cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              backdropFilter: 'saturate(180%) blur(20px)',
-              minWidth: 160
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'rgba(59,130,246,0.4)';
-              e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1), 0 4px 12px rgba(0,0,0,0.08)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = 'rgba(226,232,240,0.8)';
-              e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
-            }}
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
+      }}
+      data-equipment-list>
 
-        {/* Banner carousel under search bar */}
-        <div
-          style={{ position: 'relative', width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', marginBottom: 24 }}
-          onMouseEnter={() => setAutoPlay(false)}
-          onMouseLeave={() => setAutoPlay(true)}
-          onTouchStart={() => setAutoPlay(false)}
-          onTouchEnd={() => setAutoPlay(true)}
-          onFocusCapture={() => setAutoPlay(false)}
-          onBlurCapture={() => setAutoPlay(true)}
-        >
-          {bLoading ? (
-            <div style={{ padding: 16, color: '#64748b' }}>Loading banners…</div>
-          ) : banners.length === 0 ? null : (
-            <>
-              <div
-                ref={bScrollRef}
-                onScroll={onBannerScroll}
-                style={{
-                  display: 'flex',
-                  overflowX: 'auto',
-                  scrollSnapType: 'x mandatory',
-                  scrollBehavior: 'smooth',
-                  WebkitOverflowScrolling: 'touch',
-                  msOverflowStyle: 'none',
-                  scrollbarWidth: 'none',
-                }}
-              >
-                {banners.map((b) => (
-                  <div key={b._id} style={{ flex: '0 0 100%', scrollSnapAlign: 'start', position: 'relative' }}>
-                    <img
-                      alt={b.title || 'Banner'}
-                      src={fullUrl((b.image || b.imageUrl) || '')}
-                      style={{ width: '100%', height: 250, objectFit: 'cover', display: 'block' }}
-                    />
-                    {b.title ? (
-                      <div style={{ position: 'absolute', left: 16, bottom: 12, background: 'rgba(0,0,0,0.45)', color: 'white', padding: '6px 10px', borderRadius: 8, fontSize: 14 }}>
-                        {b.title}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-              {banners.length > 1 && (
-                <>
-                  <button
-                    aria-label="Previous banner"
-                    onClick={prevBanner}
-                    style={{ position: 'absolute', top: '50%', left: 8, transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', color: 'white', border: 'none', borderRadius: 999, width: 36, height: 36, cursor: 'pointer' }}
-                  >
-                    ‹
-                  </button>
-                  <button
-                    aria-label="Next banner"
-                    onClick={nextBanner}
-                    style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.45)', color: 'white', border: 'none', borderRadius: 999, width: 36, height: 36, cursor: 'pointer' }}
-                  >
-                    ›
-                  </button>
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 8, display: 'flex', justifyContent: 'center', gap: 6 }}>
-                    {banners.map((_, i) => (
-                      <button
-                        key={i}
-                        aria-label={`Go to banner ${i + 1}`}
-                        onClick={() => goToBanner(i)}
-                        style={{ width: 8, height: 8, borderRadius: 999, border: 'none', background: i === bIndex ? '#111827' : '#cbd5e1', cursor: 'pointer' }}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-
-<div style={{ marginBottom: 32 }}>
-          <h1 style={{ 
-            margin: 0,
-            fontSize: 32,
-            fontWeight: 800,
-            background: 'linear-gradient(135deg, #1e293b, #475569)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.025em',
-            marginBottom: 8
-          }}>
-            Available Equipment
-          </h1>
-          <p style={{
-            margin: 0,
-            color: '#64748b',
-            fontSize: 16,
-            fontWeight: 500
-          }}>
-            Discover and rent professional equipment for your events
-          </p>
-        </div>
 
       {loading ? (
         <div style={{
@@ -338,8 +123,17 @@ export default function EquipmentList() {
       ) : (
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', 
-          gap: 20 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: 35,
+          '@media (max-width: 1200px)': {
+            gridTemplateColumns: 'repeat(3, 1fr)'
+          },
+          '@media (max-width: 900px)': {
+            gridTemplateColumns: 'repeat(2, 1fr)'
+          },
+          '@media (max-width: 600px)': {
+            gridTemplateColumns: '1fr'
+          }
         }}>
           {paged.map((it) => (
             <div 
@@ -351,12 +145,15 @@ export default function EquipmentList() {
                 overflow: 'hidden',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.8) inset',
                 backdropFilter: 'saturate(180%) blur(20px)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%'
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.12), 0 4px 16px rgba(59,130,246,0.1)';
-                e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)';
+                e.currentTarget.style.transform = 'translateY(-6px)';
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0,0,0,0.15), 0 4px 16px rgba(59,130,246,0.15)';
+                e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.transform = 'none';
@@ -364,9 +161,9 @@ export default function EquipmentList() {
                 e.currentTarget.style.borderColor = 'rgba(226,232,240,0.6)';
               }}
               onFocus={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.12), 0 4px 16px rgba(59,130,246,0.1)';
-                e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)';
+                e.currentTarget.style.transform = 'translateY(-6px)';
+                e.currentTarget.style.boxShadow = '0 16px 48px rgba(0,0,0,0.15), 0 4px 16px rgba(59,130,246,0.15)';
+                e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.transform = 'none';
@@ -374,50 +171,48 @@ export default function EquipmentList() {
                 e.currentTarget.style.borderColor = 'rgba(226,232,240,0.6)';
               }}
             >
-              <Link to={`/equipment/${it._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                {it.image ? (
-                  <img
-                    src={
-                      it.image.startsWith('http')
-                        ? it.image
-                        : `${baseUrl}${it.image.startsWith('/') ? '' : '/'}${it.image}`
-                    }
-                    alt={it.name}
-                    style={{ width: '100%', height: 250, objectFit: 'cover' }}
-                  />
-
-                ) : (
-                  <div style={{ width: '100%', height: 150, background: '#e2e8f0' }} />
-                )}
-                <div style={{ padding: 18 }}>
+              <Link to={`/equipment/${it._id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ position: 'relative', overflow: 'hidden' }}>
+                  {it.image ? (
+                    <img
+                      src={
+                        it.image.startsWith('http')
+                          ? it.image
+                          : `${baseUrl}${it.image.startsWith('/') ? '' : '/'}${it.image}`
+                      }
+                      alt={it.name}
+                      style={{ 
+                        width: '100%', 
+                        height: 250, 
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease'
+                      }}
+                      onMouseOver={(e) => { e.target.style.transform = 'scale(1.05)'; }}
+                      onMouseOut={(e) => { e.target.style.transform = 'scale(1)'; }}
+                      onFocus={(e) => { e.target.style.transform = 'scale(1.05)'; }}
+                      onBlur={(e) => { e.target.style.transform = 'scale(1)'; }}
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: 250, background: '#e2e8f0' }} />
+                  )}
                   <div style={{ 
-                    fontWeight: 700, 
-                    fontSize: 16,
-                    color: '#1e293b',
-                    marginBottom: 6,
-                    letterSpacing: '-0.025em'
+                    position: 'absolute', 
+                    top: 12, 
+                    right: 12,
+                    zIndex: 2
                   }}>
-                    {it.name}
-                  </div>
-                  <div style={{ 
-                    color: '#64748b', 
-                    fontSize: 13,
-                    fontWeight: 500,
-                    marginBottom: 12
-                  }}>
-                    {it.category}
-                  </div>
-                  <div style={{ marginBottom: 14 }}>
                     {(Number(it.quantity) || 0) > 0 ? (
                       <span style={{ 
                         background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', 
                         color: '#166534', 
-                        padding: '6px 12px', 
+                        padding: '6px 14px', 
                         borderRadius: 20, 
-                        fontSize: 12,
-                        fontWeight: 600,
+                        fontSize: 11,
+                        fontWeight: 700,
                         border: '1px solid rgba(22,101,52,0.2)',
-                        boxShadow: '0 2px 4px rgba(22,101,52,0.1)'
+                        boxShadow: '0 2px 8px rgba(22,101,52,0.2)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
                       }}>
                         Available
                       </span>
@@ -425,31 +220,73 @@ export default function EquipmentList() {
                       <span style={{ 
                         background: 'linear-gradient(135deg, #fee2e2, #fecaca)', 
                         color: '#991b1b', 
-                        padding: '6px 12px', 
+                        padding: '6px 14px', 
                         borderRadius: 20, 
-                        fontSize: 12,
-                        fontWeight: 600,
+                        fontSize: 11,
+                        fontWeight: 700,
                         border: '1px solid rgba(153,27,27,0.2)',
-                        boxShadow: '0 2px 4px rgba(153,27,27,0.1)'
+                        boxShadow: '0 2px 8px rgba(153,27,27,0.2)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
                       }}>
                         Unavailable
                       </span>
                     )}
                   </div>
-                  <div style={{ marginBottom: 14, color: '#475569', fontSize: 12, fontWeight: 600 }}>
-                    In stock: {Math.max(0, Number(it.quantity) || 0)}
+                </div>
+                <div style={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ 
+                    color: '#64748b', 
+                    fontSize: 11,
+                    fontWeight: 600,
+                    marginBottom: 8,
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>
+                    {it.category}
+                  </div>
+                  <div style={{ 
+                    fontWeight: 700, 
+                    fontSize: 17,
+                    color: '#1e293b',
+                    marginBottom: 12,
+                    letterSpacing: '-0.025em',
+                    lineHeight: '1.3',
+                    minHeight: 44
+                  }}>
+                    {it.name}
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 8,
+                    marginBottom: 16,
+                    paddingTop: 12,
+                    borderTop: '1px solid rgba(226,232,240,0.8)'
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 7h-9"></path>
+                      <path d="M14 17H5"></path>
+                      <circle cx="17" cy="17" r="3"></circle>
+                      <circle cx="7" cy="7" r="3"></circle>
+                    </svg>
+                    <span style={{ color: '#475569', fontSize: 13, fontWeight: 600 }}>
+                      Stock: {Math.max(0, Number(it.quantity) || 0)} units
+                    </span>
                   </div>
                   <div style={{ 
                     fontWeight: 800, 
-                    fontSize: 18,
+                    fontSize: 20,
                     color: '#2563eb',
-                    letterSpacing: '-0.025em'
+                    letterSpacing: '-0.025em',
+                    marginTop: 'auto'
                   }}>
-                    LKR {Number(it.rentalPrice).toFixed(2)} / day
+                    LKR {Number(it.rentalPrice).toFixed(2)}
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}> / day</span>
                   </div>
                 </div>
               </Link>
-              <div style={{ padding: 18, display: 'flex', gap: 12 }}>
+              <div style={{ padding: '0 20px 20px 20px', display: 'flex', gap: 12 }}>
                 <button
                   onClick={() => { addToCart(it, 1); alert('Added to cart'); }}
                   disabled={!((Number(it.quantity) || 0) > 0)}

@@ -6,9 +6,12 @@ import SiteFooter from '../common/SiteFooter';
 
 export default function MyBookings() {
   const [list, setList] = useState([]);
+  const [supplierReqs, setSupplierReqs] = useState([]);
+  const [editingReq, setEditingReq] = useState(null);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null); // booking object being edited
   const [payments, setPayments] = useState([]); // user's payments
+  const [expanded, setExpanded] = useState({}); // composite id => bool
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
   const navigate = useNavigate();
 
@@ -49,7 +52,19 @@ export default function MyBookings() {
     }
   };
 
-  useEffect(() => { fetchBookings(); fetchPayments(); }, []);
+  const fetchSupplierRequests = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) { setSupplierReqs([]); return; }
+    try {
+      const res = await axios.get(`${baseUrl}/supplier-requests/my`, { headers: { Authorization: `Bearer ${token}` } });
+      const arr = Array.isArray(res.data?.items) ? res.data.items : [];
+      setSupplierReqs(arr);
+    } catch (_) {
+      setSupplierReqs([]);
+    }
+  };
+
+  useEffect(() => { fetchBookings(); fetchPayments(); fetchSupplierRequests(); }, []);
 
   const hasPendingBankDeposit = (bookingId) => {
     const id = String(bookingId);
@@ -113,6 +128,42 @@ export default function MyBookings() {
     }
   };
 
+  const saveReqEdit = async () => {
+    if (!editingReq) return;
+    const token = localStorage.getItem('token');
+    try {
+      const payload = {
+        bookingDate: editingReq.bookingDate,
+        returnDate: editingReq.returnDate || '',
+        customerName: editingReq.customerName,
+        customerEmail: editingReq.customerEmail,
+        customerPhone: editingReq.customerPhone,
+        deliveryAddress: editingReq.deliveryAddress,
+        notes: editingReq.notes || ''
+      };
+      await axios.put(`${baseUrl}/supplier-requests/${editingReq._id}/user-update`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      setEditingReq(null);
+      await fetchSupplierRequests();
+      alert('Nearby booking updated');
+    } catch (e) {
+      const msg = e.response?.data?.message || e.message;
+      alert(`Update failed: ${msg}`);
+    }
+  };
+
+  const cancelReq = async (id) => {
+    const token = localStorage.getItem('token');
+    if (!window.confirm('Cancel this nearby booking?')) return;
+    try {
+      await axios.put(`${baseUrl}/supplier-requests/${id}/cancel-by-user`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      await fetchSupplierRequests();
+      alert('Nearby booking cancelled');
+    } catch (e) {
+      const msg = e.response?.data?.message || e.message;
+      alert(`Cancel failed: ${msg}`);
+    }
+  };
+
   const remove = async (id) => {
     const token = localStorage.getItem('token');
     if (!window.confirm('Cancel this booking?')) return;
@@ -129,185 +180,275 @@ export default function MyBookings() {
   return (
     <div>
       <UserNavbar />
-      <div style={{ maxWidth: 980, margin: '16px auto', padding: '0 12px' }}>
+      <div style={{ maxWidth: 1060, margin: '16px auto', padding: '0 12px' }}>
         <h2>My Bookings</h2>
-
         {loading && <div>Loading...</div>}
-        {!loading && list.length === 0 && (
-          <div style={{ marginTop: 12 }}>No bookings yet.</div>
-        )}
-
-        {!loading && list.length > 0 && (
+        {!loading && (
           <div style={{ display: 'grid', gap: 12 }}>
-            {list.map((b) => (
-              <div key={b._id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', background: '#ffffff' }}>
-                <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>Booking Date: {fmt(b.bookingDate)}</div>
-                    <div style={{ color: '#64748b' }}>Order ID: <code>{b._id}</code></div>
-                    <div style={{ color: '#64748b' }}>Status: {b.status} • Created: {fmtdt(b.createdAt)}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div>Subtotal: LKR {Number(b.subtotal).toFixed(2)}</div>
-                    <div>Deposit: LKR {Number(b.securityDeposit).toFixed(2)}</div>
-                    <div style={{ fontWeight: 700 }}>Total: LKR {Number(b.total).toFixed(2)}</div>
-                  </div>
-                </div>
-                <div style={{ padding: 12 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ textAlign: 'left', padding: 6 }}>Item</th>
-                        <th style={{ textAlign: 'left', padding: 6 }}>Price/day</th>
-                        <th style={{ textAlign: 'left', padding: 6 }}>Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.isArray(b.items) && b.items.map((it) => (
-                        <tr key={it.equipmentId} style={{ borderTop: '1px solid #e2e8f0' }}>
-                          <td style={{ padding: 6 }}>{it.name}</td>
-                          <td style={{ padding: 6 }}>LKR {Number(it.pricePerDay).toFixed(2)}</td>
-                          <td style={{ padding: 6 }}>{it.qty}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ padding: 12, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', gap: 12, color: '#64748b', fontSize: 12 }}>
-                    {isCancelled(b) && <span>Edit locked (cancelled)</span>}
-                    {!isCancelled(b) && !canEdit(b) && <span>Edit locked (only within 1 hour of creation)</span>}
-                    {!canDelete(b) && <span>Delete locked (after 24h from creation)</span>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {String(b.status).toLowerCase() === 'pending' && hasPendingBankDeposit(b._id) && (
-                      <button disabled style={{ background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa', padding: '8px 12px', borderRadius: 6 }}>
-                        Pending Verification
-                      </button>
-                    )}
-                    {String(b.status).toLowerCase() === 'confirmed' && (
-                      <span style={{ background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '6px 10px', borderRadius: 16, fontWeight: 600 }}>
-                        Confirmed
-                      </span>
-                    )}
-                    {String(b.status).toLowerCase() === 'pending' && !hasPendingBankDeposit(b._id) && (
-                      <button
-                        onClick={() => navigate('/payment', { state: { booking: b, amount: b.securityDeposit, currency: 'LKR' } })}
-                        style={{ background: '#059669', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}
-                      >
-                        Pay Now
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        if (isCancelled(b) || !canEdit(b)) return;
-                        setEditing({
-                          ...b,
-                          bookingDate: b.bookingDate ? new Date(b.bookingDate).toISOString().slice(0, 10) : '',
-                          returnDate: b.returnDate ? new Date(b.returnDate).toISOString().slice(0, 10) : '',
-                          customerName: b.customerName || '',
-                          customerEmail: b.customerEmail || '',
-                          customerPhone: b.customerPhone || '',
-                          deliveryAddress: b.deliveryAddress || '',
-                          notes: b.notes || ''
-                        });
-                      }}
-                      disabled={isCancelled(b) || !canEdit(b)}
-                      style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6, opacity: (isCancelled(b) || !canEdit(b)) ? 0.5 : 1 }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => remove(b._id)}
-                      disabled={b.status === 'cancelled'}
-                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: 6, opacity: b.status === 'cancelled' ? 0.5 : 1 }}
-                    >
-                      Cancel Booking
-                    </button>
-                  </div>
-                </div>
+            {[
+              ...list.map(b => ({ kind: 'standard', createdAt: b.createdAt, data: b })),
+              ...supplierReqs.map(r => ({ kind: 'nearby', createdAt: r.createdAt, data: r }))
+            ]
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map((row) => {
+                const isNearby = row.kind === 'nearby';
+                const b = row.data;
+                const items = Array.isArray(b.items) ? b.items : [];
+                return (
+                  <div key={`${row.kind}:${b._id}`} style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden', background: '#ffffff' }}>
+                    <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontWeight: 700 }}>Booking Date: {fmt(b.bookingDate)}</span>
+                          <span style={{ fontSize: 12, background: isNearby ? '#eef2ff' : '#ecfeff', color: isNearby ? '#3730a3' : '#155e75', border: '1px solid #c7d2fe', padding: '2px 8px', borderRadius: 999 }}>{isNearby ? 'Nearby' : 'Standard'}</span>
+                        </div>
+                        <div style={{ color: '#64748b' }}>{isNearby ? 'Request' : 'Order'} ID: <code>{b._id}</code></div>
+                        <div style={{ color: '#64748b' }}>Status: {b.status}{isNearby ? ` • Fulfillment: ${b.fulfillmentStatus || 'new'}` : ''} • Created: {fmtdt(b.createdAt)}</div>
+                      </div>
+                      {!isNearby && (
+                        <div style={{ textAlign: 'right' }}>
+                          <div>Subtotal: LKR {Number(b.subtotal).toFixed(2)}</div>
+                          <div>Deposit: LKR {Number(b.securityDeposit).toFixed(2)}</div>
+                          <div style={{ fontWeight: 700 }}>Total: LKR {Number(b.total).toFixed(2)}</div>
+                        </div>
+                      )}
+                    </div>
 
-                {/* Inline editor for this booking */}
-                {editing && editing._id === b._id && !isCancelled(b) && (
-                  <div style={{ margin: '0 12px 12px', border: '1px solid #cbd5e1', borderRadius: 8, padding: 12, background: 'white' }}>
-                    <h3>Edit Booking</h3>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                      <label htmlFor={`editDate-${b._id}`}>Booking date:</label>
-                      <input id={`editDate-${b._id}`} type="date" value={editing.bookingDate} onChange={(e) => setEditing({ ...editing, bookingDate: e.target.value })} />
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                      <label htmlFor={`editReturnDate-${b._id}`}>Return date:</label>
-                      <input id={`editReturnDate-${b._id}`} type="date" value={editing.returnDate} onChange={(e) => setEditing({ ...editing, returnDate: e.target.value })} />
-                    </div>
-                    {Array.isArray(editing.items) && editing.items.length > 0 && (
-                      <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 6 }}>Items</div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ background: '#f8fafc' }}>
-                              <th style={{ textAlign: 'left', padding: 6 }}>Item</th>
-                              <th style={{ textAlign: 'left', padding: 6 }}>Price/day</th>
-                              <th style={{ textAlign: 'left', padding: 6 }}>Qty</th>
+                    <div style={{ padding: 12 }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc' }}>
+                            <th style={{ textAlign: 'left', padding: 6 }}>Item</th>
+                            <th style={{ textAlign: 'left', padding: 6 }}>Price/day</th>
+                            <th style={{ textAlign: 'left', padding: 6 }}>Qty</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((it, idx) => (
+                            <tr key={idx} style={{ borderTop: '1px solid #e2e8f0' }}>
+                              <td style={{ padding: 6 }}>{it.name}</td>
+                              <td style={{ padding: 6 }}>LKR {Number(it.pricePerDay).toFixed(2)}</td>
+                              <td style={{ padding: 6 }}>{it.qty}</td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {editing.items.map((it, idx) => (
-                              <tr key={it.equipmentId} style={{ borderTop: '1px solid #e2e8f0' }}>
-                                <td style={{ padding: 6 }}>{it.name}</td>
-                                <td style={{ padding: 6 }}>LKR {Number(it.pricePerDay).toFixed(2)}</td>
-                                <td style={{ padding: 6 }}>
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    value={it.qty}
-                                    onChange={(e) => {
-                                      const v = Math.max(1, Number(e.target.value) || 1);
-                                      const items = editing.items.slice();
-                                      items[idx] = { ...items[idx], qty: v };
-                                      setEditing({ ...editing, items });
-                                    }}
-                                    style={{ width: 80 }}
-                                  />
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div style={{ padding: 12, display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 12, color: '#64748b', fontSize: 12 }}>
+                        {!isNearby && isCancelled(b) && <span>Edit locked (cancelled)</span>}
+                        {!isNearby && !isCancelled(b) && !canEdit(b) && <span>Edit locked (only within 1 hour of creation)</span>}
+                        {!isNearby && !canDelete(b) && <span>Delete locked (after 24h from creation)</span>}
+                        {isNearby && String(b.status).toLowerCase() !== 'pending' && <span>Edit locked (only while pending)</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {!isNearby && String(b.status).toLowerCase() === 'pending' && hasPendingBankDeposit(b._id) && (
+                          <button disabled style={{ background: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa', padding: '8px 12px', borderRadius: 6 }}>
+                            Pending Verification
+                          </button>
+                        )}
+                        {!isNearby && String(b.status).toLowerCase() === 'confirmed' && (
+                          <span style={{ background: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', padding: '6px 10px', borderRadius: 16, fontWeight: 600 }}>
+                            Confirmed
+                          </span>
+                        )}
+                        {!isNearby && String(b.status).toLowerCase() === 'pending' && !hasPendingBankDeposit(b._id) && (
+                          <button
+                            onClick={() => navigate('/payment', { state: { booking: b, amount: b.securityDeposit, currency: 'LKR' } })}
+                            style={{ background: '#059669', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}
+                          >
+                            Pay Now
+                          </button>
+                        )}
+                        {!isNearby && (
+                          <>
+                            <button
+                              onClick={() => {
+                                if (isCancelled(b) || !canEdit(b)) return;
+                                setEditing({
+                                  ...b,
+                                  bookingDate: b.bookingDate ? new Date(b.bookingDate).toISOString().slice(0, 10) : '',
+                                  returnDate: b.returnDate ? new Date(b.returnDate).toISOString().slice(0, 10) : '',
+                                  customerName: b.customerName || '',
+                                  customerEmail: b.customerEmail || '',
+                                  customerPhone: b.customerPhone || '',
+                                  deliveryAddress: b.deliveryAddress || '',
+                                  notes: b.notes || ''
+                                });
+                              }}
+                              disabled={isCancelled(b) || !canEdit(b)}
+                              style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6, opacity: (isCancelled(b) || !canEdit(b)) ? 0.5 : 1 }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => remove(b._id)}
+                              disabled={b.status === 'cancelled'}
+                              style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: 6, opacity: b.status === 'cancelled' ? 0.5 : 1 }}
+                            >
+                              Cancel Booking
+                            </button>
+                          </>
+                        )}
+                        {isNearby && (
+                          <>
+                            <button
+                              onClick={() => {
+                                if (String(b.status).toLowerCase() !== 'pending') return;
+                                setEditingReq({
+                                  ...b,
+                                  bookingDate: b.bookingDate ? new Date(b.bookingDate).toISOString().slice(0, 10) : '',
+                                  returnDate: b.returnDate ? new Date(b.returnDate).toISOString().slice(0, 10) : '',
+                                  customerName: b.customerName || '',
+                                  customerEmail: b.customerEmail || '',
+                                  customerPhone: b.customerPhone || '',
+                                  deliveryAddress: b.deliveryAddress || '',
+                                  notes: b.notes || ''
+                                });
+                              }}
+                              disabled={String(b.status).toLowerCase() !== 'pending'}
+                              style={{ background: '#2563eb', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6, opacity: String(b.status).toLowerCase() !== 'pending' ? 0.5 : 1 }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => cancelReq(b._id)}
+                              disabled={String(b.status).toLowerCase() !== 'pending'}
+                              style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: 6, opacity: String(b.status).toLowerCase() !== 'pending' ? 0.5 : 1 }}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Inline editor sections */}
+                    {!isNearby && editing && editing._id === b._id && !isCancelled(b) && (
+                      <div style={{ margin: '0 12px 12px', border: '1px solid #cbd5e1', borderRadius: 8, padding: 12, background: 'white' }}>
+                        <h3>Edit Booking</h3>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <label htmlFor={`editDate-${b._id}`}>Booking date:</label>
+                          <input id={`editDate-${b._id}`} type="date" value={editing.bookingDate} onChange={(e) => setEditing({ ...editing, bookingDate: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <label htmlFor={`editReturnDate-${b._id}`}>Return date:</label>
+                          <input id={`editReturnDate-${b._id}`} type="date" value={editing.returnDate} onChange={(e) => setEditing({ ...editing, returnDate: e.target.value })} />
+                        </div>
+                        {Array.isArray(editing.items) && editing.items.length > 0 && (
+                          <div style={{ marginBottom: 8 }}>
+                            <div style={{ fontWeight: 600, marginBottom: 6 }}>Items</div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                              <thead>
+                                <tr style={{ background: '#f8fafc' }}>
+                                  <th style={{ textAlign: 'left', padding: 6 }}>Item</th>
+                                  <th style={{ textAlign: 'left', padding: 6 }}>Price/day</th>
+                                  <th style={{ textAlign: 'left', padding: 6 }}>Qty</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {editing.items.map((it, idx) => (
+                                  <tr key={it.equipmentId} style={{ borderTop: '1px solid #e2e8f0' }}>
+                                    <td style={{ padding: 6 }}>{it.name}</td>
+                                    <td style={{ padding: 6 }}>LKR {Number(it.pricePerDay).toFixed(2)}</td>
+                                    <td style={{ padding: 6 }}>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={it.qty}
+                                        onChange={(e) => {
+                                          const v = Math.max(1, Number(e.target.value) || 1);
+                                          const items = editing.items.slice();
+                                          items[idx] = { ...items[idx], qty: v };
+                                          setEditing({ ...editing, items });
+                                        }}
+                                        style={{ width: 80 }}
+                                      />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 8 }}>
+                          <div>
+                            <label htmlFor={`editName-${b._id}`}>Name</label>
+                            <input id={`editName-${b._id}`} type="text" value={editing.customerName} onChange={(e) => setEditing({ ...editing, customerName: e.target.value })} style={{ width: '100%' }} />
+                          </div>
+                          <div>
+                            <label htmlFor={`editEmail-${b._id}`}>Email</label>
+                            <input id={`editEmail-${b._id}`} type="email" value={editing.customerEmail} onChange={(e) => setEditing({ ...editing, customerEmail: e.target.value })} style={{ width: '100%' }} />
+                          </div>
+                          <div>
+                            <label htmlFor={`editPhone-${b._id}`}>Phone</label>
+                            <input id={`editPhone-${b._id}`} type="text" value={editing.customerPhone} onChange={(e) => setEditing({ ...editing, customerPhone: e.target.value })} style={{ width: '100%' }} />
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <label htmlFor={`editAddress-${b._id}`}>Delivery Address</label>
+                          <input id={`editAddress-${b._id}`} type="text" value={editing.deliveryAddress} onChange={(e) => setEditing({ ...editing, deliveryAddress: e.target.value })} style={{ width: '100%' }} />
+                        </div>
+                        <div>
+                          <label htmlFor={`editNotes-${b._id}`}>Notes</label>
+                          <textarea id={`editNotes-${b._id}`} value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} style={{ width: '100%' }} rows={3} />
+                        </div>
+                        <div>
+                          <p style={{ color: '#64748b' }}>To change items/quantities, re-create the booking from cart or use the quantity inputs above.</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <button onClick={saveEdit} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}>Save</button>
+                          <button onClick={() => setEditing(null)} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 6 }}>Cancel</button>
+                        </div>
                       </div>
                     )}
-                    <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 8 }}>
-                      <div>
-                        <label htmlFor={`editName-${b._id}`}>Name</label>
-                        <input id={`editName-${b._id}`} type="text" value={editing.customerName} onChange={(e) => setEditing({ ...editing, customerName: e.target.value })} style={{ width: '100%' }} />
+
+                    {isNearby && editingReq && editingReq._id === b._id && String(b.status).toLowerCase() === 'pending' && (
+                      <div style={{ margin: '0 12px 12px', border: '1px solid #cbd5e1', borderRadius: 8, padding: 12, background: 'white' }}>
+                        <h3>Edit Nearby Booking</h3>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <label htmlFor={`editReqDate-${b._id}`}>Booking date:</label>
+                          <input id={`editReqDate-${b._id}`} type="date" value={editingReq.bookingDate} onChange={(e) => setEditingReq({ ...editingReq, bookingDate: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <label htmlFor={`editReqReturnDate-${b._id}`}>Return date:</label>
+                          <input id={`editReqReturnDate-${b._id}`} type="date" value={editingReq.returnDate} onChange={(e) => setEditingReq({ ...editingReq, returnDate: e.target.value })} />
+                        </div>
+                        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', marginBottom: 8 }}>
+                          <div>
+                            <label htmlFor={`editReqName-${b._id}`}>Name</label>
+                            <input id={`editReqName-${b._id}`} type="text" value={editingReq.customerName} onChange={(e) => setEditingReq({ ...editingReq, customerName: e.target.value })} style={{ width: '100%' }} />
+                          </div>
+                          <div>
+                            <label htmlFor={`editReqEmail-${b._id}`}>Email</label>
+                            <input id={`editReqEmail-${b._id}`} type="email" value={editingReq.customerEmail} onChange={(e) => setEditingReq({ ...editingReq, customerEmail: e.target.value })} style={{ width: '100%' }} />
+                          </div>
+                          <div>
+                            <label htmlFor={`editReqPhone-${b._id}`}>Phone</label>
+                            <input id={`editReqPhone-${b._id}`} type="text" value={editingReq.customerPhone} onChange={(e) => setEditingReq({ ...editingReq, customerPhone: e.target.value })} style={{ width: '100%' }} />
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <label htmlFor={`editReqAddress-${b._id}`}>Delivery Address</label>
+                          <input id={`editReqAddress-${b._id}`} type="text" value={editingReq.deliveryAddress} onChange={(e) => setEditingReq({ ...editingReq, deliveryAddress: e.target.value })} style={{ width: '100%' }} />
+                        </div>
+                        <div>
+                          <label htmlFor={`editReqNotes-${b._id}`}>Notes</label>
+                          <textarea id={`editReqNotes-${b._id}`} value={editingReq.notes} onChange={(e) => setEditingReq({ ...editingReq, notes: e.target.value })} style={{ width: '100%' }} rows={3} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <button onClick={saveReqEdit} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}>Save</button>
+                          <button onClick={() => setEditingReq(null)} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 6 }}>Cancel</button>
+                        </div>
                       </div>
-                      <div>
-                        <label htmlFor={`editEmail-${b._id}`}>Email</label>
-                        <input id={`editEmail-${b._id}`} type="email" value={editing.customerEmail} onChange={(e) => setEditing({ ...editing, customerEmail: e.target.value })} style={{ width: '100%' }} />
-                      </div>
-                      <div>
-                        <label htmlFor={`editPhone-${b._id}`}>Phone</label>
-                        <input id={`editPhone-${b._id}`} type="text" value={editing.customerPhone} onChange={(e) => setEditing({ ...editing, customerPhone: e.target.value })} style={{ width: '100%' }} />
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <label htmlFor={`editAddress-${b._id}`}>Delivery Address</label>
-                      <input id={`editAddress-${b._id}`} type="text" value={editing.deliveryAddress} onChange={(e) => setEditing({ ...editing, deliveryAddress: e.target.value })} style={{ width: '100%' }} />
-                    </div>
-                    <div>
-                      <label htmlFor={`editNotes-${b._id}`}>Notes</label>
-                      <textarea id={`editNotes-${b._id}`} value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} style={{ width: '100%' }} rows={3} />
-                    </div>
-                    <div>
-                      <p style={{ color: '#64748b' }}>To change items/quantities, re-create the booking from cart or use the quantity inputs above.</p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <button onClick={saveEdit} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: 6 }}>Save</button>
-                      <button onClick={() => setEditing(null)} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 6 }}>Cancel</button>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                );
+              })}
+            {list.length === 0 && supplierReqs.length === 0 && (
+              <div style={{ marginTop: 12, color: '#64748b' }}>No bookings yet.</div>
+            )}
           </div>
         )}
       </div>

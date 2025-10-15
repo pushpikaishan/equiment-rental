@@ -18,7 +18,7 @@ export default function SupplierDashboard() {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
   const [error, setError] = useState('');
-  const [progressChoice, setProgressChoice] = useState({}); // { [requestId]: 'ready'|'shipped'|'returned'|'completed' }
+  // Progress dropdown removed per request
   const [notices, setNotices] = useState([]);
   const [loadingNotices, setLoadingNotices] = useState(false);
 
@@ -334,9 +334,9 @@ export default function SupplierDashboard() {
                     <tr>
                       <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Requested</th>
                       <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Customer</th>
+                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Address</th>
                       <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Items</th>
                       <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Status</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Progress</th>
                       <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Actions</th>
                     </tr>
                   </thead>
@@ -347,7 +347,9 @@ export default function SupplierDashboard() {
                         <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
                           <div style={{ fontWeight: 600 }}>{r.customerName}</div>
                           <div style={{ fontSize: 12, color: '#64748b' }}>{r.customerEmail} • {r.customerPhone}</div>
-                          <div style={{ fontSize: 12, color: '#64748b' }}>{r.deliveryAddress}</div>
+                        </td>
+                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                          <div style={{ fontSize: 12, color: '#0f172a' }}>{r.deliveryAddress || '—'}</div>
                         </td>
                         <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
                           {(r.items||[]).map((it, idx) => (
@@ -357,48 +359,24 @@ export default function SupplierDashboard() {
                           ))}
                         </td>
                         <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{r.status}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
-                          <span style={{
-                            padding: '2px 8px', borderRadius: 9999,
-                            background: r.fulfillmentStatus === 'completed' ? '#dcfce7' : r.fulfillmentStatus === 'shipped' ? '#e0e7ff' : r.fulfillmentStatus === 'ready' ? '#fef3c7' : r.fulfillmentStatus === 'returned' ? '#fde68a' : '#e2e8f0',
-                            color: '#0f172a', fontSize: 12, fontWeight: 600
-                          }}>{r.fulfillmentStatus || 'new'}</span>
-                        </td>
                         <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
                           <button disabled={r.status !== 'pending'} onClick={async () => { try { await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'accepted' }, { headers }); await loadRequests(); } catch (e) { setError(e.response?.data?.message || e.message); } }} style={{ padding: '6px 10px', borderRadius: 8, background: '#16a34a', color: 'white', border: '1px solid #15803d', marginRight: 6 }}>Accept</button>
                           <button disabled={r.status !== 'pending'} onClick={async () => { try { await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'rejected' }, { headers }); await loadRequests(); } catch (e) { setError(e.response?.data?.message || e.message); } }} style={{ padding: '6px 10px', borderRadius: 8, background: '#ef4444', color: 'white', border: '1px solid #dc2626', marginRight: 8 }}>Reject</button>
-                          {/* Progress dropdown */}
-                          <span>
-                            <select
-                              disabled={r.status !== 'accepted'}
-                              value={progressChoice[r._id] || ''}
-                              onChange={(e) => setProgressChoice(prev => ({ ...prev, [r._id]: e.target.value }))}
-                              style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #cbd5e1', marginRight: 6 }}
-                            >
-                              <option value="">Select status…</option>
-                              <option value="ready" disabled={['ready','shipped','returned','completed'].includes(r.fulfillmentStatus)}>Ready</option>
-                              <option value="shipped" disabled={!['ready'].includes(r.fulfillmentStatus)}>Shipped</option>
-                              <option value="returned" disabled={!['shipped'].includes(r.fulfillmentStatus)}>Returned</option>
-                              <option value="completed" disabled={!['returned'].includes(r.fulfillmentStatus)}>Completed</option>
-                            </select>
-                            <button
-                              disabled={r.status !== 'accepted' || !progressChoice[r._id]}
-                              onClick={async () => {
-                                const sel = progressChoice[r._id];
-                                if (!sel) return;
-                                try {
-                                  await axios.put(`${baseUrl}/supplier-requests/${r._id}/progress`, { status: sel }, { headers });
-                                  setProgressChoice(prev => ({ ...prev, [r._id]: '' }));
-                                  await loadRequests();
-                                } catch (e) {
-                                  setError(e.response?.data?.message || e.message);
-                                }
-                              }}
-                              style={{ padding: '6px 10px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}
-                            >
-                              Update
-                            </button>
-                          </span>
+                          {/* Shipped action: only when accepted and current progress is 'ready' */}
+                          <button
+                            onClick={async () => {
+                              try {
+                                await axios.put(`${baseUrl}/supplier-requests/${r._id}/progress`, { status: 'shipped' }, { headers });
+                                await loadRequests();
+                                alert('Marked as shipped. Customer will be notified.');
+                              } catch (e) {
+                                setError(e.response?.data?.message || e.message);
+                              }
+                            }}
+                            style={{ padding: '6px 10px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}
+                          >
+                            Shipped
+                          </button>
                         </td>
                       </tr>
                     ))}

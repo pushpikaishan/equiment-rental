@@ -25,39 +25,45 @@ export default function CartPage() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const validate = (data) => {
     const errs = {};
-    const { name, email, phone, deliveryAddress, bookingDate, returnDate, cart } = data;
+    const { name, email, phone, deliveryAddress, bookingDate, returnDate, notes, cart } = data;
 
-    // Name
-    if (!name || name.trim().length < 2) {
-      errs.name = 'Please enter your full name (min 2 characters)';
+    // Full name: Required, letters and spaces only, 3–50 characters
+    if (!name || name.trim().length === 0) {
+      errs.name = 'Full name is required';
+    } else if (name.trim().length < 3) {
+      errs.name = 'Full name must be at least 3 characters';
+    } else if (name.trim().length > 50) {
+      errs.name = 'Full name must not exceed 50 characters';
+    } else if (!/^[a-zA-Z\s]+$/.test(name.trim())) {
+      errs.name = 'Full name must contain only letters and spaces';
     }
 
-    // Email
+    // Email: Required, valid email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
+    if (!email || email.trim().length === 0) {
+      errs.email = 'Email is required';
+    } else if (!emailRegex.test(email.trim())) {
       errs.email = 'Please enter a valid email address';
     }
 
-    // Phone (Sri Lanka: 0 or +94 followed by 7XXXXXXXX)
-    const digits = (phone || '').replace(/\D/g, '');
-    let phoneValid = false;
-    if (digits.startsWith('94')) {
-      phoneValid = digits.length === 11 && digits[2] === '7';
-    } else if (digits.startsWith('0')) {
-      phoneValid = digits.length === 10 && digits[1] === '7';
-    }
-    if (!phoneValid) {
+    // Phone: Required, Sri Lankan format (07XXXXXXXX or +947XXXXXXXX)
+    const phoneRegex = /^(?:\+94|0)?7[0-9]{8}$/;
+    if (!phone || phone.trim().length === 0) {
+      errs.phone = 'Phone number is required';
+    } else if (!phoneRegex.test(phone.trim().replace(/[\s-]/g, ''))) {
       errs.phone = 'Enter a valid Sri Lankan mobile (e.g., 07XXXXXXXX or +947XXXXXXXX)';
     }
 
-    // Address
-    if (!deliveryAddress || deliveryAddress.trim().length < 5) {
-      errs.deliveryAddress = 'Please provide your delivery address (min 5 characters)';
+    // Delivery address: Required, at least 10 characters
+    if (!deliveryAddress || deliveryAddress.trim().length === 0) {
+      errs.deliveryAddress = 'Delivery address is required';
+    } else if (deliveryAddress.trim().length < 10) {
+      errs.deliveryAddress = 'Delivery address must be at least 10 characters long';
     }
 
-    // Dates
+    // Booking date: Required, must be today or future
     if (!bookingDate) {
-      errs.bookingDate = 'Please select a booking date';
+      errs.bookingDate = 'Booking date is required';
     } else {
       const bd = new Date(bookingDate);
       const today = new Date();
@@ -65,15 +71,26 @@ export default function CartPage() {
       if (isNaN(bd.getTime())) {
         errs.bookingDate = 'Invalid booking date';
       } else if (bd.getTime() < today.getTime()) {
-        errs.bookingDate = 'Booking date cannot be in the past';
+        errs.bookingDate = 'Booking date must be today or a future date';
       }
     }
+
+    // Return date: Optional, but if filled, must be later than booking date
     if (returnDate) {
-      const bd = new Date(bookingDate);
       const rd = new Date(returnDate);
-      if (isNaN(rd.getTime()) || (bookingDate && rd.getTime() < bd.getTime())) {
-        errs.returnDate = 'Return date must be on or after the booking date';
+      if (isNaN(rd.getTime())) {
+        errs.returnDate = 'Invalid return date';
+      } else if (bookingDate) {
+        const bd = new Date(bookingDate);
+        if (rd.getTime() <= bd.getTime()) {
+          errs.returnDate = 'Return date must be later than the booking date';
+        }
       }
+    }
+
+    // Notes: Optional, maximum 300 characters
+    if (notes && notes.length > 300) {
+      errs.notes = 'Notes must not exceed 300 characters';
     }
 
     // Cart
@@ -81,6 +98,12 @@ export default function CartPage() {
       errs.cart = 'Your cart is empty';
     } else if (cart.some(i => !i || Number(i.qty) <= 0)) {
       errs.cart = 'Item quantities must be at least 1';
+    } else {
+      // Prevent exceeding available quantity
+      const over = cart.filter(i => Number(i.qty) > (Number(i.quantity) || 0));
+      if (over.length > 0) {
+        errs.cart = `Some items exceed available stock: ${over.map(i => i.name).join(', ')}`;
+      }
     }
 
     return errs;
@@ -88,9 +111,9 @@ export default function CartPage() {
 
   // Re-validate on changes
   useEffect(() => {
-    setErrors(validate({ name, email, phone, deliveryAddress, bookingDate, returnDate, cart }));
+    setErrors(validate({ name, email, phone, deliveryAddress, bookingDate, returnDate, notes, cart }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, email, phone, deliveryAddress, bookingDate, returnDate, cart]);
+  }, [name, email, phone, deliveryAddress, bookingDate, returnDate, notes, cart]);
 
   const setFieldTouched = (field) => setTouched(t => ({ ...t, [field]: true }));
   const markAllTouched = () => setTouched({
@@ -100,11 +123,24 @@ export default function CartPage() {
     deliveryAddress: true,
     bookingDate: true,
     returnDate: true,
+    notes: true,
   });
 
   useEffect(() => {
-    setCart(getCart());
-  }, []);
+    const init = async () => {
+      const local = getCart();
+      try {
+        const res = await axios.get(`${baseUrl}/equipment`);
+        const items = res.data?.items || [];
+        const map = new Map(items.map(it => [it._id, Number(it.quantity) || 0]));
+        const merged = local.map(i => ({ ...i, quantity: map.has(i._id) ? map.get(i._id) : (Number(i.quantity) || 0) }));
+        setCart(merged);
+      } catch {
+        setCart(local);
+      }
+    };
+    init();
+  }, [baseUrl]);
 
   const handleQty = (id, q) => {
     const updated = updateQty(id, q);
@@ -132,11 +168,11 @@ export default function CartPage() {
       return;
     }
     // Final validation before submit
-    const currentErrors = validate({ name, email, phone, deliveryAddress, bookingDate, returnDate, cart });
+    const currentErrors = validate({ name, email, phone, deliveryAddress, bookingDate, returnDate, notes, cart });
     setErrors(currentErrors);
     if (Object.keys(currentErrors).length) {
       markAllTouched();
-      const firstField = ['name','email','phone','deliveryAddress','bookingDate','returnDate'].find(f => currentErrors[f]);
+      const firstField = ['name','email','phone','deliveryAddress','bookingDate','returnDate','notes'].find(f => currentErrors[f]);
       if (firstField) {
         const el = document.getElementById(firstField);
         if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -191,11 +227,26 @@ export default function CartPage() {
                     ) : (
                       <div style={{ width: 60, height: 40, background: '#e2e8f0', borderRadius: 6 }} />
                     )}
-                    <div>{i.name}</div>
+                    <div>
+                      <div>{i.name}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Available: {Number(i.quantity) || 0}</div>
+                    </div>
                   </td>
                   <td style={{ padding: 8 }}>LKR {Number(i.price).toFixed(2)}</td>
                   <td style={{ padding: 8 }}>
-                    <input type="number" min={1} value={i.qty} onChange={(e) => handleQty(i._id, Math.max(1, Number(e.target.value)))} style={{ width: 80, padding: 6, borderRadius: 6, border: '1px solid #e2e8f0' }} />
+                    <input 
+                      type="number" 
+                      min={1} 
+                      max={Number(i.quantity) || 1}
+                      value={i.qty} 
+                      onChange={(e) => {
+                        const avail = Number(i.quantity) || 0;
+                        const raw = Number(e.target.value);
+                        const clamped = Math.max(1, Math.min(avail || 1, raw || 1));
+                        handleQty(i._id, clamped);
+                      }} 
+                      style={{ width: 80, padding: 6, borderRadius: 6, border: '1px solid #e2e8f0' }} 
+                    />
                   </td>
                   <td style={{ padding: 8 }}>LKR {(Number(i.price) * i.qty).toFixed(2)}</td>
                   <td style={{ padding: 8 }}>
@@ -205,52 +256,73 @@ export default function CartPage() {
               ))}
             </tbody>
           </table>
+          {errors.cart && (
+            <div style={{ marginTop: 10, color: '#dc2626', fontSize: 13 }}>
+              {errors.cart}
+            </div>
+          )}
           {/* Checkout form */}
           <div style={{ marginTop: 20, padding: 12, border: '1px solid #e2e8f0', borderRadius: 8, background: 'white' }}>
             <h3 style={{ marginTop: 0 }}>Booking details</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Full name</label>
+                <label htmlFor="name" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Full name</label>
                 <input id="name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setFieldTouched('name')} placeholder="Your name" style={{ width: '100%', padding: 8, border: `1px solid ${touched.name && errors.name ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.name && errors.name)} aria-describedby={touched.name && errors.name ? 'name-error' : undefined} />
                 {touched.name && errors.name && (
                   <div id="name-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.name}</div>
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Email</label>
+                <label htmlFor="email" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Email</label>
                 <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setFieldTouched('email')} placeholder="you@example.com" style={{ width: '100%', padding: 8, border: `1px solid ${touched.email && errors.email ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.email && errors.email)} aria-describedby={touched.email && errors.email ? 'email-error' : undefined} />
                 {touched.email && errors.email && (
                   <div id="email-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.email}</div>
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Phone</label>
-                <input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setFieldTouched('phone')} placeholder="07X-XXXXXXX" style={{ width: '100%', padding: 8, border: `1px solid ${touched.phone && errors.phone ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.phone && errors.phone)} aria-describedby={touched.phone && errors.phone ? 'phone-error' : undefined} />
+                <label htmlFor="phone" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Phone</label>
+                <input 
+                  id="phone" 
+                  type="tel"
+                  value={phone} 
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9+]/g, ''); // Only allow digits and +
+                    if (value.length <= 10 || (value.startsWith('+94') && value.length <= 12)) {
+                      setPhone(value);
+                    }
+                  }} 
+                  onBlur={() => setFieldTouched('phone')} 
+                  placeholder="0712345678" 
+                  maxLength={12}
+                  style={{ width: '100%', padding: 8, border: `1px solid ${touched.phone && errors.phone ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} 
+                  aria-invalid={!!(touched.phone && errors.phone)} 
+                  aria-describedby={touched.phone && errors.phone ? 'phone-error' : undefined} 
+                />
                 {touched.phone && errors.phone && (
                   <div id="phone-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.phone}</div>
                 )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Delivery address</label>
+                <label htmlFor="deliveryAddress" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Delivery address</label>
                 <input id="deliveryAddress" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} onBlur={() => setFieldTouched('deliveryAddress')} placeholder="Street, city, additional directions" style={{ width: '100%', padding: 8, border: `1px solid ${touched.deliveryAddress && errors.deliveryAddress ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.deliveryAddress && errors.deliveryAddress)} aria-describedby={touched.deliveryAddress && errors.deliveryAddress ? 'deliveryAddress-error' : undefined} />
                 {touched.deliveryAddress && errors.deliveryAddress && (
                   <div id="deliveryAddress-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.deliveryAddress}</div>
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Booking date</label>
+                <label htmlFor="bookingDate" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Booking date</label>
                 <input id="bookingDate" type="date" value={bookingDate} min={todayStr} onChange={(e) => setBookingDate(e.target.value)} onBlur={() => setFieldTouched('bookingDate')} style={{ width: '100%', padding: 8, border: `1px solid ${touched.bookingDate && errors.bookingDate ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.bookingDate && errors.bookingDate)} aria-describedby={touched.bookingDate && errors.bookingDate ? 'bookingDate-error' : undefined} />
                 {touched.bookingDate && errors.bookingDate && (
                   <div id="bookingDate-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.bookingDate}</div>
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
+                <label htmlFor="returnDate" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
                 <input
                   id="returnDate"
                   type="date"
                   value={returnDate}
-                  min={bookingDate || undefined}
+                  min={bookingDate ? new Date(new Date(bookingDate).getTime() + 86400000).toISOString().slice(0, 10) : undefined}
                   onChange={(e) => setReturnDate(e.target.value)}
                   onBlur={() => setFieldTouched('returnDate')}
                   style={{ width: '100%', padding: 8, border: `1px solid ${touched.returnDate && errors.returnDate ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }}
@@ -262,8 +334,32 @@ export default function CartPage() {
                 )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Notes (optional)</label>
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Any instructions or notes" style={{ width: '100%', padding: 8, border: '1px solid #cbd5e1', borderRadius: 6 }} />
+                <label htmlFor="notes" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>
+                  Notes (optional)
+                  <span style={{ float: 'right', fontSize: 11, color: notes.length > 300 ? '#dc2626' : '#94a3b8' }}>
+                    {notes.length}/300
+                  </span>
+                </label>
+                <textarea 
+                  id="notes"
+                  value={notes} 
+                  onChange={(e) => setNotes(e.target.value)} 
+                  onBlur={() => setFieldTouched('notes')}
+                  rows={3} 
+                  placeholder="Any instructions or notes" 
+                  style={{ 
+                    width: '100%', 
+                    padding: 8, 
+                    border: `1px solid ${touched.notes && errors.notes ? '#ef4444' : '#cbd5e1'}`, 
+                    borderRadius: 6 
+                  }}
+                  aria-invalid={!!(touched.notes && errors.notes)}
+                  aria-describedby={touched.notes && errors.notes ? 'notes-error' : undefined}
+                  maxLength={300}
+                />
+                {touched.notes && errors.notes && (
+                  <div id="notes-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.notes}</div>
+                )}
               </div>
             </div>
           </div>
