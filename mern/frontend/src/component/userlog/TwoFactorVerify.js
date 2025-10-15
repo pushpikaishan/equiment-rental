@@ -47,7 +47,15 @@ export default function TwoFactorVerify() {
   }
 
   return (
-    <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
+    <div style={{
+      display: 'grid',
+      placeItems: 'center',
+      minHeight: '100vh',
+      backgroundImage: "linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)), url('/logback.png')",
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    }}>
       <style>
         {`
           @keyframes spinSmallLoader { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
