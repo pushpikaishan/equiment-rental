@@ -201,198 +201,183 @@ export default function CartPage() {
   };
 
   return (
-    <div
-      className="ppage"
-      style={{
-        position: 'relative',
-        minHeight: '100vh',
-        backgroundImage: "url('/logback.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      {/* Overlay */}
-      <div
-        aria-hidden
-        style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0, left: 0,
-          background: 'rgba(29, 45, 71, 0.75)', pointerEvents: 'none', zIndex: 0,
-        }}
-      />
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <UserNavbar />
-        <div className="ppage-container">
-          <h2 className="pp-title">Your Booking Cart</h2>
-          {cart.length === 0 ? (
-            <div className="pp-card" style={{ padding: 20 }}>
-              <div className="pp-hint">Your cart is empty.</div>
-            </div>
-          ) : (
-            <div className="ppage-grid" style={{ gridTemplateColumns: '1fr' }}>
-              {/* Single combined section */}
-              <div className="pp-card">
-                <div className="pp-card__header">
-                  <div className="pp-section-title">Cart & Booking details</div>
-                  <div className="pp-hint">Review items, then provide your details to continue</div>
-                </div>
-                <div className="pp-card__body">
-                  {/* Items table */}
-                  <table className="pp-table">
-                    <thead>
-                      <tr>
-                        <th>Item</th>
-                        <th>Price / day</th>
-                        <th>Qty</th>
-                        <th className="right">Subtotal</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cart.map((i) => (
-                        <tr key={i._id}>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              {i.image ? (
-                                <img src={`http://localhost:5000${i.image}`} alt={i.name} style={{ width: 60, height: 40, objectFit: 'cover', borderRadius: 6 }} />
-                              ) : (
-                                <div style={{ width: 60, height: 40, background: '#e2e8f0', borderRadius: 6 }} />
-                              )}
-                              <div>
-                                <div style={{ fontWeight: 600 }}>{i.name}</div>
-                                <div className="pp-hint" style={{ marginTop: 2 }}>Available: {Number(i.quantity) || 0}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>LKR {Number(i.price).toFixed(2)}</td>
-                          <td>
-                            <input
-                              type="number"
-                              min={1}
-                              max={Number(i.quantity) || 1}
-                              value={i.qty}
-                              onChange={(e) => {
-                                const avail = Number(i.quantity) || 0;
-                                const raw = Number(e.target.value);
-                                const clamped = Math.max(1, Math.min(avail || 1, raw || 1));
-                                handleQty(i._id, clamped);
-                              }}
-                              className="pp-input"
-                              style={{ width: 100 }}
-                            />
-                          </td>
-                          <td className="right">LKR {(Number(i.price) * i.qty).toFixed(2)}</td>
-                          <td>
-                            <button onClick={() => handleRemove(i._id)} className="pp-btn-danger">Remove</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {errors.cart && (<div className="pp-error" style={{ marginTop: 10 }}>{errors.cart}</div>)}
-
-                  {/* Divider to details */}
-                  <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 12 }} />
-
-                  {/* Booking form */}
-                  <div className="pp-form" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+    <div>
+      <UserNavbar />
+      <div style={{ padding: 20, maxWidth: 900, margin: '0 auto' }}>
+      <h2>Your Booking Cart</h2>
+      {cart.length === 0 ? (
+        <div>Your cart is empty.</div>
+      ) : (
+        <>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+            <thead>
+              <tr style={{ background: '#f1f5f9' }}>
+                <th style={{ textAlign: 'left', padding: 8 }}>Item</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Price / day</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Quantity</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Subtotal</th>
+                <th style={{ textAlign: 'left', padding: 8 }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cart.map((i) => (
+                <tr key={i._id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {i.image ? (
+                      <img src={`http://localhost:5000${i.image}`} alt={i.name} style={{ width: 60, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                    ) : (
+                      <div style={{ width: 60, height: 40, background: '#e2e8f0', borderRadius: 6 }} />
+                    )}
                     <div>
-                      <label htmlFor="name" className="pp-label">Full name</label>
-                      <input id="name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setFieldTouched('name')} placeholder="Your name" className={`pp-input ${touched.name && errors.name ? 'is-error' : touched.name && !errors.name ? 'is-valid' : ''}`} aria-invalid={!!(touched.name && errors.name)} aria-describedby={touched.name && errors.name ? 'name-error' : undefined} />
-                      {touched.name && errors.name && (<div id="name-error" className="pp-error">{errors.name}</div>)}
+                      <div>{i.name}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Available: {Number(i.quantity) || 0}</div>
                     </div>
-                    <div>
-                      <label htmlFor="email" className="pp-label">Email</label>
-                      <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setFieldTouched('email')} placeholder="you@example.com" className={`pp-input ${touched.email && errors.email ? 'is-error' : touched.email && !errors.email ? 'is-valid' : ''}`} aria-invalid={!!(touched.email && errors.email)} aria-describedby={touched.email && errors.email ? 'email-error' : undefined} />
-                      {touched.email && errors.email && (<div id="email-error" className="pp-error">{errors.email}</div>)}
-                    </div>
-                    <div>
-                      <label htmlFor="phone" className="pp-label">Phone</label>
-                      <input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9+]/g, '');
-                          if (value.length <= 10 || (value.startsWith('+94') && value.length <= 12)) {
-                            setPhone(value);
-                          }
-                        }}
-                        onBlur={() => setFieldTouched('phone')}
-                        placeholder="0712345678"
-                        maxLength={12}
-                        className={`pp-input ${touched.phone && errors.phone ? 'is-error' : touched.phone && !errors.phone ? 'is-valid' : ''}`}
-                        aria-invalid={!!(touched.phone && errors.phone)}
-                        aria-describedby={touched.phone && errors.phone ? 'phone-error' : undefined}
-                      />
-                      {touched.phone && errors.phone && (<div id="phone-error" className="pp-error">{errors.phone}</div>)}
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label htmlFor="deliveryAddress" className="pp-label">Delivery address</label>
-                      <input id="deliveryAddress" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} onBlur={() => setFieldTouched('deliveryAddress')} placeholder="Street, city, additional directions" className={`pp-input ${touched.deliveryAddress && errors.deliveryAddress ? 'is-error' : touched.deliveryAddress && !errors.deliveryAddress ? 'is-valid' : ''}`} aria-invalid={!!(touched.deliveryAddress && errors.deliveryAddress)} aria-describedby={touched.deliveryAddress && errors.deliveryAddress ? 'deliveryAddress-error' : undefined} />
-                      {touched.deliveryAddress && errors.deliveryAddress && (<div id="deliveryAddress-error" className="pp-error">{errors.deliveryAddress}</div>)}
-                    </div>
-                    <div>
-                      <label htmlFor="bookingDate" className="pp-label">Booking date</label>
-                      <input id="bookingDate" type="date" value={bookingDate} min={todayStr} onChange={(e) => setBookingDate(e.target.value)} onBlur={() => setFieldTouched('bookingDate')} className={`pp-input ${touched.bookingDate && errors.bookingDate ? 'is-error' : touched.bookingDate && !errors.bookingDate ? 'is-valid' : ''}`} aria-invalid={!!(touched.bookingDate && errors.bookingDate)} aria-describedby={touched.bookingDate && errors.bookingDate ? 'bookingDate-error' : undefined} />
-                      {touched.bookingDate && errors.bookingDate && (<div id="bookingDate-error" className="pp-error">{errors.bookingDate}</div>)}
-                    </div>
-                    <div>
-                      <label htmlFor="returnDate" className="pp-label">Return date (optional)</label>
-                      <input
-                        id="returnDate"
-                        type="date"
-                        value={returnDate}
-                        min={bookingDate ? new Date(new Date(bookingDate).getTime() + 86400000).toISOString().slice(0, 10) : undefined}
-                        onChange={(e) => setReturnDate(e.target.value)}
-                        onBlur={() => setFieldTouched('returnDate')}
-                        className={`pp-input ${touched.returnDate && errors.returnDate ? 'is-error' : touched.returnDate && !errors.returnDate ? 'is-valid' : ''}`}
-                        aria-invalid={!!(touched.returnDate && errors.returnDate)}
-                        aria-describedby={touched.returnDate && errors.returnDate ? 'returnDate-error' : undefined}
-                      />
-                      {touched.returnDate && errors.returnDate && (<div id="returnDate-error" className="pp-error">{errors.returnDate}</div>)}
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label htmlFor="notes" className="pp-label">
-                        Notes (optional)
-                        <span style={{ float: 'right', fontSize: 11, color: notes.length > 300 ? '#dc2626' : '#94a3b8' }}>{notes.length}/300</span>
-                      </label>
-                      <textarea
-                        id="notes"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        onBlur={() => setFieldTouched('notes')}
-                        rows={3}
-                        placeholder="Any instructions or notes"
-                        className={`pp-input ${touched.notes && errors.notes ? 'is-error' : touched.notes && !errors.notes ? 'is-valid' : ''}`}
-                        aria-invalid={!!(touched.notes && errors.notes)}
-                        aria-describedby={touched.notes && errors.notes ? 'notes-error' : undefined}
-                        maxLength={300}
-                      />
-                      {touched.notes && errors.notes && (<div id="notes-error" className="pp-error">{errors.notes}</div>)}
-                    </div>
-                  </div>
-
-                  {/* Totals + actions */}
-                  <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 12, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <button onClick={handleClear} className="pp-btn-danger">Clear Cart</button>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div><strong>Total (per day):</strong> LKR {total.toFixed(2)}</div>
-                      <div className="pp-hint">Security deposit (30%): <strong>LKR {(total * 0.30).toFixed(2)}</strong></div>
-                    </div>
-                  </div>
-
-                  <button onClick={createBooking} disabled={creating || cart.length === 0 || !isValid} className="pp-submit" style={{ marginTop: 12 }}>
-                    {creating ? 'Creating…' : 'Proceed to Payment'}
-                  </button>
-                </div>
-              </div>
+                  </td>
+                  <td style={{ padding: 8 }}>LKR {Number(i.price).toFixed(2)}</td>
+                  <td style={{ padding: 8 }}>
+                    <input 
+                      type="number" 
+                      min={1} 
+                      max={Number(i.quantity) || 1}
+                      value={i.qty} 
+                      onChange={(e) => {
+                        const avail = Number(i.quantity) || 0;
+                        const raw = Number(e.target.value);
+                        const clamped = Math.max(1, Math.min(avail || 1, raw || 1));
+                        handleQty(i._id, clamped);
+                      }} 
+                      style={{ width: 80, padding: 6, borderRadius: 6, border: '1px solid #e2e8f0' }} 
+                    />
+                  </td>
+                  <td style={{ padding: 8 }}>LKR {(Number(i.price) * i.qty).toFixed(2)}</td>
+                  <td style={{ padding: 8 }}>
+                    <button onClick={() => handleRemove(i._id)} style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 10px', borderRadius: 6 }}>Remove</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {errors.cart && (
+            <div style={{ marginTop: 10, color: '#dc2626', fontSize: 13 }}>
+              {errors.cart}
             </div>
           )}
-        </div>
-        <SiteFooter />
+          {/* Checkout form */}
+          <div style={{ marginTop: 20, padding: 12, border: '1px solid #e2e8f0', borderRadius: 8, background: 'white' }}>
+            <h3 style={{ marginTop: 0 }}>Booking details</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              <div>
+                <label htmlFor="name" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Full name</label>
+                <input id="name" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => setFieldTouched('name')} placeholder="Your name" style={{ width: '100%', padding: 8, border: `1px solid ${touched.name && errors.name ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.name && errors.name)} aria-describedby={touched.name && errors.name ? 'name-error' : undefined} />
+                {touched.name && errors.name && (
+                  <div id="name-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.name}</div>
+                )}
+              </div>
+              <div>
+                <label htmlFor="email" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Email</label>
+                <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onBlur={() => setFieldTouched('email')} placeholder="you@example.com" style={{ width: '100%', padding: 8, border: `1px solid ${touched.email && errors.email ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.email && errors.email)} aria-describedby={touched.email && errors.email ? 'email-error' : undefined} />
+                {touched.email && errors.email && (
+                  <div id="email-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.email}</div>
+                )}
+              </div>
+              <div>
+                <label htmlFor="phone" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Phone</label>
+                <input 
+                  id="phone" 
+                  type="tel"
+                  value={phone} 
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9+]/g, ''); // Only allow digits and +
+                    if (value.length <= 10 || (value.startsWith('+94') && value.length <= 12)) {
+                      setPhone(value);
+                    }
+                  }} 
+                  onBlur={() => setFieldTouched('phone')} 
+                  placeholder="0712345678" 
+                  maxLength={12}
+                  style={{ width: '100%', padding: 8, border: `1px solid ${touched.phone && errors.phone ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} 
+                  aria-invalid={!!(touched.phone && errors.phone)} 
+                  aria-describedby={touched.phone && errors.phone ? 'phone-error' : undefined} 
+                />
+                {touched.phone && errors.phone && (
+                  <div id="phone-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.phone}</div>
+                )}
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label htmlFor="deliveryAddress" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Delivery address</label>
+                <input id="deliveryAddress" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} onBlur={() => setFieldTouched('deliveryAddress')} placeholder="Street, city, additional directions" style={{ width: '100%', padding: 8, border: `1px solid ${touched.deliveryAddress && errors.deliveryAddress ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.deliveryAddress && errors.deliveryAddress)} aria-describedby={touched.deliveryAddress && errors.deliveryAddress ? 'deliveryAddress-error' : undefined} />
+                {touched.deliveryAddress && errors.deliveryAddress && (
+                  <div id="deliveryAddress-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.deliveryAddress}</div>
+                )}
+              </div>
+              <div>
+                <label htmlFor="bookingDate" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Booking date</label>
+                <input id="bookingDate" type="date" value={bookingDate} min={todayStr} onChange={(e) => setBookingDate(e.target.value)} onBlur={() => setFieldTouched('bookingDate')} style={{ width: '100%', padding: 8, border: `1px solid ${touched.bookingDate && errors.bookingDate ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }} aria-invalid={!!(touched.bookingDate && errors.bookingDate)} aria-describedby={touched.bookingDate && errors.bookingDate ? 'bookingDate-error' : undefined} />
+                {touched.bookingDate && errors.bookingDate && (
+                  <div id="bookingDate-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.bookingDate}</div>
+                )}
+              </div>
+              <div>
+                <label htmlFor="returnDate" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
+                <input
+                  id="returnDate"
+                  type="date"
+                  value={returnDate}
+                  min={bookingDate ? new Date(new Date(bookingDate).getTime() + 86400000).toISOString().slice(0, 10) : undefined}
+                  onChange={(e) => setReturnDate(e.target.value)}
+                  onBlur={() => setFieldTouched('returnDate')}
+                  style={{ width: '100%', padding: 8, border: `1px solid ${touched.returnDate && errors.returnDate ? '#ef4444' : '#cbd5e1'}`, borderRadius: 6 }}
+                  aria-invalid={!!(touched.returnDate && errors.returnDate)}
+                  aria-describedby={touched.returnDate && errors.returnDate ? 'returnDate-error' : undefined}
+                />
+                {touched.returnDate && errors.returnDate && (
+                  <div id="returnDate-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.returnDate}</div>
+                )}
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label htmlFor="notes" style={{ display: 'block', fontSize: 12, color: '#64748b' }}>
+                  Notes (optional)
+                  <span style={{ float: 'right', fontSize: 11, color: notes.length > 300 ? '#dc2626' : '#94a3b8' }}>
+                    {notes.length}/300
+                  </span>
+                </label>
+                <textarea 
+                  id="notes"
+                  value={notes} 
+                  onChange={(e) => setNotes(e.target.value)} 
+                  onBlur={() => setFieldTouched('notes')}
+                  rows={3} 
+                  placeholder="Any instructions or notes" 
+                  style={{ 
+                    width: '100%', 
+                    padding: 8, 
+                    border: `1px solid ${touched.notes && errors.notes ? '#ef4444' : '#cbd5e1'}`, 
+                    borderRadius: 6 
+                  }}
+                  aria-invalid={!!(touched.notes && errors.notes)}
+                  aria-describedby={touched.notes && errors.notes ? 'notes-error' : undefined}
+                  maxLength={300}
+                />
+                {touched.notes && errors.notes && (
+                  <div id="notes-error" style={{ color: '#dc2626', fontSize: 12, marginTop: 6 }}>{errors.notes}</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button onClick={handleClear} style={{ background: 'white', border: '1px solid #cbd5e1', padding: '8px 12px', borderRadius: 8 }}>Clear Cart</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>Security deposit (30%):</span>
+              <strong>LKR {(total * 0.30).toFixed(2)}</strong>
+            </div>
+            <div style={{ fontWeight: 700 }}>Total (per day): LKR {total.toFixed(2)}</div>
+            <button onClick={createBooking} disabled={creating || cart.length === 0 || !isValid} style={{ background: '#16a34a', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 8, opacity: (creating || !isValid) ? 0.8 : 1 }}>{creating ? 'Creating…' : 'Proceed to Payment'}</button>
+          </div>
+        </>
+      )}
       </div>
+      <SiteFooter />
     </div>
   );
 }

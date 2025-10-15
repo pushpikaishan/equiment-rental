@@ -18,6 +18,10 @@ export default function SupplierDashboard() {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
   const [error, setError] = useState('');
+  // Filters for Requests tab
+  const [statusFilter, setStatusFilter] = useState(''); // '', 'pending', 'accepted', 'rejected', 'cancelled'
+  const [fromDate, setFromDate] = useState(''); // YYYY-MM-DD
+  const [toDate, setToDate] = useState(''); // YYYY-MM-DD
   // Progress dropdown removed per request
   const [notices, setNotices] = useState([]);
   const [loadingNotices, setLoadingNotices] = useState(false);
@@ -102,6 +106,21 @@ export default function SupplierDashboard() {
       setError(e.response?.data?.message || e.message);
     } finally { setLoadingRequests(false); }
   };
+
+  // Apply client-side filters to the loaded requests for display
+  const filteredRequests = useMemo(() => {
+    const list = Array.isArray(requests) ? requests : [];
+    const from = fromDate ? new Date(fromDate) : null;
+    const to = toDate ? new Date(toDate) : null;
+    if (to) { to.setHours(23, 59, 59, 999); }
+    return list.filter(r => {
+      if (statusFilter && r.status !== statusFilter) return false;
+      const created = new Date(r.createdAt || r.updatedAt || Date.now());
+      if (from && created < from) return false;
+      if (to && created > to) return false;
+      return true;
+    });
+  }, [requests, statusFilter, fromDate, toDate]);
   const loadNotices = async () => {
     setLoadingNotices(true);
     try {
@@ -185,11 +204,36 @@ export default function SupplierDashboard() {
     }
   };
 
-  // Basic styles
-  const shell = { minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' };
-  // topbar moved to shared SupplierTopbar
-  const card = { background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 };
-  const grid = { display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' };
+  // Modern styles matching admin booking management theme
+  const shell = { minHeight: '100vh', background: '#f3f4f6', display: 'flex', flexDirection: 'column' };
+  const container = { flex: 1, padding: '32px', maxWidth: 1400, margin: '0 auto', width: '100%' };
+  const card = { 
+    background: '#ffffff', 
+    border: '1px solid #e5e7eb', 
+    borderRadius: 8, 
+    padding: 24,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+  };
+  const statCard = {
+    background: '#ffffff',
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    padding: 20,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.2s ease',
+    cursor: 'default'
+  };
+  const grid = { display: 'grid', gap: 20, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' };
+  const btn = (bg) => ({ 
+    padding: '10px 20px', 
+    borderRadius: 6, 
+    background: bg, 
+    color: 'white', 
+    border: 'none',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
+  });
 
   return (
     <div style={shell}>
@@ -213,61 +257,93 @@ export default function SupplierDashboard() {
         }}
       />
 
-      <div style={{ padding: 16, display: 'grid', gap: 16 }}>
-        {error && <div style={{ ...card, borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b' }}>{error}</div>}
+      <div style={container}>
+        {error && (
+          <div style={{ 
+            ...card, 
+            borderLeft: '4px solid #ef4444', 
+            background: '#fef2f2', 
+            color: '#991b1b',
+            marginBottom: 20
+          }}>
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Summary Tab: Running ads and monthly stats */}
         {activeTab === 'summary' && (
         <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div style={{ fontWeight: 700 }}>This Month Summary</div>
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ margin: 0, marginBottom: 8, fontSize: 28, fontWeight: 700, color: '#1f2937' }}>Inventory Summary</h2>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: 15 }}>Monitor your equipment inventory and monthly performance.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 8 }}>
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
-              <div style={{ fontSize: 12, color: '#64748b' }}>Total running ads</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>{runningAdsCount}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
+            <div style={{ 
+              ...statCard,
+              borderTop: '4px solid #3b82f6'
+            }}>
+              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>Total Running Ads</div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: '#1f2937' }}>{runningAdsCount}</div>
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Active listings</div>
             </div>
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
-              <div style={{ fontSize: 12, color: '#64748b' }}>This month earnings</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>LKR {Number(monthlyAdStats.totalRevenue || 0).toFixed(2)}</div>
+            <div style={{ 
+              ...statCard,
+              borderTop: '4px solid #10b981'
+            }}>
+              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>This Month Earnings</div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: '#1f2937' }}>LKR {Number(monthlyAdStats.totalRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Total revenue</div>
             </div>
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
-              <div style={{ fontSize: 12, color: '#64748b' }}>Items sold (qty)</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#0f172a' }}>{monthlyAdStats.totalQty || 0}</div>
+            <div style={{ 
+              ...statCard,
+              borderTop: '4px solid #f59e0b'
+            }}>
+              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>Items Rented</div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: '#1f2937' }}>{monthlyAdStats.totalQty || 0}</div>
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Total quantity</div>
             </div>
           </div>
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Per Ad — This Month</div>
+          <div style={{ marginTop: 24 }}>
+            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: '#1f2937' }}>Top Performing Equipment</h3>
             {monthlyAdStats.list.length === 0 ? (
-              <div style={{ color: '#64748b' }}>No sales recorded this month.</div>
+              <div style={{ 
+                padding: 60, 
+                textAlign: 'center', 
+                color: '#6b7280',
+                background: '#f9fafb',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: 14 }}>No sales recorded this month.</div>
+              </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
                   <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Ad</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Qty sold</th>
-                      <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Earnings (LKR)</th>
+                    <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                      <th style={{ textAlign: 'left', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Equipment</th>
+                      <th style={{ textAlign: 'center', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Qty Rented</th>
+                      <th style={{ textAlign: 'right', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Earnings (LKR)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {monthlyAdStats.list.map((row) => (
-                      <tr key={row.inventoryId}>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {monthlyAdStats.list.map((row, idx) => (
+                      <tr key={row.inventoryId} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             {row.image ? (
-                              <img src={`${baseUrl}${row.image}`} alt={row.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover' }} />
+                              <img src={`${baseUrl}${row.image}`} alt={row.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} />
                             ) : (
-                              <div style={{ width: 36, height: 36, borderRadius: 6, background: '#e2e8f0' }} />
+                              <div style={{ width: 40, height: 40, borderRadius: 6, background: '#e5e7eb' }} />
                             )}
                             <div>
-                              <div style={{ fontWeight: 600 }}>{row.name}</div>
-                              <div style={{ fontSize: 12, color: '#64748b' }}><code>{row.inventoryId}</code></div>
+                              <div style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>{row.name}</div>
+                              <div style={{ fontSize: 12, color: '#9ca3af' }}>ID: {row.inventoryId.slice(-8)}</div>
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{row.qty}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>{Number(row.revenue).toFixed(2)}</td>
+                        <td style={{ padding: 12, textAlign: 'center', fontWeight: 600, color: '#111827' }}>{row.qty}</td>
+                        <td style={{ padding: 12, textAlign: 'right', fontWeight: 600, color: '#111827' }}>{Number(row.revenue).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -281,36 +357,70 @@ export default function SupplierDashboard() {
         {/* Admin Notices */}
         {activeTab === 'notices' && (
         <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Admin Notices</div>
-            <button onClick={loadNotices} style={{ padding: '6px 10px', borderRadius: 8, background: 'white', border: '1px solid #cbd5e1' }}>Refresh</button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <div>
+              <h2 style={{ margin: 0, marginBottom: 8, fontSize: 28, fontWeight: 700, color: '#1f2937' }}>Admin Notices</h2>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: 15 }}>Important updates from administrators about your inventory.</p>
+            </div>
+            <button onClick={loadNotices} style={{ ...btn('#3b82f6') }}>Refresh</button>
           </div>
           {loadingNotices ? (
-            <div>Loading…</div>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: 60, 
+              color: '#6b7280',
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb'
+            }}>
+              <div>Loading notices...</div>
+            </div>
           ) : (notices.length === 0 ? (
-            <div style={{ color: '#64748b' }}>No recent admin notices.</div>
+            <div style={{ 
+              padding: 60, 
+              textAlign: 'center', 
+              color: '#6b7280',
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb'
+            }}>
+              <div>No recent admin notices.</div>
+            </div>
           ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gap: 16 }}>
               {notices.map(n => (
-                <div key={n.id} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#fff' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 600, color: '#0f172a' }}>
-                      {n.name || 'An ad'}
-                      <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 6px', borderRadius: 9999, background: n.kind === 'deleted' ? '#fee2e2' : '#e0e7ff', color: '#0f172a' }}>
+                <div key={n.id} style={{ 
+                  border: '1px solid #e5e7eb', 
+                  borderRadius: 8, 
+                  padding: 20, 
+                  background: 'white'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontWeight: 600, color: '#111827', fontSize: 15 }}>{n.name || 'An item'}</span>
+                      <span style={{ 
+                        fontSize: 11, 
+                        padding: '4px 10px', 
+                        borderRadius: 4, 
+                        background: n.kind === 'deleted' ? '#fee2e2' : '#dbeafe', 
+                        color: n.kind === 'deleted' ? '#991b1b' : '#1e40af',
+                        fontWeight: 600,
+                        textTransform: 'uppercase'
+                      }}>
                         {n.kind === 'deleted' ? 'Deleted' : 'Updated'}
                       </span>
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{new Date(n.at).toLocaleString()}</div>
+                    <div style={{ fontSize: 13, color: '#9ca3af' }}>{new Date(n.at).toLocaleString()}</div>
                   </div>
-                  <div style={{ marginTop: 4 }}>
-                    <span style={{ fontSize: 12, color: '#334155' }}>Reason:</span> {n.reason || 'No reason provided'}
+                  <div style={{ marginTop: 8, padding: 12, background: '#f9fafb', borderRadius: 6, borderLeft: '3px solid #3b82f6' }}>
+                    <span style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>Reason:</span> <span style={{ fontSize: 13, color: '#6b7280' }}>{n.reason || 'No reason provided'}</span>
                   </div>
                   {n.inventoryId && (
-                    <div style={{ marginTop: 4, fontSize: 12, color: '#64748b' }}>Inventory ID: <code>{n.inventoryId}</code></div>
+                    <div style={{ marginTop: 8, fontSize: 12, color: '#9ca3af' }}>ID: {n.inventoryId}</div>
                   )}
                   {n.kind === 'updated' && n.updates && Object.keys(n.updates).length > 0 && (
-                    <div style={{ marginTop: 6, fontSize: 12, color: '#475569' }}>
-                      Changed: {Object.keys(n.updates).join(', ')}
+                    <div style={{ marginTop: 8, fontSize: 13, color: '#4b5563', background: '#eff6ff', padding: 10, borderRadius: 6 }}>
+                      <strong>Changed fields:</strong> {Object.keys(n.updates).join(', ')}
                     </div>
                   )}
                 </div>
@@ -325,58 +435,193 @@ export default function SupplierDashboard() {
         {/* Booking Requests */}
         {activeTab === 'requests' && (
         <div style={card}>
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Incoming Booking Requests</div>
-          {loadingRequests ? 'Loading…' : (
-            requests.length === 0 ? <div>No incoming requests.</div> : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ margin: 0, marginBottom: 8, fontSize: 28, fontWeight: 700, color: '#1f2937' }}>Booking Requests</h2>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: 15 }}>Monitor incoming requests, handle cancellations and export booking reports.</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label htmlFor="supplier-req-status" style={{ fontSize: 14, color: '#374151', fontWeight: 500 }}>Status:</label>
+              <select id="supplier-req-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 6, background: 'white', fontSize: 14 }}>
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="accepted">Accepted</option>
+                <option value="rejected">Rejected</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              {(statusFilter || fromDate || toDate) && (
+                <button onClick={() => { setStatusFilter(''); setFromDate(''); setToDate(''); }} style={{ ...btn('#6b7280'), padding: '8px 16px', fontSize: 14 }}>Clear</button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await axios.get(`${baseUrl}/supplier-requests/export/csv`, {
+                      headers,
+                      responseType: 'blob',
+                      params: { status: statusFilter || undefined, from: fromDate || undefined, to: toDate || undefined }
+                    });
+                    const blob = new Blob([res.data], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'supplier-bookings.csv'; a.click();
+                    window.URL.revokeObjectURL(url);
+                  } catch (e) { alert('Failed to export CSV'); }
+                }}
+                style={{ ...btn('#10b981') }}
+              >
+                Export CSV
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await axios.get(`${baseUrl}/supplier-requests/export/pdf`, {
+                      headers,
+                      responseType: 'blob',
+                      params: { status: statusFilter || undefined, from: fromDate || undefined, to: toDate || undefined }
+                    });
+                    const blob = new Blob([res.data], { type: 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'supplier-bookings.pdf'; a.click();
+                    window.URL.revokeObjectURL(url);
+                  } catch (e) { alert('Failed to export PDF'); }
+                }}
+                style={{ ...btn('#f59e0b') }}
+              >
+                Export PDF
+              </button>
+            </div>
+          </div>
+          {loadingRequests ? (
+            <div style={{ 
+              padding: 60, 
+              textAlign: 'center', 
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: 14, color: '#6b7280' }}>Loading requests...</div>
+            </div>
+          ) : (
+            filteredRequests.length === 0 ? (
+              <div style={{ 
+                padding: 60, 
+                textAlign: 'center', 
+                background: '#f9fafb',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ color: '#6b7280', fontSize: 14 }}>No booking requests found</div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white' }}>
+                  <thead style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
                     <tr>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Requested</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Customer</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Address</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Items</th>
-                      <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Status</th>
-                      <th style={{ textAlign: 'right', padding: 8, borderBottom: '1px solid #e2e8f0' }}>Actions</th>
+                      <th style={{ textAlign: 'left', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Requested</th>
+                      <th style={{ textAlign: 'left', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Customer</th>
+                      <th style={{ textAlign: 'left', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Address</th>
+                      <th style={{ textAlign: 'left', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Items</th>
+                      <th style={{ textAlign: 'left', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Status</th>
+                      <th style={{ textAlign: 'right', padding: 12, fontWeight: 600, color: '#374151', fontSize: 14 }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {requests.map(r => (
-                      <tr key={r._id}>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{new Date(r.createdAt).toLocaleString()}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
-                          <div style={{ fontWeight: 600 }}>{r.customerName}</div>
-                          <div style={{ fontSize: 12, color: '#64748b' }}>{r.customerEmail} • {r.customerPhone}</div>
+                    {filteredRequests.map((r, i) => (
+                      <tr key={r._id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: 12, color: '#111827', fontSize: 14 }}>{new Date(r.createdAt).toLocaleString()}</td>
+                        <td style={{ padding: 12 }}>
+                          <div style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>{r.customerName}</div>
+                          <div style={{ fontSize: 13, color: '#9ca3af' }}>{r.customerEmail} • {r.customerPhone}</div>
                         </td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
-                          <div style={{ fontSize: 12, color: '#0f172a' }}>{r.deliveryAddress || '—'}</div>
+                        <td style={{ padding: 12 }}>
+                          <div style={{ fontSize: 13, color: '#6b7280' }}>{r.deliveryAddress || '—'}</div>
                         </td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: 12 }}>
                           {(r.items||[]).map((it, idx) => (
-                            <div key={idx} style={{ fontSize: 12 }}>
-                              {it.name} × {it.qty} @ LKR {Number(it.pricePerDay||0).toFixed(2)} /d
+                            <div key={idx} style={{ fontSize: 13, color: '#4b5563', marginBottom: 4 }}>
+                              <strong>{it.name}</strong> × {it.qty} @ <span style={{ fontWeight: 600 }}>LKR {Number(it.pricePerDay||0).toFixed(2)}</span> /day
                             </div>
                           ))}
                         </td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9' }}>{r.status}</td>
-                        <td style={{ padding: 8, borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
-                          <button disabled={r.status !== 'pending'} onClick={async () => { try { await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'accepted' }, { headers }); await loadRequests(); } catch (e) { setError(e.response?.data?.message || e.message); } }} style={{ padding: '6px 10px', borderRadius: 8, background: '#16a34a', color: 'white', border: '1px solid #15803d', marginRight: 6 }}>Accept</button>
-                          <button disabled={r.status !== 'pending'} onClick={async () => { try { await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'rejected' }, { headers }); await loadRequests(); } catch (e) { setError(e.response?.data?.message || e.message); } }} style={{ padding: '6px 10px', borderRadius: 8, background: '#ef4444', color: 'white', border: '1px solid #dc2626', marginRight: 8 }}>Reject</button>
-                          {/* Shipped action: only when accepted and current progress is 'ready' */}
-                          <button
-                            onClick={async () => {
-                              try {
-                                await axios.put(`${baseUrl}/supplier-requests/${r._id}/progress`, { status: 'shipped' }, { headers });
-                                await loadRequests();
-                                alert('Marked as shipped. Customer will be notified.');
-                              } catch (e) {
-                                setError(e.response?.data?.message || e.message);
-                              }
-                            }}
-                            style={{ padding: '6px 10px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}
-                          >
-                            Shipped
-                          </button>
+                        <td style={{ padding: 12 }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: r.status === 'accepted' ? '#d1fae5' :
+                                        r.status === 'pending' ? '#fef3c7' :
+                                        r.status === 'rejected' ? '#fee2e2' :
+                                        '#e5e7eb',
+                            color: r.status === 'accepted' ? '#065f46' :
+                                   r.status === 'pending' ? '#92400e' :
+                                   r.status === 'rejected' ? '#991b1b' :
+                                   '#374151'
+                          }}>
+                            {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                          </span>
+                        </td>
+                        <td style={{ padding: 12, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                            <button 
+                              disabled={r.status !== 'pending'} 
+                              onClick={async () => { 
+                                try { 
+                                  await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'accepted' }, { headers }); 
+                                  await loadRequests(); 
+                                } catch (e) { 
+                                  setError(e.response?.data?.message || e.message); 
+                                } 
+                              }} 
+                              style={{ 
+                                ...btn('#10b981'), 
+                                padding: '6px 14px', 
+                                fontSize: 13,
+                                opacity: r.status !== 'pending' ? 0.5 : 1,
+                                cursor: r.status !== 'pending' ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              Accept
+                            </button>
+                            <button 
+                              disabled={r.status !== 'pending'} 
+                              onClick={async () => { 
+                                try { 
+                                  await axios.put(`${baseUrl}/supplier-requests/${r._id}/status`, { status: 'rejected' }, { headers }); 
+                                  await loadRequests(); 
+                                } catch (e) { 
+                                  setError(e.response?.data?.message || e.message); 
+                                } 
+                              }} 
+                              style={{ 
+                                ...btn('#ef4444'), 
+                                padding: '6px 14px', 
+                                fontSize: 13,
+                                opacity: r.status !== 'pending' ? 0.5 : 1,
+                                cursor: r.status !== 'pending' ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              Reject
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await axios.put(`${baseUrl}/supplier-requests/${r._id}/progress`, { status: 'shipped' }, { headers });
+                                  await loadRequests();
+                                  alert('Marked as shipped. Customer will be notified.');
+                                } catch (e) {
+                                  setError(e.response?.data?.message || e.message);
+                                }
+                              }}
+                              style={{ ...btn('#3b82f6'), padding: '6px 14px', fontSize: 13 }}
+                            >
+                              Shipped
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -391,34 +636,59 @@ export default function SupplierDashboard() {
         {/* Profile */}
         {activeTab === 'profile' && (
         <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>My Profile</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <div>
+              <h2 style={{ margin: 0, marginBottom: 8, fontSize: 28, fontWeight: 700, color: '#1f2937' }}>My Profile</h2>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: 15 }}>Your supplier account information and contact details.</p>
+            </div>
             {me?._id && (
-              <button onClick={() => window.location.href = `/update-supplier/${me._id}`}
-                style={{ padding: '6px 10px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}>
+              <button 
+                onClick={() => window.location.href = `/update-supplier/${me._id}`}
+                style={{ ...btn('#3b82f6') }}
+              >
                 Edit Profile
               </button>
             )}
           </div>
           {!me ? (
-            <div style={{ color: '#64748b' }}>Loading profile…</div>
+            <div style={{ 
+              padding: 60, 
+              textAlign: 'center', 
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: 14, color: '#6b7280' }}>Loading profile...</div>
+            </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Name</div>
-                <div style={{ fontWeight: 700, color: '#0f172a' }}>{me.name || me.fullName || '—'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
+              <div style={{ 
+                ...statCard,
+                borderTop: '4px solid #3b82f6'
+              }}>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>Name</div>
+                <div style={{ fontWeight: 600, color: '#111827', fontSize: 16 }}>{me.name || me.fullName || '—'}</div>
               </div>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Email</div>
-                <div style={{ fontWeight: 700, color: '#0f172a' }}>{me.email || '—'}</div>
+              <div style={{ 
+                ...statCard,
+                borderTop: '4px solid #8b5cf6'
+              }}>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>Email</div>
+                <div style={{ fontWeight: 600, color: '#111827', fontSize: 14, wordBreak: 'break-all' }}>{me.email || '—'}</div>
               </div>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
-                <div style={{ fontSize: 12, color: '#64748b' }}>District</div>
-                <div style={{ fontWeight: 700, color: '#0f172a' }}>{me.district || '—'}</div>
+              <div style={{ 
+                ...statCard,
+                borderTop: '4px solid #10b981'
+              }}>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>District</div>
+                <div style={{ fontWeight: 600, color: '#111827', fontSize: 16 }}>{me.district || '—'}</div>
               </div>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 12, background: '#f8fafc' }}>
-                <div style={{ fontSize: 12, color: '#64748b' }}>Phone</div>
-                <div style={{ fontWeight: 700, color: '#0f172a' }}>{me.phone || me.mobile || '—'}</div>
+              <div style={{ 
+                ...statCard,
+                borderTop: '4px solid #f59e0b'
+              }} onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8, fontWeight: 500 }}>Phone</div>
+                <div style={{ fontWeight: 600, color: '#111827', fontSize: 16 }}>{me.phone || me.mobile || '—'}</div>
               </div>
             </div>
           )}
@@ -429,64 +699,234 @@ export default function SupplierDashboard() {
   {activeTab === 'equipment' && (
   <div style={grid}>
           <form onSubmit={onSubmit} style={card}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>{editing ? 'Edit Inventory Item' : 'Add Inventory Item'}</div>
-            <div style={{ display: 'grid', gap: 8 }}>
-              <input placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} required />
-              <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} rows={3} />
-              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }}>
-                <option value="">Select Category</option>
-                {['Lighting','Audio','Camera','Tents & Shelters','Visual & AV Equipment','Stage & Platform Equipment','Furniture','Catering & Dining Equipment','Power & Electrical','Climate Control'].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{ margin: 0, marginBottom: 8, fontSize: 20, fontWeight: 700, color: '#1f2937' }}>
+                {editing ? 'Edit Inventory Item' : 'Add Inventory Item'}
+              </h2>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: 13 }}>Fill in the details below to {editing ? 'update' : 'add'} equipment to your inventory.</p>
+            </div>
+            <div style={{ display: 'grid', gap: 14 }}>
+              <div>
+                <label htmlFor="supplier-item-name" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Item Name</label>
+                <input 
+                  id="supplier-item-name"
+                  placeholder="Enter item name" 
+                  value={form.name} 
+                  onChange={e => setForm({ ...form, name: e.target.value })} 
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px 12px', 
+                    border: '1px solid #d1d5db', 
+                    borderRadius: 6,
+                    fontSize: 14
+                  }}
+                  required 
+                />
+              </div>
+              <div>
+                <label htmlFor="supplier-item-desc" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Description</label>
+                <textarea 
+                  id="supplier-item-desc"
+                  placeholder="Describe your item" 
+                  value={form.description} 
+                  onChange={e => setForm({ ...form, description: e.target.value })} 
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px 12px', 
+                    border: '1px solid #d1d5db', 
+                    borderRadius: 6,
+                    fontSize: 14,
+                    resize: 'vertical'
+                  }}
+                  rows={3} 
+                />
+              </div>
+              <div>
+                <label htmlFor="supplier-item-category" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Category</label>
+                <select 
+                  id="supplier-item-category"
+                  value={form.category} 
+                  onChange={e => setForm({ ...form, category: e.target.value })} 
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px 12px', 
+                    border: '1px solid #d1d5db', 
+                    borderRadius: 6,
+                    fontSize: 14,
+                    background: 'white'
+                  }}
+                >
+                  <option value="">Select Category</option>
+                  {['Lighting','Audio','Camera','Tents & Shelters','Visual & AV Equipment','Stage & Platform Equipment','Furniture','Catering & Dining Equipment','Power & Electrical','Climate Control'].map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="supplier-item-district" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>District (from profile)</label>
                 <input
+                  id="supplier-item-district"
                   placeholder="District"
                   value={form.district}
                   onChange={() => { /* disabled - district is managed by profile */ }}
                   disabled
-                  style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8, background: '#f8fafc', color: '#64748b' }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px 12px', 
+                    border: '1px solid #d1d5db', 
+                    borderRadius: 6, 
+                    background: '#f9fafb', 
+                    color: '#9ca3af',
+                    fontSize: 14
+                  }}
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <input type="number" min="0.01" step="0.01" placeholder="Rental Price (per day)" value={form.rentalPrice} onChange={e => setForm({ ...form, rentalPrice: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} required />
-                <input type="number" min="1" step="1" placeholder="Quantity" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} style={{ padding: 8, border: '1px solid #cbd5e1', borderRadius: 8 }} required />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label htmlFor="supplier-item-price" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Rental Price (LKR/day)</label>
+                  <input 
+                    id="supplier-item-price"
+                    type="number" 
+                    min="0.01" 
+                    step="0.01" 
+                    placeholder="0.00" 
+                    value={form.rentalPrice} 
+                    onChange={e => setForm({ ...form, rentalPrice: e.target.value })} 
+                    style={{ 
+                      width: '100%', 
+                      padding: '10px 12px', 
+                      border: '1px solid #d1d5db', 
+                      borderRadius: 6,
+                      fontSize: 14
+                    }} 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label htmlFor="supplier-item-qty" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Quantity</label>
+                  <input 
+                    id="supplier-item-qty"
+                    type="number" 
+                    min="1" 
+                    step="1" 
+                    placeholder="1" 
+                    value={form.quantity} 
+                    onChange={e => setForm({ ...form, quantity: e.target.value })} 
+                    style={{ 
+                      width: '100%', 
+                      padding: '10px 12px', 
+                      border: '1px solid #cbd5e1', 
+                      borderRadius: 6,
+                      fontSize: 14
+                    }} 
+                    required 
+                  />
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input id="avail" type="checkbox" checked={!!form.available} onChange={e => setForm({ ...form, available: e.target.checked })} />
-                <label htmlFor="avail">Available</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 10, background: '#f9fafb', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                <input id="avail" type="checkbox" checked={!!form.available} onChange={e => setForm({ ...form, available: e.target.checked })} style={{ width: 16, height: 16 }} />
+                <label htmlFor="avail" style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>Available for rent</label>
               </div>
-              <input type="file" accept="image/*" onChange={e => setImage(e.target.files?.[0] || null)} />
+              <div>
+                <label htmlFor="supplier-item-image" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Item Image</label>
+                <input 
+                  id="supplier-item-image"
+                  type="file" 
+                  accept="image/*" 
+                  onChange={e => setImage(e.target.files?.[0] || null)} 
+                  style={{ 
+                    width: '100%', 
+                    padding: 8, 
+                    border: '1px solid #d1d5db', 
+                    borderRadius: 6,
+                    fontSize: 14
+                  }} 
+                />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button type="submit" style={{ padding: '8px 12px', borderRadius: 8, background: '#2563eb', color: 'white', border: '1px solid #1d4ed8' }}>{editing ? 'Update' : 'Add'}</button>
-              {editing && <button type="button" onClick={() => { setEditing(null); setForm(emptyForm); setImage(null); }} style={{ padding: '8px 12px', borderRadius: 8, background: 'white', border: '1px solid #cbd5e1' }}>Cancel</button>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button type="submit" style={{ ...btn('#3b82f6'), flex: 1 }}>
+                {editing ? 'Update Item' : 'Add Item'}
+              </button>
+              {editing && (
+                <button 
+                  type="button" 
+                  onClick={() => { setEditing(null); setForm(emptyForm); setImage(null); }} 
+                  style={{ ...btn('#6b7280'), flex: 1 }}
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           </form>
 
           <div style={card}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Your Inventory</div>
-            {loadingItems ? 'Loading…' : (
-              items.length === 0 ? <div>No items yet.</div> : (
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{ margin: 0, marginBottom: 8, fontSize: 20, fontWeight: 700, color: '#1f2937' }}>Your Inventory</h2>
+              <p style={{ margin: 0, color: '#6b7280', fontSize: 13 }}>Manage your equipment listings and availability.</p>
+            </div>
+            {loadingItems ? (
+              <div style={{ 
+                padding: 60, 
+                textAlign: 'center', 
+                background: '#f9fafb',
+                borderRadius: 8,
+                border: '1px solid #e5e7eb'
+              }}>
+                <div style={{ fontSize: 14, color: '#6b7280' }}>Loading items...</div>
+              </div>
+            ) : (
+              items.length === 0 ? (
+                <div style={{ 
+                  padding: 60, 
+                  textAlign: 'center', 
+                  background: '#f9fafb',
+                  borderRadius: 8,
+                  border: '1px solid #e5e7eb'
+                }}>
+                  <div style={{ color: '#6b7280', fontSize: 14 }}>No items in your inventory yet</div>
+                </div>
+              ) : (
                 <div style={{ display: 'grid', gap: 12 }}>
-                  {items.map(it => (
-                    <div key={it._id} style={{ display: 'grid', gap: 8, gridTemplateColumns: '80px 1fr auto', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: 8 }}>
+                  {items.map((it, idx) => (
+                    <div key={it._id} style={{ 
+                      display: 'grid', 
+                      gap: 16, 
+                      gridTemplateColumns: '80px 1fr auto', 
+                      alignItems: 'center', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 8,
+                      padding: 16,
+                      background: 'white'
+                    }}>
                       <div>
                         {it.image ? (
-                          <img src={`${baseUrl}${it.image}`} alt={it.name} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }} />
+                          <img src={`${baseUrl}${it.image}`} alt={it.name} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6 }} />
                         ) : (
-                          <div style={{ width: 72, height: 72, background: '#e2e8f0', borderRadius: 8 }} />
+                          <div style={{ width: 80, height: 80, background: '#e5e7eb', borderRadius: 6 }} />
                         )}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600 }}>{it.name}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{it.category} • {it.district} • Qty {it.quantity} • LKR {Number(it.rentalPrice || 0).toFixed(2)}/day</div>
-                        <div style={{ fontSize: 12, color: it.available !== false ? '#16a34a' : '#b91c1c' }}>{it.available !== false ? 'Available' : 'Unavailable'}</div>
+                        <div style={{ fontWeight: 600, color: '#111827', fontSize: 15, marginBottom: 6 }}>{it.name}</div>
+                        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>
+                          <strong>{it.category}</strong> • {it.district} • Qty: <strong>{it.quantity}</strong> • <span style={{ color: '#10b981', fontWeight: 600 }}>LKR {Number(it.rentalPrice || 0).toFixed(2)}/day</span>
+                        </div>
+                        <div style={{ 
+                          display: 'inline-block',
+                          fontSize: 11, 
+                          fontWeight: 600,
+                          padding: '3px 10px',
+                          borderRadius: 4,
+                          background: it.available !== false ? '#d1fae5' : '#fee2e2',
+                          color: it.available !== false ? '#065f46' : '#991b1b'
+                        }}>
+                          {it.available !== false ? 'Available' : 'Unavailable'}
+                        </div>
                         <AdStatusRow baseUrl={baseUrl} headers={headers} item={it} />
                       </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => startEdit(it)} style={{ padding: '6px 10px', borderRadius: 8, background: 'white', border: '1px solid #cbd5e1' }}>Edit</button>
-                        <button onClick={() => removeItem(it._id)} style={{ padding: '6px 10px', borderRadius: 8, background: '#ef4444', color: 'white', border: '1px solid #dc2626' }}>Delete</button>
+                      <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
+                        <button onClick={() => startEdit(it)} style={{ ...btn('#3b82f6'), padding: '6px 14px', fontSize: 13 }}>Edit</button>
+                        <button onClick={() => removeItem(it._id)} style={{ ...btn('#ef4444'), padding: '6px 14px', fontSize: 13 }}>Delete</button>
                       </div>
                     </div>
                   ))}

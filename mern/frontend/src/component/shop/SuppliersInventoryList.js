@@ -37,8 +37,103 @@ export default function SuppliersInventoryList() {
   const [reqAddress, setReqAddress] = useState('');
   const [reqNotes, setReqNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // Validation state for supplier booking modal
+  const [reqErrors, setReqErrors] = useState({});
+  const [reqTouched, setReqTouched] = useState({});
 
   const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const validateSupplierRequest = (data) => {
+    const errs = {};
+    const { name, email, phone, address, bookingDate, returnDate, notes, qty, availableQty } = data;
+    // Full name: 3-50 letters/spaces
+    if (!name || name.trim().length === 0) {
+      errs.name = 'Full name is required';
+    } else if (name.trim().length < 3) {
+      errs.name = 'Full name must be at least 3 characters';
+    } else if (name.trim().length > 50) {
+      errs.name = 'Full name must not exceed 50 characters';
+    } else if (!/^[a-zA-Z\s]+$/.test(name.trim())) {
+      errs.name = 'Full name must contain only letters and spaces';
+    }
+    // Email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || email.trim().length === 0) {
+      errs.email = 'Email is required';
+    } else if (!emailRegex.test(email.trim())) {
+      errs.email = 'Please enter a valid email address';
+    }
+    // Sri Lankan phone: 07XXXXXXXX or +947XXXXXXXX
+    const phoneRegex = /^(?:\+94|0)?7[0-9]{8}$/;
+    if (!phone || phone.trim().length === 0) {
+      errs.phone = 'Phone number is required';
+    } else if (!phoneRegex.test(phone.trim().replace(/[\s-]/g, ''))) {
+      errs.phone = 'Enter a valid Sri Lankan mobile (e.g., 07XXXXXXXX or +947XXXXXXXX)';
+    }
+    // Address: min 10 chars
+    if (!address || address.trim().length === 0) {
+      errs.address = 'Delivery address is required';
+    } else if (address.trim().length < 10) {
+      errs.address = 'Delivery address must be at least 10 characters long';
+    }
+    // Booking date: today or future
+    if (!bookingDate) {
+      errs.bookingDate = 'Booking date is required';
+    } else {
+      const bd = new Date(bookingDate);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      if (isNaN(bd.getTime())) {
+        errs.bookingDate = 'Invalid booking date';
+      } else if (bd.getTime() < today.getTime()) {
+        errs.bookingDate = 'Booking date must be today or a future date';
+      }
+    }
+    // Return date: optional but must be later than booking date if provided
+    if (returnDate) {
+      const rd = new Date(returnDate);
+      if (isNaN(rd.getTime())) {
+        errs.returnDate = 'Invalid return date';
+      } else if (bookingDate) {
+        const bd = new Date(bookingDate);
+        if (rd.getTime() <= bd.getTime()) {
+          errs.returnDate = 'Return date must be later than the booking date';
+        }
+      }
+    }
+    // Notes length
+    if (notes && notes.length > 300) {
+      errs.notes = 'Notes must not exceed 300 characters';
+    }
+    // Quantity within available
+    const a = Number(availableQty) || 0;
+    const qn = Number(qty) || 0;
+    if (!(qn >= 1)) {
+      errs.qty = 'Quantity must be at least 1';
+    } else if (a && qn > a) {
+      errs.qty = `Quantity cannot exceed available stock (${a})`;
+    }
+    return errs;
+  };
+
+  // Live-validate supplier request fields as user types/selects
+  useEffect(() => {
+    if (!reqItem) return;
+    const errs = validateSupplierRequest({
+      name: reqName,
+      email: reqEmail,
+      phone: reqPhone,
+      address: reqAddress,
+      bookingDate: reqDate,
+      returnDate: reqReturn,
+      notes: reqNotes,
+      qty: reqQty,
+      availableQty: reqItem?.quantity
+    });
+    setReqErrors(errs);
+  }, [reqName, reqEmail, reqPhone, reqAddress, reqDate, reqReturn, reqNotes, reqQty, reqItem]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -548,49 +643,84 @@ export default function SuppliersInventoryList() {
       <SiteFooter />
       {showReq && reqItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 520, background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 560, background: 'rgba(255,255,255,0.95)', borderRadius: 14, border: '1px solid rgba(226,232,240,0.9)', padding: 16, boxShadow: '0 10px 30px rgba(2,8,23,0.12)', backdropFilter: 'saturate(180%) blur(12px)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ fontWeight: 700 }}>Request: {reqItem.name}</div>
-              <button onClick={() => setShowReq(false)} style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: 8, padding: '6px 10px' }}>Close</button>
+              <div style={{ fontWeight: 800, color: '#0f172a' }}>Request: {reqItem.name}</div>
+              <button onClick={() => setShowReq(false)} style={{ background: 'white', border: '1px solid rgba(226,232,240,0.9)', borderRadius: 10, padding: '8px 12px' }}>Close</button>
             </div>
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
                   <label htmlFor="reqBookingDate" style={{ fontSize: 12, color: '#64748b' }}>Booking date</label>
-                  <input id="reqBookingDate" type="date" value={reqDate} min={new Date().toISOString().slice(0,10)} onChange={e => setReqDate(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input id="reqBookingDate" type="date" value={reqDate} min={todayStr} onChange={e => { setReqDate(e.target.value); setReqTouched(t => ({...t, bookingDate: true})); }} onBlur={() => setReqTouched(t => ({...t, bookingDate: true}))} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.bookingDate && reqErrors.bookingDate ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                  {reqTouched.bookingDate && reqErrors.bookingDate && (
+                    <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.bookingDate}</div>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="reqReturnDate" style={{ fontSize: 12, color: '#64748b' }}>Return date (optional)</label>
-                  <input id="reqReturnDate" type="date" value={reqReturn} min={reqDate || undefined} onChange={e => setReqReturn(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input id="reqReturnDate" type="date" value={reqReturn} min={reqDate ? new Date(new Date(reqDate).getTime() + 86400000).toISOString().slice(0,10) : undefined} onChange={e => { setReqReturn(e.target.value); setReqTouched(t => ({...t, returnDate: true})); }} onBlur={() => setReqTouched(t => ({...t, returnDate: true}))} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.returnDate && reqErrors.returnDate ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                  {reqTouched.returnDate && reqErrors.returnDate && (
+                    <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.returnDate}</div>
+                  )}
                 </div>
               </div>
               <div>
                 <label htmlFor="reqQty" style={{ fontSize: 12, color: '#64748b' }}>Quantity</label>
-                <input id="reqQty" type="number" min={1} max={Number(reqItem.quantity)||undefined} value={reqQty} onChange={e => setReqQty(Math.max(1, Number(e.target.value)))} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                <input id="reqQty" type="number" min={1} max={Number(reqItem.quantity)||undefined} value={reqQty} onChange={e => {
+                  const avail = Number(reqItem.quantity) || 0;
+                  const raw = Number(e.target.value);
+                  const clamped = Math.max(1, Math.min(avail || 1, raw || 1));
+                  setReqQty(clamped);
+                  setReqTouched(t => ({...t, qty: true}));
+                }} onBlur={() => setReqTouched(t => ({...t, qty: true}))} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.qty && reqErrors.qty ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                {reqTouched.qty && reqErrors.qty && (
+                  <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.qty}</div>
+                )}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
                   <label htmlFor="reqName" style={{ fontSize: 12, color: '#64748b' }}>Your name</label>
-                  <input id="reqName" value={reqName} onChange={e => setReqName(e.target.value)} placeholder="Full name" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input id="reqName" value={reqName} onChange={e => { setReqName(e.target.value); setReqTouched(t => ({...t, name: true})); }} onBlur={() => setReqTouched(t => ({...t, name: true}))} placeholder="Full name" style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.name && reqErrors.name ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                  {reqTouched.name && reqErrors.name && (
+                    <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.name}</div>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="reqEmail" style={{ fontSize: 12, color: '#64748b' }}>Email</label>
-                  <input id="reqEmail" type="email" value={reqEmail} onChange={e => setReqEmail(e.target.value)} placeholder="you@example.com" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input id="reqEmail" type="email" value={reqEmail} onChange={e => { setReqEmail(e.target.value); setReqTouched(t => ({...t, email: true})); }} onBlur={() => setReqTouched(t => ({...t, email: true}))} placeholder="you@example.com" style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.email && reqErrors.email ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                  {reqTouched.email && reqErrors.email && (
+                    <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.email}</div>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
                   <label htmlFor="reqPhone" style={{ fontSize: 12, color: '#64748b' }}>Phone</label>
-                  <input id="reqPhone" value={reqPhone} onChange={e => setReqPhone(e.target.value)} placeholder="07X-XXXXXXX" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input id="reqPhone" type="tel" value={reqPhone} onChange={e => {
+                    const value = e.target.value.replace(/[^0-9+]/g, '');
+                    if (value.length <= 10 || (value.startsWith('+94') && value.length <= 12)) setReqPhone(value);
+                    setReqTouched(t => ({...t, phone: true}));
+                  }} onBlur={() => setReqTouched(t => ({...t, phone: true}))} placeholder="0712345678" maxLength={12} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.phone && reqErrors.phone ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                  {reqTouched.phone && reqErrors.phone && (
+                    <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.phone}</div>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="reqAddress" style={{ fontSize: 12, color: '#64748b' }}>Delivery address</label>
-                  <input id="reqAddress" value={reqAddress} onChange={e => setReqAddress(e.target.value)} placeholder="Street, city" style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                  <input id="reqAddress" value={reqAddress} onChange={e => { setReqAddress(e.target.value); setReqTouched(t => ({...t, address: true})); }} onBlur={() => setReqTouched(t => ({...t, address: true}))} placeholder="Street, city, additional directions" style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.address && reqErrors.address ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                  {reqTouched.address && reqErrors.address && (
+                    <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.address}</div>
+                  )}
                 </div>
               </div>
               <div>
                 <label htmlFor="reqNotes" style={{ fontSize: 12, color: '#64748b' }}>Notes (optional)</label>
-                <textarea id="reqNotes" rows={3} value={reqNotes} onChange={e => setReqNotes(e.target.value)} style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                <textarea id="reqNotes" rows={3} value={reqNotes} onChange={e => { setReqNotes(e.target.value.slice(0,300)); setReqTouched(t => ({...t, notes: true})); }} onBlur={() => setReqTouched(t => ({...t, notes: true}))} maxLength={300} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${reqTouched.notes && reqErrors.notes ? '#ef4444' : 'rgba(226,232,240,0.9)'}` }} />
+                <div style={{ fontSize: 11, color: reqNotes.length > 300 ? '#dc2626' : '#94a3b8', marginTop: 4 }}>{reqNotes.length}/300</div>
+                {reqTouched.notes && reqErrors.notes && (
+                  <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4 }}>{reqErrors.notes}</div>
+                )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                 <div style={{ fontWeight: 600 }}>Price/day: LKR {Number(reqItem.rentalPrice||0).toFixed(2)}</div>
@@ -599,8 +729,21 @@ export default function SuppliersInventoryList() {
                   <button onClick={async () => {
                     const token = localStorage.getItem('token');
                     if (!token) { alert('Please login first'); return; }
-                    if (!reqDate) { alert('Select a booking date'); return; }
-                    if (!reqName || !reqEmail || !reqPhone || !reqAddress) { alert('Fill contact details'); return; }
+                    const currentErrors = validateSupplierRequest({
+                      name: reqName,
+                      email: reqEmail,
+                      phone: reqPhone,
+                      address: reqAddress,
+                      bookingDate: reqDate,
+                      returnDate: reqReturn,
+                      notes: reqNotes,
+                      qty: reqQty,
+                      availableQty: reqItem?.quantity
+                    });
+                    setReqErrors(currentErrors);
+                    // mark all touched
+                    setReqTouched({ name: true, email: true, phone: true, address: true, bookingDate: true, returnDate: true, notes: true, qty: true });
+                    if (Object.keys(currentErrors).length) return;
                     setSubmitting(true);
                     try {
                       const payload = {

@@ -22,4 +22,8 @@ router.put('/:id/progress', auth, ctrl.updateProgress);
 router.put('/:id/user-update', auth, ctrl.userUpdate);
 router.put('/:id/cancel-by-user', auth, ctrl.cancelByUser);
 
+// Supplier: export reports (CSV/PDF)
+router.get('/export/csv', auth, ctrl.exportCSV);
+router.get('/export/pdf', auth, ctrl.exportPDF);
+
 module.exports = router;

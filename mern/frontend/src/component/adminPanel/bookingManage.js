@@ -50,6 +50,7 @@ export default function BookingManagement() {
     await axios.put(`${baseUrl}/bookings/admin/${id}/cancel`, { reason }, { headers });
     fetchData();
   };
+
   const download = (blob, filename) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -60,17 +61,25 @@ export default function BookingManagement() {
     a.remove();
     URL.revokeObjectURL(url);
   };
+
   const exportCSV = async () => {
     try {
-      const res = await axios.get(`${baseUrl}/bookings/admin/export/csv`, { headers, responseType: 'blob' });
+      const params = new URLSearchParams();
+      if (statusFilter) params.set('status', statusFilter);
+      const url = `${baseUrl}/bookings/admin/export/csv${params.toString() ? `?${params.toString()}` : ''}`;
+      const res = await axios.get(url, { headers, responseType: 'blob' });
       download(new Blob([res.data], { type: 'text/csv' }), 'bookings-report.csv');
     } catch (e) {
       alert('Failed to export CSV');
     }
   };
+
   const exportPDF = async () => {
     try {
-      const res = await axios.get(`${baseUrl}/bookings/admin/export/pdf`, { headers, responseType: 'blob' });
+      const params = new URLSearchParams();
+      if (statusFilter) params.set('status', statusFilter);
+      const url = `${baseUrl}/bookings/admin/export/pdf${params.toString() ? `?${params.toString()}` : ''}`;
+      const res = await axios.get(url, { headers, responseType: 'blob' });
       download(new Blob([res.data], { type: 'application/pdf' }), 'bookings-report.pdf');
     } catch (e) {
       alert('Failed to export PDF');
@@ -86,7 +95,7 @@ export default function BookingManagement() {
     <div>
       <div style={headerCard}>
         <h1 style={headerTitle}>Booking Management</h1>
-  <p style={headerSub}>Monitor system usage, handle cancellations and export booking reports.</p>
+        <p style={headerSub}>Monitor system usage, handle cancellations and export booking reports.</p>
         {summary && (
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
             <div style={{ ...input }}>Total: {summary.total}</div>
@@ -99,7 +108,7 @@ export default function BookingManagement() {
         )}
       </div>
 
-      {/* Toolbar with simple status filter and export actions */}
+      {/* Toolbar with status filter and export actions */}
       <div style={{ ...card, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ fontWeight: 600, color: '#334155' }}>Bookings</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
