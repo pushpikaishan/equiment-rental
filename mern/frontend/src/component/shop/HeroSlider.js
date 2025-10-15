@@ -47,19 +47,19 @@ const HeroSlider = () => {
 
   const handleBookNow = () => {
     // Scroll to equipment list smoothly
-    const equipmentSection = document.querySelector('[data-equipment-list]');
+    const equipmentSection = document.getElementById('inventory-list') || document.querySelector('[data-equipment-list]');
     if (equipmentSection) {
       equipmentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
-      // If not on home page, navigate to home
-      navigate('/home');
+      // If not on home page, navigate to home with hash so list scrolls on mount
+      navigate('/home#inventory-list');
     }
   };
 
   const containerStyle = {
     position: 'relative',
     width: '100%',
-    height: '550px',
+    height: '750px',
     overflow: 'hidden',
     background: '#000',
     marginTop: 0
