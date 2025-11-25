@@ -7,11 +7,13 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async () => {
     try {
       setLoading(true);
+      setErrorMsg("");
       const res = await axios.post("http://localhost:5000/auth/login", {
         email,
         password,
@@ -46,7 +48,8 @@ function Login() {
           navigate("/");
       }
     } catch (err) {
-      alert(err.response?.data?.msg || "Invalid credentials");
+      const message = err.response?.data?.msg || "Invalid credentials";
+      setErrorMsg(message);
     } finally {
       setLoading(false);
     }
@@ -199,7 +202,7 @@ function Login() {
   };
 
   const linkStyle = {
-    color: "#3b82f6",
+    color: "#e1e5e9",
     textDecoration: "none",
     transition: "color 0.3s ease",
     cursor: "pointer",
@@ -294,6 +297,7 @@ function Login() {
 
 
           <div style={formStyle}>
+            
             <div style={inputGroupStyle}>
               <input
                 style={inputStyle}
@@ -336,6 +340,7 @@ function Login() {
                     e.target.style.transform = "translateY(0)";
                   }}
                 />
+                
                 <button
                   type="button"
                   aria-label={showPassword ? "Hide password" : "Show password"}
@@ -372,6 +377,20 @@ function Login() {
                 </button>
               </div>
             </div>
+            {errorMsg && (
+              <div
+                role="alert"
+                style={{
+                  marginTop:-10,
+                  marginBottom: 18,
+                  padding: 1,
+                  color: "#ff3b30",
+                  
+                }}
+              >
+                {errorMsg}
+              </div>
+            )}
 
             <button
               style={{
@@ -442,19 +461,19 @@ function Login() {
                 href="/forgot-password" 
                 style={linkStyle}
                 onMouseOver={(e) => {
-                  e.target.style.color = "#764ba2";
+                  e.target.style.color = "#6f85eaff";
                   e.target.style.textDecoration = "underline";
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.color = "#667eea";
+                  e.target.style.color = "#e1e5e9";
                   e.target.style.textDecoration = "none";
                 }}
                 onFocus={(e) => {
-                  e.target.style.color = "#764ba2";
+                  e.target.style.color = "#e1e5e9";
                   e.target.style.textDecoration = "underline";
                 }}
                 onBlur={(e) => {
-                  e.target.style.color = "#667eea";
+                  e.target.style.color = "#e1e5e9";
                   e.target.style.textDecoration = "none";
                 }}
               >
@@ -464,19 +483,19 @@ function Login() {
                 href="/RegCusOrSupButton" 
                 style={linkStyle}
                 onMouseOver={(e) => {
-                  e.target.style.color = "#764ba2";
+                  e.target.style.color = "#6f85eaff";
                   e.target.style.textDecoration = "underline";
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.color = "#667eea";
+                  e.target.style.color = "#e1e5e9";
                   e.target.style.textDecoration = "none";
                 }}
                 onFocus={(e) => {
-                  e.target.style.color = "#764ba2";
+                  e.target.style.color = "#e1e5e9";
                   e.target.style.textDecoration = "underline";
                 }}
                 onBlur={(e) => {
-                  e.target.style.color = "#667eea";
+                  e.target.style.color = "#e1e5e9";
                   e.target.style.textDecoration = "none";
                 }}
               >
